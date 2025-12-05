@@ -304,8 +304,10 @@ def color_fall(
 
 
 def animate(animation):
+    start = time.time()
     while True:
-        animation.render(time.time())
+        since_start = time.time() - start
+        animation.render(since_start)
     
 
 def playlist(seg_length, animations):
@@ -316,5 +318,4 @@ def playlist(seg_length, animations):
         animations[idx % len(animations)].render(since_start)
 
 
-# animate(rainbow_spirals())
 playlist(60, [color_fall(), dancing_tree(), crossing_streamers(), rainbow_spirals()])
