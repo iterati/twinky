@@ -31,6 +31,10 @@ def ident(t, pixel):
 def reset(t, pixel):
     pixel.reset()
 
+
+def reset_t(t, pixel):
+    pixel.t = pixel._t
+
     
 def invert(t, pixel):
     pixel.h = (pixel.h + 0.5) % 1
@@ -127,7 +131,14 @@ def mirror(m=1):
 
 def repeat(n=2):
     def func(t, pixel):
-        pixel.t = (pixel.t + getv(n, t)) % 1
+        pixel.t = (pixel.t * getv(n, t)) % 1
+
+    return func
+
+
+def split(window=0.5):
+    def func(t, pixel):
+        pixel.t = int(pixel.t + getv(window, t)) / 2
 
     return func
         
@@ -150,18 +161,16 @@ class Effect:
     def __init__(self, pixelf=ident):
         self.pixelf = pixelf
 
-    def init(self, t):
+    def init(self, t, pixels):
         pass
 
-    def reset(self, t):
+    def reset(self, t, pixels):
         pass
 
-    def tick(self, t):
-        pass
+    def render(self, t, pixels):
+        for pixel in pixels:
+            self.pixelf(t, pixel)
     
-    def render_pixel(self, t, pixel):
-        self.pixelf(t, pixel)
-
 
 class Sparkle(Effect):
     def __init__(self, chance=0.25, length=0.25, pixelf=setw(255)):
@@ -171,19 +180,22 @@ class Sparkle(Effect):
         self.next_sparkle = 0
         self.picks = []
 
-    def reset(self, t):
+    def reset(self, t, pixels):
         self.next_sparkle = 0
         self.picks = []
         
-    def tick(self, t):
+    def render(self, t, pixels):
         if t >= self.next_sparkle:
-            self.picks = random.choices(range(800), k=int(getv(self.chance, t) * 800))
+            self.picks = random.choices(
+                range(len(pixels)),
+                k=int(getv(self.chance, t) * len(pixels))
+            )
             self.next_sparkle = t + getv(self.length, t)
 
-    def render_pixel(self, t, pixel):
-        idx = pixel.idx + (400 * pixel.strand)
-        if idx in self.picks:
-            self.pixelf(t, pixel)
+        for pixel in pixels:
+            idx = pixel.idx + (400 * pixel.strand)
+            if idx in self.picks:
+                self.pixelf(t, pixel)
 
 
 class Streamers(Effect):
@@ -240,12 +252,20 @@ class Streamers(Effect):
         self.spin = spin
         self.pixelf = pixelf
         self.reverse = reverse
+        self.next_trigger = 0
+        self.streamers = []
+
+    def init(self, t, pixels):
         self.streamers = []
         self.next_trigger = 0
 
-    def tick(self, t):
+    def reset(self, t, pixels):
+        self.streamers = []
+        self.next_trigger = 0
+
+    def render(self, t, pixels):
         streamers = []
-        if t > self.next_trigger:
+        if t >= self.next_trigger:
             for _ in range(getv(self.emit, t)):
                 streamer = self.Streamer(
                     t,
@@ -267,8 +287,7 @@ class Streamers(Effect):
 
         self.streamers = streamers
 
-    def render_pixel(self, t, pixel):
-        for streamer in self.streamers:
-            if streamer.contains(pixel):
-                self.pixelf(t, pixel)
-
+        for pixel in pixels:
+            for streamer in self.streamers:
+                if streamer.contains(pixel):
+                    self.pixelf(t, pixel)

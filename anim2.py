@@ -165,24 +165,26 @@ class Animation:
             for strand, interface in enumerate(lights.interfaces)
         ]
 
+    @property
+    def pixels(self):
+        return self.light_pixels[0] + self.light_pixels[1]
+
     def init(self, t):
         for effect in self.effects:
-            effect.init(t)
+            effect.init(t, self.pixels)
 
     def reset(self, t):
         for effect in self.effects:
-            effect.reset(t)
+            effect.reset(t, self.pixels)
 
     def render(self, t):
+        # print(self.pixels)
+        for effect in self.effects:
+            effect.render(t, self.pixels)
+        
         for interface, buffer, pixels in zip(lights.interfaces, self.buffers, self.light_pixels):
-            for effect in self.effects:
-                effect.tick(t)
-
             buffer.seek(0)
             for pixel in pixels:
-                for effect in self.effects:
-                    effect.render_pixel(t, pixel)
-
                 buffer.write(pixel.as_byte())
                 
             # write to light
@@ -335,4 +337,37 @@ def playlist(seg_length, animations):
         animations[idx].render(since_start)
 
 
-playlist(60, [color_fall(), dancing_tree(), crossing_streamers(), rainbow_spirals()])
+def slider():
+    def steps(interval):
+        def func(t, pixel):
+            u = int(t / interval)
+            pixel.h += u * 0.55
+
+        return func
+
+    return Animation(
+        lights=lights,
+        effects=[
+            Effect(effects.reset),
+            Effect(effects.setl(0.0)),
+            Effect(effects.repeat(3)),
+            Effect(effects.split(Tween(linear, 5, 0.0, 1.0))),
+            Effect(effects.spread(1)),
+            Effect(steps(5)),
+            Effect(effects.addh(rand(-1/16, 1/16))),
+            effects.Streamers(
+                length=0.5,
+                width=0.05,
+                delay=1,
+                emit=1,
+                speed=3,
+                spin=randc(-2, -3/2, -1, -3/4, -2/3, -1/2, -1/3, 1/3, 1/2, 2/3, 3/4, 1, 3/2, 2),
+                pixelf=effects.chain(effects.setw(192), effects.sets(0.0)),
+                reverse=True,
+            ),
+        ]
+    )
+
+
+playlist(60, [slider(), color_fall(), dancing_tree(), crossing_streamers(), rainbow_spirals()])
+# animate(slider())
