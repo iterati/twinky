@@ -150,6 +150,12 @@ class Effect:
     def __init__(self, pixelf=ident):
         self.pixelf = pixelf
 
+    def init(self, t):
+        pass
+
+    def reset(self, t):
+        pass
+
     def tick(self, t):
         pass
     
@@ -162,6 +168,10 @@ class Sparkle(Effect):
         self.chance = chance
         self.length = length
         self.pixelf = pixelf
+        self.next_sparkle = 0
+        self.picks = []
+
+    def reset(self, t):
         self.next_sparkle = 0
         self.picks = []
         

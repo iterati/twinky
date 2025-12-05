@@ -165,6 +165,14 @@ class Animation:
             for strand, interface in enumerate(lights.interfaces)
         ]
 
+    def init(self, t):
+        for effect in self.effects:
+            effect.init(t)
+
+    def reset(self, t):
+        for effect in self.effects:
+            effect.reset(t)
+
     def render(self, t):
         for interface, buffer, pixels in zip(lights.interfaces, self.buffers, self.light_pixels):
             for effect in self.effects:
@@ -305,6 +313,7 @@ def color_fall(
 
 def animate(animation):
     start = time.time()
+    animation.init(start)
     while True:
         since_start = time.time() - start
         animation.render(since_start)
@@ -312,10 +321,18 @@ def animate(animation):
 
 def playlist(seg_length, animations):
     start = time.time()
+    for animation in animations:
+        animation.init(start)
+
+    active_animation = 0
     while True:
         since_start = time.time() - start
-        idx = int(since_start / seg_length)
-        animations[idx % len(animations)].render(since_start)
+        idx = int(since_start / seg_length) % len(animations)
+        if idx != active_animation:
+            animations[idx].reset(since_start)
+            active_animation = idx
+            
+        animations[idx].render(since_start)
 
 
 playlist(60, [color_fall(), dancing_tree(), crossing_streamers(), rainbow_spirals()])
