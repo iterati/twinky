@@ -42,7 +42,7 @@ def invert(t, pixel):
 
 def invertAndWhite(t, pixel):
     if pixel.l != -1.0:
-        pixel.w = 192
+        pixel.w = 0.75
         pixel.s = 0.4
         pixel.l = 0.75
     else:
@@ -59,38 +59,25 @@ def multi_color(repeat, colors):
     return func
 
 
-def setw(w):
+def seta(attr, v):
     def func(t, pixel):
-        pixel.w = getv(w, t)
-
-    return func
-
-    
-def seth(h):
-    def func(t, pixel):
-        pixel.h = getv(h, t)
+        setattr(pixel, attr, getv(v, t))
         
     return func
 
 
-def addh(h):
+def adda(attr, v):
     def func(t, pixel):
-        pixel.h += getv(h, t)
-
-    return func
-
-    
-def sets(s):
-    def func(t, pixel):
-        pixel.s = getv(s, t)
+        x = getattr(pixel, attr) + getv(v, t)
+        setattr(pixel, attr, x)
         
     return func
 
-    
-def setl(l):
+def scalea(attr, v):
     def func(t, pixel):
-        pixel.l = getv(l, t)
-
+        x = getattr(pixel, attr) * getv(v, t)
+        setattr(pixel, attr, x)
+        
     return func
 
 
@@ -173,7 +160,7 @@ class Effect:
     
 
 class Sparkle(Effect):
-    def __init__(self, chance=0.25, length=0.25, pixelf=setw(255)):
+    def __init__(self, chance=0.25, length=0.25, pixelf=seta('w', 1.0)):
         self.chance = chance
         self.length = length
         self.pixelf = pixelf
