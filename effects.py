@@ -59,21 +59,21 @@ def multi_color(repeat, colors):
     return func
 
 
-def seta(attr, v):
+def set(attr, v):
     def func(t, pixel):
         setattr(pixel, attr, getv(v, t))
         
     return func
 
 
-def adda(attr, v):
+def add(attr, v):
     def func(t, pixel):
         x = getattr(pixel, attr) + getv(v, t)
         setattr(pixel, attr, x)
         
     return func
 
-def scalea(attr, v):
+def scale(attr, v):
     def func(t, pixel):
         x = getattr(pixel, attr) * getv(v, t)
         setattr(pixel, attr, x)
@@ -160,7 +160,7 @@ class Effect:
     
 
 class Sparkle(Effect):
-    def __init__(self, chance=0.25, length=0.25, pixelf=seta('w', 1.0)):
+    def __init__(self, chance=0.25, length=0.25, pixelf=set('w', 1.0)):
         self.chance = chance
         self.length = length
         self.pixelf = pixelf
