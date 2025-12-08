@@ -50,15 +50,6 @@ def invertAndWhite(t, pixel):
         pixel.l = 0.0
 
         
-def multi_color(repeat, colors):
-    def func(t, pixel):
-        pc = int(pixel.t * repeat * len(colors))
-        color = colors[pc % len(colors)]
-        pixel.w, pixel.h, pixel.s, pixel.l = color.w, color.h, color.s, color.l
-
-    return func
-
-
 def set(attr, v):
     def func(t, pixel):
         setattr(pixel, attr, getv(v, t))
@@ -126,6 +117,13 @@ def repeat(n=2):
 def split(window=0.5):
     def func(t, pixel):
         pixel.t = int(pixel.t + getv(window, t)) / 2
+
+    return func
+
+
+def panels(panels=3):
+    def func(t, pixel):
+        pixel.t = int(pixel.t * panels) / panels
 
     return func
         

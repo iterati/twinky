@@ -1,21 +1,33 @@
-
 import io
 import math
 from pytweening import (
-    easeInOutElastic,
     linear,
     easeInOutSine,
+    easeInOutCubic,
 )
-import random
+import random as rand
 import struct
 import time
-import xled
-from xled_plus.ledcolor import hsl_color, set_color_style
+from xled.discover import xdiscover
+from xled.control import ControlInterface
+from xled_plus.ledcolor import (
+    hsl_color,
+    set_color_style,
+)
+
+from curves import (
+    curve,
+    tween,
+    const,
+    ordered,
+    stepped,
+    random,
+    choice,
+)
 
 import effects
 from effects import (
     Effect,
-    bounce,
     getv,
 )
 
@@ -23,74 +35,6 @@ from effects import (
 PI = math.pi
 PI_2 = math.pi / 2
 
-
-class Tween:
-    def __init__(self, shapef, length, minv, maxv, circular=False):
-        self.shapef = shapef
-        self.length = length
-        self.minv = minv
-        self.maxv = maxv
-        self.circular = circular
-
-    def __call__(self, t):
-        s = (t / self.length) % 1
-        r = bounce(1)(s) if self.circular else s
-        r = self.shapef(r)
-        return (r * (self.maxv - self.minv)) + self.minv
-
-
-class Curve:
-    def __init__(self, *tweens, circular=False):
-        self.tweens = tweens
-        self.length = sum(t.length for t in tweens)
-        self.circular = circular
-        self.ranges = []
-        s = 0
-        for t in tweens:
-            self.ranges.append((s, s + t.length))
-            s += t.length
-
-        self.init_time = time.time()
-
-    @property
-    def total_length(self):
-        return self.length * 2 if self.circular else self.length
-
-    def __call__(self, t):
-        s = (t - self.init_time) % self.total_length
-        if s > self.length:
-            s = self.total_length - s
-
-        for i, (start, end) in enumerate(self.ranges):
-            if start <= s < end:
-                return self.tweens[i](s - start)
-
-
-def rand(minv, maxv):
-    def func(t):
-        n = getv(minv, t)
-        m = getv(maxv, t)
-        return (random.random() * (m - n)) + n
-
-    return func
-
-
-def randc(*choices):
-    def func(t):
-        return random.choice(choices)
-
-    return func
-    
-class ordered:
-    def __init__(self, interval, *choices):
-        self.interval = interval
-        self.choices = choices
-        self.next_trigger = 0
-        
-    def __call__(self, t):
-        i = int(t / self.interval) % len(self.choices)
-        return self.choices[i]
-        
 
 class Color:
     def __init__(self, w=0, h=0.0, s=1.0, l=-1.0):
@@ -155,7 +99,7 @@ class Pixel:
         return self.color.as_byte()
 
 
-class Interface(xled.control.ControlInterface):
+class Interface(ControlInterface):
     def __init__(self, device):
         super(Interface, self).__init__(device.ip_address)
         self.device = device
@@ -164,7 +108,7 @@ class Interface(xled.control.ControlInterface):
 
 class Lights:
     def __init__(self):
-        dgen = xled.discover.xdiscover()
+        dgen = xdiscover()
         devices = [next(dgen), next(dgen)]
         print("Found:", devices)
         self.interfaces = [Interface(device) for device in devices]
@@ -195,7 +139,6 @@ class Animation:
             effect.reset(t, self.pixels)
 
     def render(self, t):
-        # print(self.pixels)
         for effect in self.effects:
             effect.render(t, self.pixels)
         
@@ -204,28 +147,22 @@ class Animation:
             for pixel in pixels:
                 buffer.write(pixel.as_byte())
                 
-            # write to light
-            interface.set_mode("rt")
             interface._udpclient = lights.udpclient
             interface.udpclient.destination_host = interface.host
             buffer.seek(0)
             interface.set_rt_frame_socket(buffer, 3)
 
 
-set_color_style('8col')
-# set_color_style('linear')
-lights = Lights()
-
-
 def rainbow_spirals(
+        lights,
         mirror=3,
-        spin=Tween(linear, 10, 0, 1),
+        spin=tween(10, linear, 0, 1),
         spiral=5,
-        blend=Tween(linear, 60, 0, 1),
-        spread=Curve(
-            Tween(easeInOutSine, 5, 0, 8/8, True),
-            Tween(easeInOutSine, 5, 0, -8/8, True),
-        ),
+        blend=tween(60, linear, 0, 1),
+        spread=curve([
+            tween(5, easeInOutSine, 0, 8/8, True),
+            tween(5, easeInOutSine, 0, -8/8, True),
+        ]),
 ):
     return Animation(
         lights=lights,
@@ -241,13 +178,14 @@ def rainbow_spirals(
     )
 
 def crossing_streamers(
-        blend=Tween(linear, 30, 0, 1),
-        length=randc(1/5, 1/4, 1/3, 1/2, 2/3, 3/4, 1),
-        width=rand(0.05, 0.15),
-        delay=rand(0.25, 1.0),
+        lights,
+        blend=tween(30, linear, 0, 1),
+        length=choice(1, [1/5, 1/4, 1/3, 1/2, 2/3, 3/4, 1]),
+        width=random(1, 0.05, 0.15),
+        delay=random(1, 0.25, 1.0),
         emit=1,
-        speed=randc(*[i/2 for i in range(2,6)]),
-        spin=randc(-2, -3/2, -1, -3/4, -2/3, -1/2, -1/3, 1/3, 1/2, 2/3, 3/4, 1, 3/2, 2),
+        speed=choice(1, [i/2 for i in range(2,6)]),
+        spin=choice(1, [-2, -3/2, -1, -3/4, -2/3, -1/2, -1/3, 1/3, 1/2, 2/3, 3/4, 1, 3/2, 2]),
 ):
     def streamer(pixelf, reverse):
         return effects.Streamers(
@@ -261,6 +199,15 @@ def crossing_streamers(
             reverse=reverse,
         )
 
+    def invert_white(t, pixel):
+        if pixel.l == -1.0:
+            pixel.h = (pixel.h + 0.5) % 1
+            pixel.l = 0.0
+        else:
+            pixel.w = 0.75
+            pixel.s = 0.4
+            pixel.l = 0.75
+
     return Animation(
         lights=lights,
         effects=[
@@ -268,30 +215,31 @@ def crossing_streamers(
             Effect(effects.set('h', blend)),
             streamer(effects.set('l', 0.0), False),
             streamer(effects.set('l', 0.0), True),
-            streamer(effects.invertAndWhite, False),
-            streamer(effects.invertAndWhite, True),
+            streamer(invert_white, False),
+            streamer(invert_white, True),
         ]
     )
 
 
 def dancing_tree(
-        spin=Tween(easeInOutSine, 10, -1, 1, True),
-        spiral=Tween(linear, 2, -3, 3, True),
-        color_repeats=1,
-        colors=[
-            Color(h=0/8, l=0.0),
-            Color(h=2/8, l=0.0),
-            Color(h=5/8, l=0.0),
-        ],
+        lights,
+        spin=tween(10, easeInOutSine, -1, 1, True),
+        spiral=tween(5, linear, -3, 3, True),
+        colors=3,
         sparkle_chance=0.5,
 ):
+    def split_colors(t, pixel):
+        pixel.h += int(pixel.t * colors) / colors
+
     return Animation(
         lights=lights,
         effects=[
             Effect(effects.reset),
+            Effect(effects.set('l', 0.0)),
             Effect(effects.spin(spin)),
             Effect(effects.spiral(spiral)),
-            Effect(effects.multi_color(color_repeats, colors)),
+            Effect(effects.add('h', tween(60, linear, 0, 1))),
+            Effect(split_colors),
             effects.Sparkle(
                 chance=sparkle_chance,
                 pixelf=effects.chain(
@@ -310,49 +258,15 @@ def dancing_tree(
     )
 
 
-# def color_fall(
-#         fade=0.5,
-#         length=5,
-#         y_scale=5,
-#         blend_time=30,
-#         hue_range=1/8,
-# ):
-#     hue = hue_range / 2
-#     return Animation(
-#         lights=lights,
-#         effects=[
-#             Effect(effects.reset),
-#             Effect(effects.color_wash(
-#                 l=Curve(
-#                     Tween(linear, fade, -1, -1),
-#                     Tween(easeInOutSine, length - (fade * 2), -1, 0),
-#                     Tween(linear, fade, 0, 0),
-#                     circular=True,
-#                 ),
-#                 y_scale=y_scale,
-#             )),
-#             Effect(effects.add('h', Tween(linear, blend_time, 0, 1))),
-#             Effect(effects.add('h', rand(-hue, hue))),
-#             effects.Sparkle(
-#                 pixelf=effects.chain(
-#                     effects.set('w', 0.75),
-#                     effects.set('s', 0.0),
-#                     effects.set('l', 0.75),
-#                 )
-#             ),
-#         ]
-#     )
-
-
-def slider():
+def slider(lights):
     def streamer(reverse):
         return effects.Streamers(
             length=1,
             width=0.05,
             delay=0.5,
-            emit=randc(1, 2),
+            emit=choice(1, [1, 2]),
             speed=1.5,
-            spin=randc(-2, -3/2, -1, -3/4, -2/3, -1/2, -1/3, 1/3, 1/2, 2/3, 3/4, 1, 3/2, 2),
+            spin=choice(1, [-2, -3/2, -1, -3/4, -2/3, -1/2, -1/3, 1/3, 1/2, 2/3, 3/4, 1, 3/2, 2]),
             pixelf=effects.chain(
                 effects.set('w', 0.75),
                 effects.set('s', 0.0),
@@ -365,18 +279,19 @@ def slider():
         effects=[
             Effect(effects.reset),
             Effect(effects.repeat(3)),
-            Effect(effects.split(Tween(linear, 5, 0.0, 1.0))),
+            Effect(effects.split(tween(5, linear, 0.0, 1.0))),
             Effect(effects.spread(1)),
             Effect(effects.set('l', 0.0)),
-            Effect(effects.add('h', ordered(5, 0, 0.5))),
-            Effect(effects.add('h', rand(-1/16, 1/16))),
-            Effect(effects.add('h', Tween(linear, 60, 0, -1))),
+            Effect(effects.add('h', stepped(1, 5, 2))),
+            Effect(effects.add('h', random(1, -1/16, 1/16))),
+            Effect(effects.add('h', tween(60, linear, 0, -1))),
             streamer(True),
             streamer(False),
         ]
     )
 
 def stained_glass(
+        lights,
         length=2,
         width=0.1,
         delay=10,
@@ -387,7 +302,8 @@ def stained_glass(
         split_max=1/3,
 ):
     def streamer(inv=False):
-        spin = randc(-1, -2, -3, -4, -5) if inv else randc(1, 2, 3, 4, 5)
+        choices = [1, 2, 3, 4, 5]
+        spin = choice(1, [-i for i in choices]) if inv else choice(1, choices)
         return effects.Streamers(
             length=length,
             width=width,
@@ -406,15 +322,16 @@ def stained_glass(
         lights=lights,
         effects=[
             Effect(effects.reset),
-            Effect(effects.set('l', rand(-0.25, .1))),
-            Effect(effects.set('s', rand(1.0, 0.8))),
-            Effect(effects.set('h', Curve(
-                *[Tween(easeInOutSine, blend_time/8, -i/8, -(i+1)/8) for i in range(8)],
+            Effect(effects.set('l', random(1, -0.25, .1))),
+            Effect(effects.set('s', random(1, 1.0, 0.8))),
+            Effect(effects.set('h', curve(
+                [tween(blend_time/8, easeInOutSine, -i/8, -(i+1)/8) for i in range(8)],
                 circular=True,
             ))),
-            Effect(effects.add('h', rand(
-                Tween(linear, split_time, -split_min, -split_max, True),
-                Tween(linear, split_time, split_min, split_max, True),
+            Effect(effects.add('h', random(
+                1, 
+                tween(split_time, linear, -split_min, -split_max, True),
+                tween(split_time, linear, split_min, split_max, True),
             ))),
             streamer(False),
             streamer(True),
@@ -423,15 +340,16 @@ def stained_glass(
 
 
 def color_fall(
+        lights,
         num_colors=8,
         colors_at_once=0.75,
         color_step=3,
 ):
     def foo(t, pixel):
-        fy = Tween(linear, 60, 0, num_colors)
+        fy = tween(60, linear, 0, num_colors)
         y = ((pixel.y + getv(fy, t)) * colors_at_once) % num_colors
         h = (int(y) * color_step) % num_colors
-        fl = Tween(easeInOutElastic, 1, -1.0, 0.0, True)
+        fl = tween(1, easeInOutCubic, -1.0, 0.25, True)
         pixel.w = 0
         pixel.h = h / num_colors
         pixel.s = 1.0
@@ -442,7 +360,7 @@ def color_fall(
         effects=[
             Effect(effects.reset),
             Effect(foo),
-            Effect(effects.add('h', rand(-1/16, 1/16))),
+            Effect(effects.add('h', random(1, -1/16, 1/16))),
             effects.Sparkle(
                 chance=0.25,
                 pixelf=effects.chain(
@@ -454,29 +372,169 @@ def color_fall(
         ],
     )
 
+
+def evolver(lights):
+    class Streamer:
+        def __init__(self, initial_t, angle, length, width, speed, spin, reverse):
+            self.angle = angle
+            self.length = length
+            self.width = width
+            self.speed = speed
+            self.spin = spin
+            self.reverse = reverse
+            self.y = 1.0 if reverse else -length
+            self.last_update = initial_t
+
+        def update(self, t):
+            d = t - self.last_update
+            self.last_update = t
+            if self.reverse:
+                self.y -= d / self.speed
+            else:
+                self.y += d / self.speed
+
+        @property
+        def alive(self):
+            if self.reverse:
+                return self.y > -self.length
+            else:
+                return self.y < 1.0 + self.length
+
+        def contains(self, pixel):
+            miny = self.y
+            maxy = miny + self.length
+            mino = (((pixel.y * self.spin) + self.angle) % 1) + 1
+            maxo = mino + self.width
+            return (miny <= pixel.y <= maxy) and (mino <= pixel._t + 1 <= maxo)
+
+        def __repr__(self):
+            return f'y={round(self.y, 2)} yTop={round(self.y + self.length, 2)} angle={round(self.angle, 2)} alive={self.alive}'
+
+
+    def whiten(pixel):
+        pixel.w = 0.75
+        pixel.s = 0.0
+        pixel.l = 0
+
+    class Evolver(Effect):
+        # 60s for color fall
+        # 12s color goes black, crossing streamers start over sparkles fading
+        # 60s for crossing streamers
+        # 12s streamers cover the tree, fade out to dancing tree
+        # 60s for dancing tree
+        # 12s spiral stalls, colors fade to single hue
+        # 60s for rainbow spiral/stained glass
+        # 12s spiral reverses, streamers fade, hue collapses
+        # 60s for slider
+        # 12s slider slides in blank with sparkles
+        # repeat (6min)
+        def __init__(self):
+            self.sparkles = []
+            self.blinks = []
+            self.streamers = []
+            self.last_update = 0
+
+            self.flicker_time = 0.25
+
+            self.sparkle_chance_f = curve([])
+            self.blink_chance_f = curve([])
+            self.base_h_f = curve([])
+            self.base_s_f = curve([])
+            self.base_l_f = curve([])
+            self.spin_f = curve([])
+            self.spiral_f = curve([])
+            self.scale_f = curve([])
+            self.offset_f = curve([])
+
+        def reset(self, t, pixels):
+            self.sparkles = []
+            self.blinks = []
+            self.streamers = []
+            self.last_update = t
+            self.next_streamer = t
+
+        def render(self, t, pixels):
+            base_h = getv(self.base_h_f, t)
+            base_s = getv(self.base_s_f, t)
+            base_l = getv(self.base_l_f, t)
+            spin = getv(self.spin_f, t)
+            spiral = getv(self.spiral_f, t)
+            scale = getv(self.scale_f, t)
+            offset = getv(self.offset_f, t)
+
+            if t >= self.last_update + self.flicker_time:
+                self.sparkles = rand.choices(range(len(pixels)), k=int(getv(self.sparkle_chance_f, t) * len(pixels)))
+                self.blinks = rand.choices(range(len(pixels)), k=int(getv(self.blink_chance_f, t) * len(pixels)))
+
+            for pixel in pixels:
+                pixel.reset()
+                pixel_idx = pixel.idx + (400 * pixel.strand)
+
+                if pixel_idx in self.blinks:
+                    pixel.reset()
+                elif pixel_idx in self.sparkles:
+                    whiten(pixel)
+                else:
+                    pixel.w, pixel.h, pixel.s, pixel.l = 0, base_h, base_s, base_l
+                    pixel.t = (pixel.t + spin + (pixel.y * spiral))
+                    pixel.y = (pixel.y + offset + (pixel.y * scale))
+
+
+            self.last_update = t
+        
+    return Animation(
+        lights=lights,
+        effects=[Effect(Evolver)],
+    )
+
     
 def animate(animation):
     start = time.time()
     animation.init(start)
+    for interface in animation.lights.interfaces:
+        interface.set_mode("rt")
+    
     while True:
         since_start = time.time() - start
+        frame_start = time.time()
         animation.render(since_start)
-    
+        while time.time() < frame_start + (1 / 30):
+            pass
+
 
 def playlist(seg_length, animations):
     start = time.time()
     for animation in animations:
         animation.init(start)
 
+    for interface in animations[0].lights.interfaces:
+        interface.set_mode("rt")
+
     active_animation = 0
     while True:
         since_start = time.time() - start
+        frame_start = time.time()
         idx = int(since_start / seg_length) % len(animations)
         if idx != active_animation:
             animations[idx].reset(since_start)
             active_animation = idx
             
         animations[idx].render(since_start)
+        while time.time() < frame_start + (1 / 30):
+            pass
 
 
-playlist(60, [color_fall(), stained_glass(), slider(), dancing_tree(), crossing_streamers(), rainbow_spirals()])
+set_color_style('8col')
+# set_color_style('linear')
+lights = Lights()
+modes = [
+    color_fall,
+    stained_glass,
+    slider,
+    dancing_tree,
+    crossing_streamers,
+    rainbow_spirals,
+]
+
+playlist(60, [f(lights) for f in modes])
+# animate(evolver(lights))
