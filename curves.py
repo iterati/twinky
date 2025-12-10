@@ -56,10 +56,15 @@ class stepped:
 
 
 class random:
-    def __init__(self, length, minv=0.0, maxv=1.0):
-        self.length = length
-        self.minv = minv
-        self.maxv = maxv
+    def __init__(self, length, minv, maxv=None):
+        if maxv is None:
+            self.minv = length
+            self.maxv = minv
+            self.length = 1
+        else:
+            self.length = length
+            self.minv = minv
+            self.maxv = maxv
 
     def __call__(self, t):
         n = getv(self.minv, t)
@@ -68,9 +73,13 @@ class random:
 
 
 class choice:
-    def __init__(self, length, choices):
-        self.length = length
-        self.choices = choices
+    def __init__(self, length, choices=None):
+        if choices is None:
+            self.length = 1
+            self.choices = length
+        else:
+            self.length = length
+            self.choices = choices
         
     def __call__(self, t):
         return rand.choice(self.choices)
