@@ -41,7 +41,7 @@ class Pixel:
 
     @w.setter
     def w(self, w):
-        self.color.w = max(min(int(w), 255), 0)
+        self.color.w = max(min(w, 1.0), 0.0)
  
     @property
     def h(self):
