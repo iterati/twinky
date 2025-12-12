@@ -20,7 +20,7 @@ DEBUG = False
 # DEBUG = True
 CHANGE = "none"
 # CHANGE = "transition"
-CURR_PATTERN = -2
+CURR_PATTERN = -1
 NEXT_PATTERN = 1
 
 FROM_BOT = 0
@@ -219,7 +219,7 @@ class Blender(Animation):
             "spin": mk_curve("spin"),
             "spiral": mk_curve("spiral"),
             "spread": mk_curve("spread"),
-            "streamers": self.next_pattern.get("streamers", {}).copy(),
+            "streamers": self.next_pattern.get("streamers", []).copy(),
         } 
 
     def render(self, t):
@@ -284,12 +284,17 @@ class Blender(Animation):
 
         self.streamers = new_streamers
 
+        # flash drops l from 0->-1
         flash_v = getv(self.pattern.get("flash", 0.0), t - self.pattern_start)
         flash_fn = rand(0.0, flash_v)
-        flicker_v = getv(self.pattern.get("flicker", 0.0), t - self.pattern_start)
-        flicker_fn = rand(0.0 - flicker_v, 0.0)
+
+        # flitter drops saturation 1->0
         flitter_v = getv(self.pattern.get("flitter", 0.0), t - self.pattern_start)
-        flitter_fn = rand(1.0 - flitter_v, 1.0)
+        flitter_fn = rand(0.0, flitter_v)
+
+        flicker_v = getv(self.pattern.get("flicker", 0.0), t - self.pattern_start)
+        flicker_fn = rand(0.0, flicker_v)
+
         flux_v = getv(self.pattern.get("flux", 0.0), t - self.pattern_start)
         flux_fn = rand(-flux_v / 2, flux_v / 2)
         spin = getv(self.pattern.get("spin", 0.0), t - self.pattern_start)
@@ -405,11 +410,12 @@ class Blender(Animation):
                 pixel.h += flux_fn(t - self.pattern_start)
 
             if "flitter" not in suppress_fx:
-                pixel.s += flitter_fn(t - self.pattern_start)
+                if pixel.s != 0.0:
+                    pixel.s -= flitter_fn(t - self.pattern_start)
 
             if "flash" not in suppress_fx:
                 if pixel.l != -1.0:
-                    pixel.l += flash_fn(t - self.pattern_start)
+                    pixel.l -= flash_fn(t - self.pattern_start)
 
             # run streamers and sparkles
             if "streamers" not in suppress_fx:
@@ -743,15 +749,6 @@ patterns = [
         "streamers": galaxus_streamers(),
     },
     {
-        "name": "Basic Bitch",
-        "base_color": {
-            "type": "base",
-        },
-        "flash": 1.0,
-        "flitter": curve(easeInOutSine, [(0, 0.75), (3, 0), (6, 0.75)]),
-        "flux": curve(easeInOutSine, [(0, 0), (6, 2/3), (12, 0)]),
-    },
-    {
         "name": "Spread Eagle",
         "base_color": {
             "type": "base",
@@ -764,23 +761,6 @@ patterns = [
         "spiral": curve(const, [(0, 0), (12, 1), (24, -1), (36, 0.5), (48, -0.5), (60, 0)]),
         "spread": curve(easeInSine, [(0, 0), (3, 3/8), (6, 0), (9, -3/8), (12, 0)]),
         "streamers": spiral_streamers(FROM_TOP, lifetime=6.0, func=invert_streamer),
-    },
-    {
-        "name": "Circus Tent",
-        "base_color": {
-            "type": "panels",
-            "value": 4,
-            "funcs": circus_tent_funcs(0.5),
-        },
-        "topology": {
-            "type": "mirror",
-            "value": 3,
-        },
-        "sparkles": 0.5,
-        "spin": 10,
-        "streamers": {
-            "base": sliding_door_streamers(func=base_streamer),
-        },
     },
     {
         "name": "Coiled Spring",
@@ -805,7 +785,32 @@ patterns = [
         "name": "Confetti",
         "streamers": confetti_streamers(),
         "sparkles": 0.2,
-    }
+    },
+    {
+        "name": "Circus Tent",
+        "base_color": {
+            "type": "panels",
+            "value": 4,
+            "funcs": circus_tent_funcs(0.5),
+        },
+        "topology": {
+            "type": "mirror",
+            "value": 3,
+        },
+        "sparkles": 0.5,
+        "spin": 10,
+        "streamers": sliding_door_streamers(func=base_streamer)
+    },
+    {
+        "name": "Basic Bitch",
+        "base_color": {
+            "type": "base",
+        },
+        "flash": 1.0,
+        "flitter": curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)]),
+        "flicker": curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)]),
+        "flux": curve(easeInOutSine, [(0, 0), (3, 2/3), (6, 0), (9, -2/3), (12, 0)]),
+    },
 ]
 
 lights = Lights()
