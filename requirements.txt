@@ -1,3 +1,4 @@
+pycurses
 pytweening==1.2.0
 xled @ git+https://github.com/scrool/xled@ccfd69922ff334ea18fd67cbe9a317d92525c5a7
 xled_plus==0.1.37

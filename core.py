@@ -148,6 +148,8 @@ class Blender:
         self.pattern = self.patterns[start_idx if start_idx is not None else -1]
         self.next_pattern = self._pick_next()
         self.transitioning = False
+        self._init_t = 0.0
+        self._t = 0.0
 
     @property
     def pixels(self):
@@ -167,6 +169,7 @@ class Blender:
         self.next_pattern = self._pick_next()
         self.pattern.base_color.init(getv(self._blend_func, t))
 
+        self._init_t = t
         self._t = t
         self.transitioning = False
         self.pattern_start = t

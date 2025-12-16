@@ -1,3 +1,4 @@
+import curses
 import threading
 import time
 import queue
@@ -495,23 +496,71 @@ def switch_name(name):
         a.start_transition(idx)
     return func
 
-if __name__ == "__main__":
-    animation = Blender(
-        patterns,
-        start_idx=-1,
-        pause_change=True,
-    )
-    q = queue.Queue()
+def make_draw_menu(animation, q):
+    def draw_menu(stdscr):
+        curses.curs_set(0)
+        curses.cbreak()    # React to keys instantly, no Enter needed
+        stdscr.nodelay(True)
+        stdscr.keypad(True)
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
+        current_row = 0
+        menu_items = ["Pause", "Unpause", "Quit"]
 
+        def print_menu(screen, selected_row_idx):
+            screen.clear()
+            h, w = screen.getmaxyx()
+
+            item = f"{'[PAUSED] ' if animation.pause_change else ''}({round(animation._t - animation._init_t, 2)}): {animation.pattern_name}"
+            x = w // 2 - len(item) // 2
+            y = h // 2 - len(menu_items) // 2 - 2
+            screen.addstr(y, x, item)
+
+            for idx, item in enumerate(menu_items):
+                x = w // 2 - len(item) // 2
+                y = h // 2 - len(menu_items) // 2 + idx
+                if idx == selected_row_idx:
+                    screen.attron(curses.A_REVERSE)
+                    screen.addstr(y, x, item)
+                    screen.attroff(curses.A_REVERSE)
+                else:
+                    screen.addstr(y, x, item)
+            screen.refresh()
+
+        while True:
+            print_menu(stdscr, current_row)
+            key = stdscr.getch()
+
+            if key == curses.KEY_UP:
+                if current_row > 0:
+                    current_row -= 1
+            elif key == curses.KEY_DOWN:
+                if current_row < len(menu_items) - 1:
+                    current_row += 1
+            elif key == curses.KEY_ENTER or key in [10, 13]:
+                if current_row == 0:
+                    q.put(pause)
+                elif current_row == 1:
+                    q.put(unpause)
+                if current_row == len(menu_items) - 1:
+                    q.put(_sentinel)
+                    break
+
+                stdscr.addstr(curses.LINES - 1, 0, animation.pattern_name)
+
+        curses.nocbreak()
+        stdscr.keypad(False)
+        curses.echo()
+        curses.curs_set(1)
+    return draw_menu
+
+
+def console_run(animation, q):
     valid_commands = ["Pause", "Unpause", "Quit"]
     pattern_names = [p.name for p in animation.patterns]
     pattern_idx = [f"{i}" for i in range(len(animation.patterns))]
-
-    animation_thread = threading.Thread(
-        target=animation_thread_task,
-        args=(animation,q,),
-    )
-    animation_thread.start()
 
     while True:
         command = input(f"{animation.pattern_name} >> ")
@@ -528,4 +577,20 @@ if __name__ == "__main__":
         elif command in pattern_idx:
             q.put(switch_idx(command))
 
+
+if __name__ == "__main__":
+    animation = Blender(
+        patterns,
+        start_idx=-1,
+        pause_change=False,
+    )
+    q = queue.Queue()
+    animation_thread = threading.Thread(
+        target=animation_thread_task,
+        args=(animation,q,),
+    )
+    animation_thread.start()
+    # console_run(animation, q)
+    draw_menu = make_draw_menu(animation, q)
+    curses.wrapper(draw_menu)
     animation_thread.join()
