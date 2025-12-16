@@ -1,0 +1,18 @@
+* Types of effects
+** Topology
+*** Base topology
+- repeats - [0, 1] -> [0, 1], [0, 1]
+- mirrored - [0, 1] -> [0, 1], [1, 0]
+*** Height dependent
+- spiral
+- distored
+*** Time dependent
+- spin
+** Base Color
+- window - splits into two panes with the ratio
+- door - same as window really
+- ncolors - more than one window with set ratio
+- panels - same as ncolors really
+- falling - color falls from sky!
+- blank - nothing 
+- base - same as blank but sets a different color v 
