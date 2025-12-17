@@ -37,10 +37,7 @@ class Curve:
     def __init__(self, shape_func: ParamFunc, control_points: ControlPoints):
         self.shape_func = shape_func
         self.control_points = control_points
-
-    @property
-    def length(self) -> float:
-        return self.control_points[-1][0] if len(self.control_points) > 0 else 0
+        self.length = self.control_points[-1][0] if len(self.control_points) > 0 else 0
 
     def _find_control_points(self, s) -> tuple[int, int]:
         bottom = None
@@ -65,7 +62,7 @@ class Curve:
         return f"curve({self.control_points})"
 
 
-class Random:
+class Random(Curve):
     def __init__(self,
                  minv: Curve | float=0.0,
                  maxv: Curve | float=1.0,
@@ -90,6 +87,25 @@ class Random:
         maxv = getv(self.maxv, t)
         return (s * (maxv - minv)) + minv
 
+
+class CombinedCurve(Curve):
+    def __init__(self, curves: list[Curve]):
+        self.curves = curves
+        self.starts = []
+        self.length = 0
+        for curve in self.curves:
+            self.starts.append(self.length)
+            self.length += curve.length
+
+    def __call__(self, t: float) -> float:
+        s = t % self.length
+        idx = 0
+        for i, s in enumerate(self.starts):
+            if t > s:
+                idx = i
+
+        return self.curves[idx](t - self.starts[idx])
+            
 
 def combined_curve(curves: list[Curve]) -> ParamFunc:
     starts = []

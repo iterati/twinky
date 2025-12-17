@@ -3,7 +3,7 @@ import math
 from pytweening import linear, easeInOutCubic
 import random
 import time
-from typing import Callable
+from typing import Callable, TypeAlias
 from xled.discover import xdiscover
 from xled.control import ControlInterface
 
@@ -12,6 +12,9 @@ from param import Param, getv, Curve
 from streamer import Streamer, StreamerParam, getv_streamers
 from topologies import Topology
 
+import sys
+sys.stdout = open('log.txt', 'w')
+sys.stderr = open('error.txt', 'w')
 
 def rand(minv=0.0, maxv=1.0) -> Callable[[], float]:
     def func() -> float:
@@ -126,9 +129,53 @@ class Pattern:
         self.streamers = streamers if streamers is not None else []
 
 
+ControlValue: TypeAlias = float | Curve | StreamerParam
+ControlOption: TypeAlias = tuple[str, ControlValue]
+ControlOptions: TypeAlias = list[ControlOption]
+Control: TypeAlias = tuple[str, ControlOptions]
+Controls: TypeAlias = list[Control]
+
+
+class ControllablePattern(Pattern):
+    controls: Controls = [
+        ("sparkles", [("0.25", 0.25)])
+    ]
+    set_controls: list[int] = [
+        0,
+    ]
+
+    def __init__(self, name, **kwargs):
+        super(ControllablePattern, self).__init__(name, **kwargs)
+        for idx, option_idx in enumerate(self.set_controls):
+            self.set_control_option(idx, option_idx)
+
+    def get_controls(self) -> list[str]:
+        return [name for name, _ in self.controls]
+
+    def get_control(self, idx: int) -> Control:
+        return self.controls[idx]
+
+    def get_control_options(self, idx: int) -> list[str]:
+        _, options = self.get_control(idx)
+        return [name for name, _ in options]
+
+    def set_control_option(self, idx: int, option_idx: int):
+        name, options = self.controls[idx]
+        _, option = options[option_idx]
+        self.set_controls[idx] = option_idx
+        setattr(self, name, option)
+        print(f"{name} {option} {getattr(self, name)}")
+
+    def get_control_option(self, i: int) -> int:
+        return self.set_controls[i]
+
+
 class Blender:
     sparkle_delay = 0.25
     streamer_delay = 1.0
+    pattern_length = 60.0
+    transition_length = 6.0
+    transition_offset = pattern_length - transition_length
 
     def __init__(self,
                  patterns: list[Pattern],
@@ -150,6 +197,7 @@ class Blender:
         self.transitioning = False
         self._init_t = 0.0
         self._t = 0.0
+        self.pattern_end = self.pattern_length
 
     @property
     def pixels(self):
@@ -173,7 +221,7 @@ class Blender:
         self._t = t
         self.transitioning = False
         self.pattern_start = t
-        self.pattern_end = t + 54.0
+        self.pattern_end = t + self.pattern_length
         self.next_sparkle = t
         self.sparkles = []
         self.next_streamer = t
@@ -235,8 +283,10 @@ class Blender:
         return colors
 
     def _render_transition(self, t: float) -> list[Color]:
-        curr_colors = self._render(54.0 + t, self.pattern)
-        next_colors = self._render(t, self.next_pattern)
+        # current goes around again from 60/0 -> 6
+        curr_colors = self._render(t, self.pattern)
+        # next starts early, 54 -> 60/0
+        next_colors = self._render(self.transition_offset + t, self.next_pattern)
         colors = []
         for curr_color, next_color in zip(curr_colors, next_colors):
             colors.append(Color(
@@ -255,10 +305,17 @@ class Blender:
         else:
             return self.pattern.name
 
+    @property
+    def time_str(self):
+        if self.pause_change:
+            return f"{round(self._t - self._init_t, 2)}"
+        else:
+            return f"{round(self.pattern_end - self._t, 2)}"
+
     def start_transition(self, next: int | None=None):
         self.pattern_hue = getv(self._blend_func, self._t)
         self.transitioning = True
-        self.pattern_end = self._t + 6.0
+        self.pattern_end = self._t + self.transition_length
         if next is not None:
             self.next_pattern = self.patterns[next]
 
@@ -267,14 +324,14 @@ class Blender:
         if t >= self.pattern_end and not (self.pause_change and not self.transitioning):
             self.pattern_start = self.pattern_end
             if not self.transitioning:
+                self.next_pattern.base_color.init(getv(self._blend_func, self.transition_offset + t))
                 self.start_transition()
             else:
                 self.pattern = self.next_pattern
-                self.pattern.base_color.init(getv(self._blend_func, t))
                 self.next_pattern = self._pick_next()
                 self.pattern = self.pattern
                 self.transitioning = False
-                self.pattern_end += 54.0
+                self.pattern_end = self._t + self.pattern_length
             
             print(self.pattern_name)
 
@@ -282,8 +339,8 @@ class Blender:
             self.next_sparkle += self.sparkle_delay
             if self.transitioning:
                 sparkle_chance = getv(Curve(linear, [
-                    (0, getv(self.pattern.sparkles, 60.0)),
-                    (6, getv(self.next_pattern.sparkles, 6.0)),
+                    (0, getv(self.pattern.sparkles, self.transition_length)),
+                    (6, getv(self.next_pattern.sparkles, self.transition_offset)),
                 ]), t - self.pattern_start)
             else:
                 sparkle_chance = getv(self.pattern.sparkles, t)
