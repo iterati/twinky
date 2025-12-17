@@ -137,15 +137,12 @@ Controls: TypeAlias = list[Control]
 
 
 class ControllablePattern(Pattern):
-    controls: Controls = [
-        ("sparkles", [("0.25", 0.25)])
-    ]
-    set_controls: list[int] = [
-        0,
-    ]
+    controls = []
+    set_controls = []
 
     def __init__(self, name, **kwargs):
         super(ControllablePattern, self).__init__(name, **kwargs)
+
         for idx, option_idx in enumerate(self.set_controls):
             self.set_control_option(idx, option_idx)
 
@@ -164,7 +161,7 @@ class ControllablePattern(Pattern):
         _, option = options[option_idx]
         self.set_controls[idx] = option_idx
         setattr(self, name, option)
-        print(f"{name} {option} {getattr(self, name)}")
+        # print(f"{name} {option} {getattr(self, name)}")
 
     def get_control_option(self, i: int) -> int:
         return self.set_controls[i]
@@ -242,6 +239,7 @@ class Blender:
 
         colors = []
         for pixel in self.pixels:
+            print(pattern.spiral, getv(pattern.spiral, t), pixel.y)
             pixel_t = (
                 pixel.t
               + getv(pattern.spin, t)

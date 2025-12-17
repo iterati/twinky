@@ -3,6 +3,8 @@ import queue
 import threading
 import time
 
+from core import ControllablePattern
+
 _sentinel = object()
 
 def animation_thread_task(animation, command_queue):
@@ -184,5 +186,13 @@ def make_draw_menu(animation, q):
         curses.curs_set(1)
     return draw_menu
 
+
 def get_thread_and_menu(animation):
     q = queue.Queue()
+    animation_thread = threading.Thread(
+        target=animation_thread_task,
+        args=(animation,q,),
+    )
+    draw_menu = make_draw_menu(animation, q)
+
+    return [animation_thread, draw_menu]
