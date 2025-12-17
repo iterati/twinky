@@ -1,7 +1,4 @@
 import curses
-import threading
-import time
-import queue
 
 from pytweening import (
     linear,
@@ -23,7 +20,6 @@ from colors import (
 from core import (
     Blender,
     Color,
-    Pattern,
     ControllablePattern,
     rand,
     choice,
@@ -47,20 +43,47 @@ from topologies import (
     TurntTopology,
     DistortTopology,
 )
+from ui import get_thread_and_menu
 
 
 class BasicBitch(ControllablePattern):
     controls = [
-        ("flash", [("0", 0.0), ("1", 1.0)]),
-        ("flicker",
-         [
-             ("0.5->0/6", Curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)])),
-             ("0->0.5/6", Curve(easeInOutSine, [(0, 0), (3, 0.5), (6, 0)])),
+        ("flash", [
+            ("0.25", 0.25),
+            ("0.5", 0.5),
+            ("0.75", 0.75),
+            ("1", 1.0),
+            ("Off", 0.0),
+        ]),
+        ("flicker", [
+            ("updown:6", Curve(easeInOutSine, [(0, 0), (3, 0.5), (6, 0)])),
+            ("downup:6", Curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)])),
+            ("updown:12", Curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)])),
+            ("downup:12", Curve(easeInOutSine, [(0, 0.5), (6, 0), (12, 0.5)])),
+            ("Off", 0.0),
          ]),
+        ("flitter", [
+            ("updown:6", Curve(easeInOutSine, [(0, 0), (3, 0.5), (6, 0)])),
+            ("downup:6", Curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)])),
+            ("updown:12", Curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)])),
+            ("downup:12", Curve(easeInOutSine, [(0, 0.5), (6, 0), (12, 0.5)])),
+            ("Off", 0.0),
+        ]),
+        ("flux", [
+            ("1/3:6", Curve(easeInOutSine, [(0, 0), (1.5, 1/3), (3, 0), (4.5, -1/3), (6, 0)])),
+            ("2/3:6", Curve(easeInOutSine, [(0, 0), (1.5, 2/3), (3, 0), (4.5, -2/3), (6, 0)])),
+            ("3/3:6", Curve(easeInOutSine, [(0, 0), (1.5, 1), (3, 0), (4.5, -1), (6, 0)])),
+            ("1/3:12", Curve(easeInOutSine, [(0, 0), (3, 1/3), (6, 0), (9, -1/3), (12, 0)])),
+            ("2/3:12", Curve(easeInOutSine, [(0, 0), (3, 2/3), (6, 0), (9, -2/3), (12, 0)])),
+            ("3/3:12", Curve(easeInOutSine, [(0, 0), (3, 1), (6, 0), (9, -1), (12, 0)])),
+            ("Off", 0.0),
+        ]),
     ]
     set_controls = [
         1,
         0,
+        1,
+        2,
     ]
 
     def __init__(self):
@@ -69,37 +92,34 @@ class BasicBitch(ControllablePattern):
             base_color=BaseColor(l=0),
             flash=0.0,
             flicker=0.0,
-            flitter=Curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)]),
-            flux=Curve(easeInOutSine, [(0, 0), (3, 2/3), (6, 0), (9, -2/3), (12, 0)]),
+            flitter=0.0,
+            flux=0.0,
         )
 
 
 class CircusTent(ControllablePattern):
-    controls = [
-        ("streamers",
-         [
-             ("On", streamer_choices(
-                 3,
-                 [
-                     [
-                         {
-                             "move_dir": move_dir,
-                             "spin_dir": spin_dir,
-                             "spin": Curve(const, [(0, 1), (3, 0.5), (6, 1)]),
-                             "length": 1.0,
-                             "width": Curve(const, [(0, 0.1), (3, 0.15), (6, 0.1)]),
-                             "lifetime": 6.0,
-                             "func": StreamerFuncs.WHITEN,
-                         } for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
-                     ] for move_dir in [Direction.FROM_BOT, Direction.FROM_TOP]
-                 ],
-             )),
-             ("Off", []),
-         ])
-    ]
+    @staticmethod
+    def mk_streamers():
+        return streamer_choices(
+            3,
+            [
+                [
+                    {
+                        "move_dir": move_dir,
+                        "spin_dir": spin_dir,
+                        "spin": Curve(const, [(0, 1), (3, 0.5), (6, 1)]),
+                        "length": 1.0,
+                        "width": Curve(const, [(0, 0.1), (3, 0.15), (6, 0.1)]),
+                        "lifetime": 6.0,
+                        "func": StreamerFuncs.WHITEN,
+                    } for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
+                ] for move_dir in [Direction.FROM_BOT, Direction.FROM_TOP]
+            ],
+        ) 
 
-    def __init__(self):
-        split_funcs = periodic_choices(1.5, [
+    @staticmethod
+    def mk_split_funcs(delay):
+        return periodic_choices(delay, [
             [
                 BaseColor(h=0.25, l=-1),
                 BaseColor(h=0.0, l=0, suppress=["sparkles"]),
@@ -124,15 +144,36 @@ class CircusTent(ControllablePattern):
                 BaseColor(h=0.75, l=0, suppress=["sparkles"]),
                 BaseColor(h=0.5, l=0, suppress=["sparkles"]),
             ],
-        ])
+        ]) 
 
+    controls = [
+        ("base_color", [("1.5", SplitColor(4, mk_split_funcs(1.5))), ("3", SplitColor(4, mk_split_funcs(3)))]),
+        ("topologies", [("r3", [RepeatTopology(3)]), ("r4", [RepeatTopology(4)]), ("r5", [RepeatTopology(5)]), ("r6", [RepeatTopology(6)])]),
+        ("spin", [
+            ("1xC-CC", Curve(easeInOutSine, [(0, 0), (15, 1), (30, 0), (45, -1), (60, 0)])),
+            ("1xCC-C", Curve(easeInOutSine, [(0, 0), (15, -1), (30, 0), (45, 1), (60, 0)])),
+            ("2xC-CC", Curve(easeInOutSine, [(0, 0), (7.5, 1), (15, 0), (22.5, -1), (30, 0)])),
+            ("2xCC-C", Curve(easeInOutSine, [(0, 0), (7.5, -1), (15, 0), (22.5, 1), (30, 0)])),
+        ]),
+        ("sparkles", [("0.25", 0.25), ("0.5", 0.5), ("0.75", 0.75), ("Off", 0.0)]),
+        ("streamers", [("On", mk_streamers()), ("Off", [])]),
+    ]
+    set_controls = [
+        1,
+        1,
+        0,
+        1,
+        1,
+    ]
+
+    def __init__(self):
         super(CircusTent, self).__init__(
             "Circus Tent",
-            base_color=SplitColor(4, split_funcs),
+            base_color=SplitColor(4, self.mk_split_funcs(1.5)),
             topologies=[RepeatTopology(4)],
             sparkles=0.5,
-            spin=Curve(easeInOutSine, [(0, 0), (15, 1), (30, 0), (45, -1), (60, 0)]),
-            streamers=None,
+            spin=0.0,
+            streamers=[],
         )
 
         
@@ -157,7 +198,7 @@ class Confetti(ControllablePattern):
             choose=choose)
         
     controls = [
-        ("sparkles", [("0", 0), ("0.1", 0.1), ("0.2", 0.2), ("0.3", 0.3)]),
+        ("sparkles", [("0.25", 0.25), ("0.5", 0.5), ("0.75", 0.75), ("Off", 0)]),
         ("streamers", [
             ("FROM_TOP", mk_streamer_choices(Direction.FROM_TOP)),
             ("FROM_BOT", mk_streamer_choices(Direction.FROM_BOT)),
@@ -175,18 +216,29 @@ class Confetti(ControllablePattern):
     def __init__(self):
         super(Confetti, self).__init__(
             "Confetti",
-            sparkles=0.2,
+            sparkles=0,
             streamers=[],
         )
     
 
 class CoiledSpring(ControllablePattern):
     controls = [
+        ("repeat", [("3", 3), ("4", 4), ("5", 5)]),
     ]
     set_controls = [
+        1,
     ]
 
+    @property
+    def repeat(self):
+        return self._repeat.count
+
+    @repeat.setter
+    def repeat(self, repeat):
+        self._repeat.count = repeat
+
     def __init__(self):
+        self._repeat = RepeatTopology(3)
         super(CoiledSpring, self).__init__(
             "Coiled Spring",
             base_color=WindowColor(
@@ -196,7 +248,7 @@ class CoiledSpring(ControllablePattern):
                     BaseColor(h=0.5, l=-1),
                 ],
             ),
-            topologies=[RepeatTopology(3)],
+            topologies=[self._repeat],
             spiral=Curve(easeOutBounce, [(0, 2), (15, -2), (30, 2)]),
             streamers=streamer_choices(
                 2,
@@ -468,7 +520,7 @@ class FallingSnow(ControllablePattern):
             flitter=0.25,
             flux=1/8,
             sparkles=Curve(easeInOutSine, [(0, 0.25), (6, 0.5), (12, 0.25)]),
-            streamers=[]
+            streamers=[],
         )
 
 class TurningWindows(ControllablePattern):
@@ -545,244 +597,28 @@ class Groovy(ControllablePattern):
             sparkles=0.25,
         )
 
-patterns = [
-    BasicBitch(),
-    CircusTent(),
-    CoiledSpring(),
-    Confetti(),
-    Confetti(),
-    FallingSnow(),
-    Galaxus(),
-    Groovy(),
-    Rainbro(),
-    SlidingDoor(),
-    SpiralTop(),
-    TurningWindows(),
-    TwistedRainbows(),
-]
-
-_sentinel = object()
-
-def animation_thread_task(animation, command_queue):
-    start_time = time.time()
-    animation.init(start_time)
-    next_frame = start_time + (1/16)
-    while True:
-        try:
-            command = command_queue.get(False)
-            if command is not None:
-                if command is _sentinel:
-                    print("Stopping animation")
-                    command_queue.put(_sentinel)
-                    break
-                else:
-                    command(animation)
-                command_queue.task_done()
-        except queue.Empty:
-            pass
-        
-        colors = animation.render(time.time())
-        animation.write(colors)
-        while time.time() < next_frame:
-            pass
-        next_frame += 1/16
-
-def pause(a):
-    a.pause_change = True
-
-def unpause(a):
-    a.pause_change = False
-
-def switch_idx(idx):
-    def func(a):
-        a.start_transition(int(idx))
-    return func
-
-def switch_name(name):
-    def func(a):
-        idx = [i for i, p in enumerate(a.patterns) if p.name == name][0]
-        a.start_transition(idx)
-    return func
-
-def set_control_option(idx, option_idx):
-    def func(a):
-        a.pattern.set_control_option(idx, option_idx)
-    return func
-
-def make_draw_menu(animation, q):
-    def draw_menu(stdscr):
-        curses.curs_set(0)
-        curses.cbreak()    # React to keys instantly, no Enter needed
-        stdscr.nodelay(True)
-        stdscr.keypad(True)
-        curses.start_color()
-        curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
-
-        def print_menu(screen, selected_row_idx, menu_items):
-            screen.clear()
-            h, w = screen.getmaxyx()
-
-            for idx, item in enumerate(menu_items):
-                y = h // 2 - len(menu_items) // 2 + idx
-
-                if item is None:
-                    continue
-                elif item == "PATTERN_NAME":
-                    x = w // 2 - len(animation.pattern_name) // 2
-                    screen.addstr(y, x, animation.pattern_name)
-                elif item == "TIME_STR":
-                    x = w // 2 - len(animation.time_str) // 2
-                    screen.addstr(y, x, animation.time_str)
-                elif item in controls:
-                    cidx = controls.index(item)
-                    options = animation.pattern.get_control_options(cidx)
-                    string = f"{item}: {' '.join(options)}"
-                    x = w // 2 - len(string) // 2
-
-                    selected_option = animation.pattern.get_control_option(cidx)
-                    if selected_row_idx == idx:
-                        screen.attron(curses.A_REVERSE)
-                        screen.addstr(y, x, item)
-                        screen.attroff(curses.A_REVERSE)
-                        screen.addstr(y, x + len(item), ": ")
-                    else:
-                        screen.addstr(y, x, f'{item}: ')
-
-                    l = len(item) + 2
-                    for j, option in enumerate(options):
-                        if j == selected_option:
-                            screen.attron(curses.A_REVERSE)
-                            screen.addstr(y, x + l, option)
-                            screen.attroff(curses.A_REVERSE)
-                        else:
-                            screen.addstr(y, x + l, option)
-                        l += len(option) + 1
-                else:
-                    x = w // 2 - len(item) // 2
-                    if idx == selected_row_idx:
-                        screen.attron(curses.A_REVERSE)
-                        screen.addstr(y, x, item)
-                        screen.attroff(curses.A_REVERSE)
-                    else:
-                        screen.addstr(y, x, item)
-
-            screen.refresh()
-
-        lowest_row = 4
-        current_row = lowest_row
-        while True:
-            controls = animation.pattern.get_controls() if isinstance(animation.pattern, ControllablePattern) else []
-            patterns = [p.name for p in animation.patterns]
-            menu_items = [
-                '[PAUSED]' if animation.pause_change else '',
-                "PATTERN_NAME",
-                "TIME_STR",
-                None,
-            ] + controls + [
-                None,
-            ] + patterns + [
-                None,
-                "EXIT",
-            ]
-
-            highest_row = len(menu_items) - 1
-            if current_row > highest_row:
-                current_row = highest_row
-
-            print_menu(stdscr, current_row, menu_items)
-            key = stdscr.getch()
-
-            if key == curses.KEY_UP:
-                current_row -= 1
-                if current_row < lowest_row:
-                    current_row = highest_row
-
-                while menu_items[current_row] is None:
-                    current_row -= 1
-                    if current_row < lowest_row:
-                        current_row = highest_row
-
-            elif key == curses.KEY_DOWN:
-                current_row += 1
-                if current_row > highest_row:
-                    current_row = lowest_row
-
-                while menu_items[current_row] is None:
-                    current_row += 1
-                    if current_row > highest_row:
-                        current_row = lowest_row
-
-            elif key == curses.KEY_LEFT:
-                if menu_items[current_row] in controls:
-                    idx = controls.index(menu_items[current_row])
-                    num_options = len(animation.pattern.get_control_options(idx))
-                    option_idx = animation.pattern.get_control_option(idx)
-                    option_idx = (option_idx - 1) % num_options
-                    q.put(set_control_option(idx, option_idx))
-
-            elif key == curses.KEY_RIGHT:
-                if menu_items[current_row] in controls:
-                    idx = controls.index(menu_items[current_row])
-                    num_options = len(animation.pattern.get_control_options(idx))
-                    option_idx = animation.pattern.get_control_option(idx)
-                    option_idx = (option_idx + 1) % num_options
-                    q.put(set_control_option(idx, option_idx))
-
-            elif key == ord(' '):
-                q.put(unpause if animation.pause_change else q.put(pause))
-
-            elif key == curses.KEY_ENTER or key in [10, 13]:
-                item = menu_items[current_row]
-                if item == "EXIT":
-                    q.put(_sentinel)
-                    break
-                elif item in patterns:
-                    pattern_idx = patterns.index(item)
-                    q.put(switch_idx(pattern_idx))
-
-        curses.nocbreak()
-        stdscr.keypad(False)
-        curses.echo()
-        curses.curs_set(1)
-    return draw_menu
-
-
-def console_run(animation, q):
-    valid_commands = ["Pause", "Unpause", "Quit"]
-    pattern_names = [p.name for p in animation.patterns]
-    pattern_idx = [f"{i}" for i in range(len(animation.patterns))]
-
-    while True:
-        command = input(f"{animation.pattern_name} >> ")
-        if command in valid_commands:
-            if command == "Pause":
-                q.put(pause)
-            elif command == "Unpause":
-                q.put(unpause)
-            elif command == "Quit":
-                q.put(_sentinel)
-                break
-        elif command in pattern_names:
-            q.put(switch_name(command))
-        elif command in pattern_idx:
-            q.put(switch_idx(command))
-
-
 if __name__ == "__main__":
+    patterns = [
+        BasicBitch(),
+        CircusTent(),
+        CoiledSpring(),
+        Confetti(),
+        Confetti(),
+        FallingSnow(),
+        Galaxus(),
+        Groovy(),
+        Rainbro(),
+        SlidingDoor(),
+        SpiralTop(),
+        TurningWindows(),
+        TwistedRainbows(),
+    ]
     animation = Blender(
         patterns,
-        start_idx=-1,
+        start_idx=0,
         pause_change=False,
     )
-    q = queue.Queue()
-    animation_thread = threading.Thread(
-        target=animation_thread_task,
-        args=(animation,q,),
-    )
+    animation_thread, draw_menu = get_thread_and_menu(animation)
     animation_thread.start()
-    # console_run(animation, q)
-    draw_menu = make_draw_menu(animation, q)
     curses.wrapper(draw_menu)
     animation_thread.join()

@@ -104,14 +104,14 @@ class BaseColor:
 
 BaseColorFunc: TypeAlias = BaseColor
 BaseColorFuncs: TypeAlias = list[BaseColorFunc | None]
-BaseColorFuncsFunc: TypeAlias = Callable[[float], BaseColorFuncs] | BaseColorFuncs
+BaseColorFuncsParam: TypeAlias = Callable[[float], BaseColorFuncs] | BaseColorFuncs
 
 
-def getv_funcs(v: BaseColorFuncsFunc, t: float) -> BaseColorFuncs:
+def getv_funcs(v: BaseColorFuncsParam, t: float) -> BaseColorFuncs:
     return v(t) if callable(v) else v
 
 
-def periodic_choices(delay: float, choices: list[BaseColorFuncs]) -> BaseColorFuncsFunc:
+def periodic_choices(delay: float, choices: list[BaseColorFuncs]) -> BaseColorFuncsParam:
     def func(t: float) -> BaseColorFuncs:
         return choices[int(t / delay) % len(choices)]
 
@@ -150,7 +150,7 @@ class ColorFuncs(Enum):
 class WindowColor(BaseColor):
     def __init__(self,
                  ratio: Param,
-                 funcs: BaseColorFuncsFunc | None=None,
+                 funcs: BaseColorFuncsParam | None=None,
                  suppress: list[str] | None=None):
         super(WindowColor, self).__init__(suppress=suppress)
         self.ratio = ratio
@@ -182,7 +182,7 @@ class WindowColor(BaseColor):
 class SplitColor(BaseColor):
     def __init__(self,
                  count: Param,
-                 funcs: BaseColorFuncsFunc | None=None,
+                 funcs: BaseColorFuncsParam | None=None,
                  suppress: list[str] | None=None):
         super(SplitColor, self).__init__(suppress=suppress)
         self.count = count

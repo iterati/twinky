@@ -7,7 +7,7 @@ from typing import Callable, TypeAlias
 from xled.discover import xdiscover
 from xled.control import ControlInterface
 
-from colors import Color, BaseColor, ColorFuncs
+from colors import Color, BaseColor, ColorFuncs, BaseColorFuncsParam
 from param import Param, getv, Curve
 from streamer import Streamer, StreamerParam, getv_streamers
 from topologies import Topology
@@ -129,7 +129,7 @@ class Pattern:
         self.streamers = streamers if streamers is not None else []
 
 
-ControlValue: TypeAlias = float | Curve | StreamerParam
+ControlValue: TypeAlias = float | Curve | StreamerParam | BaseColor | list[Topology]
 ControlOption: TypeAlias = tuple[str, ControlValue]
 ControlOptions: TypeAlias = list[ControlOption]
 Control: TypeAlias = tuple[str, ControlOptions]
