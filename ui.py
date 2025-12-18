@@ -27,6 +27,9 @@ def animation_thread_task(animation, command_queue):
         
         colors = animation.render(time.time())
         animation.write(colors)
+        # except Exception as ex:
+        #     print(animation.pattern.name)
+        #     raise ex
         while time.time() < next_frame:
             pass
         next_frame += 1/16

@@ -65,6 +65,42 @@ class Curve:
     def __repr__(self):
         return f"curve({self.control_points})"
 
+    def __add__(self, y):
+        return Curve(self.shape_func, [(t, v + y) for (t, v) in self.control_points])
+
+    def __radd__(self, y):
+        return self.__add__(y)
+
+    def __sub__(self, y):
+        return Curve(self.shape_func, [(t, v - y) for (t, v) in self.control_points])
+
+    def __rsub__(self, y):
+        return self.__sub__(y)
+
+    def __mul__(self, y):
+        return Curve(self.shape_func, [(t, v * y) for (t, v) in self.control_points])
+
+    def __rmul__(self, y):
+        return self.__mul__(y)
+
+    def __truediv__(self, y):
+        return Curve(self.shape_func, [(t, v / y) for (t, v) in self.control_points])
+
+    def __rtruediv__(self, y):
+        return self.__truediv__(y)
+
+    def __floordiv__(self, y):
+        return Curve(self.shape_func, [(t, v // y) for (t, v) in self.control_points])
+
+    def __floorrdiv__(self, y):
+        return self.__floordiv__(y)
+
+    def __mod__(self, y):
+        return Curve(self.shape_func, [(t, v % y) for (t, v) in self.control_points])
+
+    def __rmod__(self, y):
+        return self.__mod__(y)
+
 
 class Random(Curve):
     def __init__(self,
@@ -91,6 +127,42 @@ class Random(Curve):
         maxv = getv(self.maxv, t)
         return (s * (maxv - minv)) + minv
 
+    def __add__(self, y):
+        return Random(self.minv + y, self.maxv + y, self.length)
+
+    def __radd__(self, y):
+        return self.__add__(y)
+
+    def __sub__(self, y):
+        return Random(self.minv - y, self.maxv + y, self.length)
+
+    def __rsub__(self, y):
+        return self.__sub__(y)
+
+    def __mul__(self, y):
+        return Random(self.minv * y, self.maxv + y, self.length)
+
+    def __rmul__(self, y):
+        return self.__mul__(y)
+
+    def __truediv__(self, y):
+        return Random(self.minv / y, self.maxv + y, self.length)
+
+    def __rtruediv__(self, y):
+        return self.__truediv__(y)
+
+    def __floordiv__(self, y):
+        return Random(self.minv // y, self.maxv + y, self.length)
+
+    def __rfloordiv__(self, y):
+        return self.__floordiv__(y)
+
+    def __mod__(self, y):
+        return Random(self.minv % y, self.maxv + y, self.length)
+
+    def __rmod__(self, y):
+        return self.__mod__(y)
+
 
 class CombinedCurve(Curve):
     def __init__(self, curves: list[Curve]):
@@ -110,21 +182,56 @@ class CombinedCurve(Curve):
 
         return self.curves[idx](t - self.starts[idx])
             
+    def __add__(self, y):
+        return CombinedCurve([
+            Curve(self.shape_func, [(t, v + y) for (t, v) in curve.control_points])
+            for curve in self.curves
+        ])
 
-def combined_curve(curves: list[Curve]) -> ParamFunc:
-    starts = []
-    length = 0
-    for c in curves:
-        starts.append(length)
-        length += c.length
-        
-    def func(t: float):
-        s = t % length
-        idx = 0
-        for i, s in enumerate(starts):
-            if t > s:
-                idx = i
+    def __radd__(self, y):
+        return self.__add__(y)
 
-        return curves[idx](t - starts[idx])
+    def __sub__(self, y):
+        return CombinedCurve([
+            Curve(self.shape_func, [(t, v - y) for (t, v) in curve.control_points])
+            for curve in self.curves
+        ])
 
-    return func
+    def __rsub__(self, y):
+        return self.__sub__(y)
+
+    def __mul__(self, y):
+        return CombinedCurve([
+            Curve(self.shape_func, [(t, v * y) for (t, v) in curve.control_points])
+            for curve in self.curves
+        ])
+
+    def __rmul__(self, y):
+        return self.__mul__(y)
+
+    def __truediv__(self, y):
+        return CombinedCurve([
+            Curve(self.shape_func, [(t, v / y) for (t, v) in curve.control_points])
+            for curve in self.curves
+        ])
+
+    def __rtruediv__(self, y):
+        return self.__truediv__(y)
+
+    def __floordiv__(self, y):
+        return CombinedCurve([
+            Curve(self.shape_func, [(t, v // y) for (t, v) in curve.control_points])
+            for curve in self.curves
+        ])
+
+    def __rfloordiv__(self, y):
+        return self.__floordiv__(y)
+
+    def __mod__(self, y):
+        return CombinedCurve([
+            Curve(self.shape_func, [(t, v % y) for (t, v) in curve.control_points])
+            for curve in self.curves
+        ])
+
+    def __rmod__(self, y):
+        return self.__mul__(y)

@@ -78,8 +78,8 @@ class Pixel:
     def l(self, l):
         self.color.l = l
  
-    def as_byte(self):
-        return self.color.as_byte()
+    def as_byte(self, t=0):
+        return self.color.as_byte(t)
 
 
 class Interface(ControlInterface):
@@ -392,7 +392,7 @@ class Blender:
         for interface, buffer, colors in zip(self.lights.interfaces, self.buffers, colors):
             buffer.seek(0)
             for color in colors:
-                buffer.write(color.as_byte())
+                buffer.write(color.as_byte(self._t - self.pattern_start))
             
             interface._udpclient = self.lights.udpclient
             interface.udpclient.destination_host = interface.host

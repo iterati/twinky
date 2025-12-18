@@ -53,9 +53,17 @@ class Color:
     def reset(self):
         self.w, self.h, self.s, self.l = 0, 0, 1.0, -1.0
 
-    def as_byte(self):
-        rgb = hsl_color(self.h, self.s, self.l)
-        return struct.pack('>BBBB', int(self.w * 255), *rgb)
+    def as_byte(self, t=0):
+        w = getv(self.w, t)
+        h = getv(self.h, t)
+        s = getv(self.s, t)
+        l = getv(self.l, t)
+        try:
+            rgb = hsl_color(h, s, l)
+        except Exception as ex:
+            print(f"self.w={self.w} self.h={self.h} self.s={self.s} self.l={self.l} w={w} h={h} s={s} l={l}")
+            raise ex
+        return struct.pack('>BBBB', int(w * 255), *rgb)
 
     def __repr__(self):
         return f"{self.w} {self.h} {self.s} {self.l}"

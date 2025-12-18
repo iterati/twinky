@@ -143,9 +143,6 @@ HALVES053 = [("0.5", 0.5), ("1", 1), ("1.5", 1.5), ("2", 2), ("2.5", 2.5), ("3",
 HALVES056 = HALVES053 + [("4", 4), ("5", 5), ("6", 6)]
 QUARTERS = [("0.25", 0.25), ("0.5", 0.5), ("0.75", 0.75), ("1.0", 1.0)]
 
-def make_option(name, values):
-    return (name, [(str(i), i) for i in values])
-
 class SparkleFuncOptions:
     default = ("sparkle_func", [
         ("base", ColorFuncs.BASE),
@@ -179,7 +176,8 @@ class StreamerFuncOptions:
     ])
 
 class RainbowOptions:
-    default = make_option("rainbow", FRACS + SINES + ONE_ZERO)
+    default = ("rainbow", FRACS + SINES + ONE_ZERO)
+    nocurve = ("rainbow", FRACS + ONE_ZERO)
 
 class FlashOptions:
     default = ("flash", FRACS + QUARTER_SINES + ONE_ZERO)
@@ -490,7 +488,7 @@ class Confetti(ControllablePattern):
         self._rainbow = 1.0
 
         self.controls = [
-            RainbowOptions.default,
+            RainbowOptions.nocurve,
             FlickerOptions.default,
             FlitterOptions.default,
             FluxOptions.default,
@@ -500,7 +498,7 @@ class Confetti(ControllablePattern):
                 ("\u21c5", "BOTH"),
             ]),
             ("intensity", [("low", "low"), ("medium", "medium"), ("high", "high")]),
-            make_option("delay", [0.25, 0.5, 0.75, 1]),
+            ("delay", QUARTERS),
             SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
@@ -522,7 +520,7 @@ class Confetti(ControllablePattern):
                     "length": lambda _: choice([0.25, 0.5])(),
                     "lifetime": lambda _: rand(3, 6)(),
                     "func": RandomColorStreamerFunc(
-                        -self._rainbow / 2, self.rainbow / 2, w=0, s=1, l=0),
+                        -1 * self._rainbow / 2, self.rainbow / 2, w=0, s=1, l=0),
                 }
                 for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
                 for spin, width in [(0.5, 0.1), (1, 0.15), (1.5, 0.2)]
@@ -591,7 +589,7 @@ class FallingSnow(ControllablePattern):
         self._fade = easeInOutCubic
         
         self.controls = [
-            make_option("colors", [6, 8, 10, 12, 16]),
+            ("colors", [("6", 6), ("8", 8), ("10", 10), ("12", 12)]),
             FluxOptions.default,
             FlitterOptions.default,
             ("fade", [
@@ -824,7 +822,7 @@ class Groovy(ControllablePattern):
         self._mirrors = 2
 
         self.controls = [
-            RainbowOptions.default,
+            RainbowOptions.nocurve,
             FlitterOptions.default,
             FlickerOptions.default,
             FluxOptions.default,
@@ -933,9 +931,9 @@ class Groovy(ControllablePattern):
                 BaseColor(
                     l=0.0, spread=False, suppress=["sparkles"],
                     h=Curve(easeInOutSine, [
-                        (0, -self._rainbow),
+                        (0, -1 * self._rainbow),
                         (10, 0),
-                        (20, -self._rainbow)]),
+                        (20, -1 * self._rainbow)]),
                 ),
             ],
         )
@@ -972,7 +970,7 @@ class Rainbro(ControllablePattern):
         self._repeats = 0
 
         self.controls = [
-            RainbowOptions.default,
+            RainbowOptions.nocurve,
             FlitterOptions.default,
             FluxOptions.default,
             SpinOptions.default,
@@ -1035,7 +1033,7 @@ class Rainbro(ControllablePattern):
         ])
         self.spread = Curve(easeInOutSine, [
             (0, self._rainbow),
-            (15, -self._rainbow),
+            (15, -1 * self._rainbow),
             (30, self._rainbow),
         ])
 
@@ -1060,9 +1058,9 @@ class SlidingDoor(ControllablePattern):
         self._speed = 1
 
         self.controls = [
-            RainbowOptions.default,
+            RainbowOptions.nocurve,
             FluxOptions.default,
-            ("mirror", [("jumble", 0), INTS28]),
+            ("mirror", [("jumble", 0)] + INTS28),
             ("speed", INTS26),
             SparkleOptions.default,
             SparkleFuncOptions.default,
@@ -1135,7 +1133,7 @@ class SlidingDoor(ControllablePattern):
                 BaseColor(
                     h=Curve(const, [
                         (0, self._rainbow / 2),
-                        (30 / self._speed, -self._rainbow / 2),
+                        (30 / self._speed, -1 * self._rainbow / 2),
                         (60 / self._speed, self._rainbow / 2),
                     ]),
                     l=0,
@@ -1147,7 +1145,7 @@ class SlidingDoor(ControllablePattern):
         self.streamers = self.mk_streamers()
         self.spread = Curve(easeInOutSine, [
             (0, self._rainbow / 2),
-            (15, -self._rainbow / 2),
+            (15, -1 * self._rainbow / 2),
             (30, self._rainbow / 2),
         ])
         mirror = Curve(const, [
@@ -1261,13 +1259,13 @@ class TurningWindows(ControllablePattern):
         self._rainbow = 1
 
         self.controls = [
-            SpinOptions.default,
-            SparkleOptions.default,
-            RainbowOptions.default,
+            RainbowOptions.nocurve,
             FluxOptions.default,
+            SpinOptions.default,
             ("delay", QUARTERS),
             ("splits", INTS28),
             ("repeats", INTS18),
+            SparkleOptions.default,
         ]
 
         base_windows = [None] * splits
@@ -1423,7 +1421,7 @@ class TwistedRainbows(ControllablePattern):
         self.spread = Curve(easeInOutCubic, [
             (0, self._rainbow / 2),
             (3, 0),
-            (6, -self._rainbow / 2),
+            (6, -1 * self._rainbow / 2),
             (9, 0),
             (12, self._rainbow / 2),
         ])
@@ -1505,7 +1503,7 @@ if __name__ == "__main__":
         TurningWindows(),
         TwistedRainbows(),
     ]
-    animation = Blender(patterns)
+    animation = Blender(patterns, 7)
     animation_thread, draw_menu = get_thread_and_menu(animation)
     animation_thread.start()
     curses.wrapper(draw_menu)
