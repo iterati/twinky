@@ -55,56 +55,96 @@ from topologies import (
 from ui import get_thread_and_menu
 
 
-FRACSL = [
-    ("1/16", 1/16),
-    ("1/12", 1/12),
+FRACS = [
     ("1/8", 1/8),
     ("1/6", 1/6),
     ("1/5", 1/5),
     ("1/4", 1/4),
     ("1/3", 1/3),
     ("1/2", 1/2),
-]
-FRACSU = [
-    ("1/2", 1/2),
     ("2/3", 2/3),
     ("3/4", 3/4),
     ("4/5", 4/5),
     ("5/6", 5/6),
     ("7/8", 7/8),
-    ("11/12", 11/12),
-    ("15/16", 15/16),
 ]
-FRACS = FRACSL + FRACSU
-
+SINES = [
+    ("1/4:6",  Curve(easeInOutSine, [(0, 0), (3, 1/4), (6, 0)])),
+    ("1/3:6",  Curve(easeInOutSine, [(0, 0), (3, 1/3), (6, 0)])),
+    ("1/2:6",  Curve(easeInOutSine, [(0, 0), (3, 1/2), (6, 0)])),
+    ("2/3:6",  Curve(easeInOutSine, [(0, 0), (3, 2/3), (6, 0)])),
+    ("3/4:6",  Curve(easeInOutSine, [(0, 0), (3, 3/4), (6, 0)])),
+    (  "1:6",  Curve(easeInOutSine, [(0, 0), (3, 1),   (6, 0)])),
+    ("1/4:12", Curve(easeInOutSine, [(0, 0), (6, 1/4), (12, 0)])),
+    ("1/3:12", Curve(easeInOutSine, [(0, 0), (6, 1/3), (12, 0)])),
+    ("1/2:12", Curve(easeInOutSine, [(0, 0), (6, 1/2), (12, 0)])),
+    ("2/3:12", Curve(easeInOutSine, [(0, 0), (6, 2/3), (12, 0)])),
+    ("3/4:12", Curve(easeInOutSine, [(0, 0), (6, 3/4), (12, 0)])),
+    (  "1:12", Curve(easeInOutSine, [(0, 0), (6, 1),   (12, 0)])),
+    ("1/4:30", Curve(easeInOutSine, [(0, 0), (15, 1/4), (30, 0)])),
+    ("1/3:30", Curve(easeInOutSine, [(0, 0), (15, 1/3), (30, 0)])),
+    ("1/2:30", Curve(easeInOutSine, [(0, 0), (15, 1/2), (30, 0)])),
+    ("2/3:30", Curve(easeInOutSine, [(0, 0), (15, 2/3), (30, 0)])),
+    ("3/4:30", Curve(easeInOutSine, [(0, 0), (15, 3/4), (30, 0)])),
+    (  "1:30", Curve(easeInOutSine, [(0, 0), (15, 1),   (30, 0)])),
+]
+QUARTER_SINES = [
+    ("0.25\u21c5 6", Curve(easeInOutSine, [(0, 0),    (3, 0.25), (6, 0)])),
+    ("0.25\u21f5 6", Curve(easeInOutSine, [(0, 0.25), (3, 0),    (6, 0.25)])),
+    ("0.50\u21c5 6", Curve(easeInOutSine, [(0, 0),    (3, 0.50), (6, 0)])),
+    ("0.50\u21f5 6", Curve(easeInOutSine, [(0, 0.50), (3, 0),    (6, 0.50)])),
+    ("0.75\u21c5 6", Curve(easeInOutSine, [(0, 0),    (3, 0.75), (6, 0)])),
+    ("0.75\u21f5 6", Curve(easeInOutSine, [(0, 0.75), (3, 0),    (6, 0.75)])),
+    ("1.00\u21c5 6", Curve(easeInOutSine, [(0, 0),    (3, 1),    (6, 0)])),
+    ("1.00\u21f5 6", Curve(easeInOutSine, [(0, 1),    (3, 0),    (6, 1)])),
+    ("0.25\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 0.25), (12, 0)])),
+    ("0.25\u21f5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0),    (12, 0.25)])),
+    ("0.50\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 0.5),  (12, 0)])),
+    ("0.50\u21f5 12", Curve(easeInOutSine, [(0, 0.5),  (6, 0),    (12, 0.5)])),
+    ("0.75\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 0.75), (12, 0)])),
+    ("0.75\u21f5 12", Curve(easeInOutSine, [(0, 0.75), (6, 0),    (12, 0.75)])),
+    ("1.00\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 1),    (12, 0)])),
+    ("1.00\u21f5 12", Curve(easeInOutSine, [(0, 1),    (6, 0),    (12, 1)])),
+    ("0.25\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 0.25), (30, 0)])),
+    ("0.25\u21f5 30", Curve(easeInOutSine, [(0, 0.25), (15, 0),    (30, 0.25)])),
+    ("0.50\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 0.5),  (30, 0)])),
+    ("0.50\u21f5 30", Curve(easeInOutSine, [(0, 0.5),  (15, 0),    (30, 0.5)])),
+    ("0.75\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 0.75), (30, 0)])),
+    ("0.75\u21f5 30", Curve(easeInOutSine, [(0, 0.75), (15, 0),    (30, 0.75)])),
+    ("1.00\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 1),    (30, 0)])),
+    ("1.00\u21f5 30", Curve(easeInOutSine, [(0, 1),    (15, 0),    (30, 1)])),
+]
+BOUNCES = [
+    ("1/4:6",  Curve(easeInOutSine, [(0, 0), (1.5, 1/4), (3, 0), (4.5, -1/4), (6, 0)])),
+    ("1/3:6",  Curve(easeInOutSine, [(0, 0), (1.5, 1/3), (3, 0), (4.5, -1/3), (6, 0)])),
+    ("1/2:6",  Curve(easeInOutSine, [(0, 0), (1.5, 1/2), (3, 0), (4.5, -1/2), (6, 0)])),
+    ("2/3:6",  Curve(easeInOutSine, [(0, 0), (1.5, 2/3), (3, 0), (4.5, -2/3), (6, 0)])),
+    ("3/4:6",  Curve(easeInOutSine, [(0, 0), (1.5, 3/4), (3, 0), (4.5, -3/4), (6, 0)])),
+    (  "1:6",  Curve(easeInOutSine, [(0, 0), (1.5, 1),   (3, 0), (4.5, -1),   (6, 0)])),
+    ("1/4:12", Curve(easeInOutSine, [(0, 0), (3, 1/4), (6, 0), (9, -1/4), (12, 0)])),
+    ("1/3:12", Curve(easeInOutSine, [(0, 0), (3, 1/3), (6, 0), (9, -1/3), (12, 0)])),
+    ("1/2:12", Curve(easeInOutSine, [(0, 0), (3, 1/2), (6, 0), (9, -1/2), (12, 0)])),
+    ("2/3:12", Curve(easeInOutSine, [(0, 0), (3, 2/3), (6, 0), (9, -2/3), (12, 0)])),
+    ("3/4:12", Curve(easeInOutSine, [(0, 0), (3, 3/4), (6, 0), (9, -3/4), (12, 0)])),
+    (  "1:12", Curve(easeInOutSine, [(0, 0), (3, 1),   (6, 0), (9, -1),   (12, 0)])),
+    ("1/4:30", Curve(easeInOutSine, [(0, 0), (7.5, 1/4), (15, 0), (22.5, -1/4), (30, 0)])),
+    ("1/3:30", Curve(easeInOutSine, [(0, 0), (7.5, 1/3), (15, 0), (22.5, -1/3), (30, 0)])),
+    ("1/2:30", Curve(easeInOutSine, [(0, 0), (7.5, 1/2), (15, 0), (22.5, -1/2), (30, 0)])),
+    ("2/3:30", Curve(easeInOutSine, [(0, 0), (7.5, 2/3), (15, 0), (22.5, -2/3), (30, 0)])),
+    ("3/4:30", Curve(easeInOutSine, [(0, 0), (7.5, 3/4), (15, 0), (22.5, -3/4), (30, 0)])),
+    (  "1:30", Curve(easeInOutSine, [(0, 0), (7.5, 1),   (15, 0), (22.5, -1),   (30, 0)])),
+]
+ONE_ZERO = [("1", 1), ("off", 0)]
+INTS16 = [("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5), ("6", 6)]
+INTS18 = INTS16 + [("7", 7), ("8", 8)]
+INTS26 = INTS16[1:] 
+INTS28 = INTS18[1:]
+HALVES053 = [("0.5", 0.5), ("1", 1), ("1.5", 1.5), ("2", 2), ("2.5", 2.5), ("3", 3)]
+HALVES056 = HALVES053 + [("4", 4), ("5", 5), ("6", 6)]
+QUARTERS = [("0.25", 0.25), ("0.5", 0.5), ("0.75", 0.75), ("1.0", 1.0)]
 
 def make_option(name, values):
     return (name, [(str(i), i) for i in values])
-
-def make_optionf(name, values):
-    r = []
-    for v in values:
-        vs = v.split("/")
-        r.append((v, int(vs[0]) / int(vs[1])))
-
-    return (name, r)
-
-class RainbowOptions:
-    default = ("rainbow", [
-        ("1/8", 1/8),
-        ("1/6", 1/6),
-        ("1/5", 1/5),
-        ("1/4", 1/4),
-        ("1/3", 1/3),
-        ("1/2", 1/2),
-        ("2/3", 2/3),
-        ("3/4", 3/4),
-        ("4/5", 4/5),
-        ("5/6", 5/6),
-        ("7/8", 7/8),
-        ("1", 1),
-        ("off", 0),
-    ])
 
 class SparkleFuncOptions:
     default = ("sparkle_func", [
@@ -138,108 +178,20 @@ class StreamerFuncOptions:
         ("off", StreamerFuncs.NOOP),
     ])
 
+class RainbowOptions:
+    default = make_option("rainbow", FRACS + SINES + ONE_ZERO)
+
 class FlashOptions:
-    default = ("flash", FRACS + [
-        ("1", 1),
-        ("off", 0),
-    ])
-    curved = ("flash", [
-        ("0.25\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.25), (6, 0)])),
-        ("0.25\u21f5 6", Curve(easeInOutSine, [(0, 0.25), (3, 0), (6, 0.25)])),
-        ("0.25\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.25), (12, 0)])),
-        ("0.25\u21f5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0), (12, 0.25)])),
-        ("0.5\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.5), (6, 0)])),
-        ("0.5\u21f5 6", Curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)])),
-        ("0.5\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)])),
-        ("0.5\u21f5 12", Curve(easeInOutSine, [(0, 0.5), (6, 0), (12, 0.5)])),
-        ("0.75\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.75), (6, 0)])),
-        ("0.75\u21f5 6", Curve(easeInOutSine, [(0, 0.75), (3, 0), (6, 0.75)])),
-        ("0.75\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.75), (12, 0)])),
-        ("0.75\u21f5 12", Curve(easeInOutSine, [(0, 0.75), (6, 0), (12, 0.75)])),
-        ("1\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 1), (6, 0)])),
-        ("1\u21f5 6", Curve(easeInOutSine, [(0, 1), (3, 0), (6, 1)])),
-        ("1\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 1), (12, 0)])),
-        ("1\u21f5 12", Curve(easeInOutSine, [(0, 1), (6, 0), (12, 1)])),
-        ("off", 0),
-    ])
+    default = ("flash", FRACS + QUARTER_SINES + ONE_ZERO)
 
 class FlickerOptions:
-    default = ("flicker", FRACS + [
-        ("1", 1),
-        ("off", 0),
-    ])
-    curved = ("flicker", [
-        ("0.25\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.25), (6, 0)])),
-        ("0.25\u21f5 6", Curve(easeInOutSine, [(0, 0.25), (3, 0), (6, 0.25)])),
-        ("0.25\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.25), (12, 0)])),
-        ("0.25\u21f5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0), (12, 0.25)])),
-        ("0.5\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.5), (6, 0)])),
-        ("0.5\u21f5 6", Curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)])),
-        ("0.5\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)])),
-        ("0.5\u21f5 12", Curve(easeInOutSine, [(0, 0.5), (6, 0), (12, 0.5)])),
-        ("0.75\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.75), (6, 0)])),
-        ("0.75\u21f5 6", Curve(easeInOutSine, [(0, 0.75), (3, 0), (6, 0.75)])),
-        ("0.75\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.75), (12, 0)])),
-        ("0.75\u21f5 12", Curve(easeInOutSine, [(0, 0.75), (6, 0), (12, 0.75)])),
-        ("1\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 1), (6, 0)])),
-        ("1\u21f5 6", Curve(easeInOutSine, [(0, 1), (3, 0), (6, 1)])),
-        ("1\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 1), (12, 0)])),
-        ("1\u21f5 12", Curve(easeInOutSine, [(0, 1), (6, 0), (12, 1)])),
-        ("off", 0),
-    ])
+    default = ("flicker", FRACS + QUARTER_SINES + ONE_ZERO)
 
 class FlitterOptions:
-    default = ("flitter", FRACS + [
-        ("1", 1),
-        ("off", 0),
-    ])
-    curved = ("flitter", [
-        ("0.25\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.25), (6, 0)])),
-        ("0.25\u21f5 6", Curve(easeInOutSine, [(0, 0.25), (3, 0), (6, 0.25)])),
-        ("0.25\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.25), (12, 0)])),
-        ("0.25\u21f5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0), (12, 0.25)])),
-        ("0.5\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.5), (6, 0)])),
-        ("0.5\u21f5 6", Curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)])),
-        ("0.5\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)])),
-        ("0.5\u21f5 12", Curve(easeInOutSine, [(0, 0.5), (6, 0), (12, 0.5)])),
-        ("0.75\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 0.75), (6, 0)])),
-        ("0.75\u21f5 6", Curve(easeInOutSine, [(0, 0.75), (3, 0), (6, 0.75)])),
-        ("0.75\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.75), (12, 0)])),
-        ("0.75\u21f5 12", Curve(easeInOutSine, [(0, 0.75), (6, 0), (12, 0.75)])),
-        ("1\u21c5 6", Curve(easeInOutSine, [(0, 0), (3, 1), (6, 0)])),
-        ("1\u21f5 6", Curve(easeInOutSine, [(0, 1), (3, 0), (6, 1)])),
-        ("1\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 1), (12, 0)])),
-        ("1\u21f5 12", Curve(easeInOutSine, [(0, 1), (6, 0), (12, 1)])),
-        ("off", 0),
-    ])
+    default = ("flitter", FRACS + QUARTER_SINES + ONE_ZERO)
 
 class FluxOptions:
-    default = ("flux", FRACS + [
-        ("off", 0),
-    ])
-    curved = ("flux", [
-        ("1/8:6", Curve(easeInOutSine, [(0, 0), (1.5, 1/8), (3, 0), (4.5, -1/8), (6, 0)])),
-        ("1/6:6", Curve(easeInOutSine, [(0, 0), (1.5, 1/6), (3, 0), (4.5, -1/6), (6, 0)])),
-        ("1/4:6", Curve(easeInOutSine, [(0, 0), (1.5, 1/4), (3, 0), (4.5, -1/4), (6, 0)])),
-        ("1/3:6", Curve(easeInOutSine, [(0, 0), (1.5, 1/3), (3, 0), (4.5, -1/3), (6, 0)])),
-        ("1/2:6", Curve(easeInOutSine, [(0, 0), (1.5, 1/2), (3, 0), (4.5, -1/2), (6, 0)])),
-        ("2/3:6", Curve(easeInOutSine, [(0, 0), (1.5, 2/3), (3, 0), (4.5, -2/3), (6, 0)])),
-        ("3/4:6", Curve(easeInOutSine, [(0, 0), (1.5, 3/4), (3, 0), (4.5, -3/4), (6, 0)])),
-        ("5/6:6", Curve(easeInOutSine, [(0, 0), (1.5, 5/6), (3, 0), (4.5, -5/6), (6, 0)])),
-        ("7/8:6", Curve(easeInOutSine, [(0, 0), (1.5, 7/8), (3, 0), (4.5, -7/8), (6, 0)])),
-        ("1:6",   Curve(easeInOutSine, [(0, 0), (1.5, 1), (3, 0), (4.5, -1), (6, 0)])),
-        ("1/8:12", Curve(easeInOutSine, [(0, 0), (3, 1/8), (6, 0), (9, -1/8), (12, 0)])),
-        ("1/6:12", Curve(easeInOutSine, [(0, 0), (3, 1/6), (6, 0), (9, -1/6), (12, 0)])),
-        ("1/4:12", Curve(easeInOutSine, [(0, 0), (3, 1/4), (6, 0), (9, -1/4), (12, 0)])),
-        ("1/3:12", Curve(easeInOutSine, [(0, 0), (3, 1/3), (6, 0), (9, -1/3), (12, 0)])),
-        ("1/2:12", Curve(easeInOutSine, [(0, 0), (3, 1/2), (6, 0), (9, -1/2), (12, 0)])),
-        ("2/3:12", Curve(easeInOutSine, [(0, 0), (3, 2/3), (6, 0), (9, -2/3), (12, 0)])),
-        ("3/4:12", Curve(easeInOutSine, [(0, 0), (3, 3/4), (6, 0), (9, -3/4), (12, 0)])),
-        ("5/6:12", Curve(easeInOutSine, [(0, 0), (3, 5/6), (6, 0), (9, -5/6), (12, 0)])),
-        ("7/8:12", Curve(easeInOutSine, [(0, 0), (3, 7/8), (6, 0), (9, -7/8), (12, 0)])),
-        ("1:12",   Curve(easeInOutSine, [(0, 0), (3, 1), (6, 0), (9, -1), (12, 0)])),
-        ("off", 0),
-    ])
+    default = ("flux", FRACS + BOUNCES + ONE_ZERO)
 
 class SpinOptions:
     default = ("spin", [
@@ -257,9 +209,6 @@ class SpinOptions:
         ("\u21ba 4", 4),
         ("\u21ba 5", 5),
         ("\u21ba 6", 6),
-        ("off", 0),
-    ])
-    bothways = ("spin", [
         ("1x\u21bb\u21ba x1", Curve(easeInOutSine, [(0, 0), (15, -1), (30, 0), (45, 1), (60, 0)])),
         ("1x\u21ba\u21bb x1", Curve(easeInOutSine, [(0, 0), (15, 1), (30, 0), (45, -1), (60, 0)])),
         ("2x\u21bb\u21ba x1", Curve(easeInOutSine, [(0, 0), (7.5, -1), (15, 0), (22.5, 1), (30, 0)])),
@@ -273,21 +222,24 @@ class SpinOptions:
 
 class SparkleOptions:
     default = ("sparkles", FRACS + [
-        ("off", 0),
-    ])
-    curved = ("sparkles", [
-        ("L\u21c5 6",  Curve(easeInOutSine, [(0, 0), (3, 0.5), (6, 0)])),
-        ("L\u21f5 6",  Curve(easeInOutSine, [(0, 0.5), (3, 0), (6, 0.5)])),
-        ("L\u21c5 12", Curve(easeInOutSine, [(0, 0), (6, 0.5), (12, 0)])),
-        ("L\u21f5 12", Curve(easeInOutSine, [(0, 0.5), (6, 0), (12, 0.5)])),
-        ("M\u21c5 6",  Curve(easeInOutSine, [(0, 0.25), (3, 0.5), (6, 0.25)])),
-        ("M\u21f5 6",  Curve(easeInOutSine, [(0, 0.5), (3, 0.25), (6, 0.5)])),
-        ("M\u21c5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0.5), (12, 0.25)])),
-        ("M\u21f5 12", Curve(easeInOutSine, [(0, 0.5), (6, 0.25), (12, 0.5)])),
+        ("L\u21c5 6",  Curve(easeInOutSine, [(0, 0.00), (3, 0.50), (6, 0.00)])),
+        ("L\u21f5 6",  Curve(easeInOutSine, [(0, 0.50), (3, 0.00), (6, 0.50)])),
+        ("M\u21c5 6",  Curve(easeInOutSine, [(0, 0.25), (3, 0.50), (6, 0.25)])),
+        ("M\u21f5 6",  Curve(easeInOutSine, [(0, 0.50), (3, 0.25), (6, 0.50)])),
         ("H\u21c5 6",  Curve(easeInOutSine, [(0, 0.25), (3, 0.75), (6, 0.25)])),
         ("H\u21f5 6",  Curve(easeInOutSine, [(0, 0.75), (3, 0.25), (6, 0.75)])),
+        ("L\u21c5 12", Curve(easeInOutSine, [(0, 0.00), (6, 0.50), (12, 0.00)])),
+        ("L\u21f5 12", Curve(easeInOutSine, [(0, 0.50), (6, 0.00), (12, 0.50)])),
+        ("M\u21c5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0.50), (12, 0.25)])),
+        ("M\u21f5 12", Curve(easeInOutSine, [(0, 0.50), (6, 0.25), (12, 0.50)])),
         ("H\u21c5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0.75), (12, 0.25)])),
         ("H\u21f5 12", Curve(easeInOutSine, [(0, 0.75), (6, 0.25), (12, 0.75)])),
+        ("L\u21c5 30", Curve(easeInOutSine, [(0, 0.00), (15, 0.50), (30, 0.00)])),
+        ("L\u21f5 30", Curve(easeInOutSine, [(0, 0.50), (15, 0.00), (30, 0.50)])),
+        ("M\u21c5 30", Curve(easeInOutSine, [(0, 0.25), (15, 0.50), (30, 0.25)])),
+        ("M\u21f5 30", Curve(easeInOutSine, [(0, 0.50), (15, 0.25), (30, 0.50)])),
+        ("H\u21c5 30", Curve(easeInOutSine, [(0, 0.25), (15, 0.75), (30, 0.25)])),
+        ("H\u21f5 30", Curve(easeInOutSine, [(0, 0.75), (15, 0.25), (30, 0.75)])),
         ("off", 0),
     ])
     
@@ -296,10 +248,10 @@ class BasicBitch(ControllablePattern):
     def __init__(self):
         self.controls = [
             FlashOptions.default,
-            FlickerOptions.curved,
-            FlitterOptions.curved,
-            FluxOptions.curved,
-            SparkleOptions.curved,
+            FlickerOptions.default,
+            FlitterOptions.default,
+            FluxOptions.default,
+            SparkleOptions.default,
             SparkleFuncOptions.basic,
         ]
 
@@ -322,10 +274,10 @@ class CircusTent(ControllablePattern):
         self._streamer_func = StreamerFuncs.WHITEN
         
         self.controls = [
-            make_option("repeats", range(2, 9)),
-            make_option("delay", [i/2 for i in range(1, 7)]),
+            ("repeats", INTS28),
+            ("delay", HALVES053),
             RainbowOptions.default,
-            SpinOptions.bothways,
+            SpinOptions.default,
             SparkleOptions.default,
             SparkleFuncOptions.basic,
             StreamerFuncOptions.basic,
@@ -431,27 +383,27 @@ class CircusTent(ControllablePattern):
 class CoiledSpring(ControllablePattern):
     def __init__(self):
         self._rainbow = 1
-        self._repeat = 3
+        self._repeats = 3
         self._split = 0.25
         self._width = 0.1
         self._spirals = 2
 
         self.controls = [
             RainbowOptions.default,
-            SpinOptions.bothways,
-            make_option("repeat", range(2,9)),
-            make_option("spirals", [i/2 for i in range(2, 7)]),
-            ("split", FRACS[4:-4]),
-            ("width", FRACS[4:-4]),
+            SpinOptions.default,
+            ("repeats", INTS28),
+            ("spirals", HALVES053),
+            ("split", FRACS),
+            ("width", FRACS),
         ]
 
         super(CoiledSpring, self).__init__(
             "Coiled Spring",
             base_color=WindowColor(0.75, [
                 BaseColor(w=0.75, s=0.0, l=-0.75, suppress=["sparkles", "streamers"]),
-                BaseColor(h=0, l=-1),
+                BaseColor(l=-1),
             ]),
-            topologies=[RepeatTopology(4)],
+            topologies=[RepeatTopology(self._repeats)],
             spiral=0,
             streamers=[],
         )
@@ -466,12 +418,12 @@ class CoiledSpring(ControllablePattern):
         self.update_values()
 
     @property
-    def repeat(self):
-        return self._repeat
+    def repeats(self):
+        return self._repeats
 
-    @repeat.setter
-    def repeat(self, repeat):
-        self._repeat = repeat
+    @repeats.setter
+    def repeats(self, repeats):
+        self._repeats = repeats
         self.update_values()
 
     @property
@@ -506,27 +458,27 @@ class CoiledSpring(ControllablePattern):
             BaseColor(w=0.75, s=0.0, l=-0.75, suppress=["sparkles", "streamers"]),
             BaseColor(l=-1),
         ])
-        self.topologies = [RepeatTopology(self._repeat)]
-        self.streamers = streamer_choices(2, [[
-            {
-                "move_dir": Direction.FROM_BOT,
-                "spin_dir": Spin.CLOCKWISE,
-                "angle": (i/self._repeat) + (o/(self._repeat * 4)),
-                "spin": Curve(easeOutBounce, [
-                    (0, self._spirals),
-                    (15, -self._spirals),
-                    (30, self._spirals)]),
-                "length": 2.0,
-                "width": self._width / self._repeat,
-                "lifetime": 2.0,
-                "func": setcolor_streamer(h=i * (self._rainbow / 4), w=0, s=1, l=0.0),
-            } for i in range(self._repeat)
-        ] for o in range(4)])
+        self.topologies = [RepeatTopology(self._repeats)]
         self.spiral=Curve(easeOutBounce, [
             (0, self._spirals),
             (15, -self._spirals),
             (30, self._spirals),
         ])
+        self.streamers = streamer_choices(2, [[
+            {
+                "move_dir": Direction.FROM_BOT,
+                "spin_dir": Spin.CLOCKWISE,
+                "angle": (i/self._repeats) + (o/(self._repeats * 4)),
+                "spin": Curve(easeOutBounce, [
+                    (0, self._spirals),
+                    (15, -self._spirals),
+                    (30, self._spirals)]),
+                "length": 2.0,
+                "width": self._width / self._repeats,
+                "lifetime": 2.0,
+                "func": setcolor_streamer(h=i * (self._rainbow / 4), w=0, s=1, l=0.0),
+            } for i in range(self._repeats)
+        ] for o in range(4)])
 
 
 # Done: sparkle, rainbow, intensity, delay, direction
@@ -539,17 +491,17 @@ class Confetti(ControllablePattern):
 
         self.controls = [
             RainbowOptions.default,
-            FluxOptions.default,
             FlickerOptions.default,
             FlitterOptions.default,
-            ("intensity", [("low", "low"), ("medium", "medium"), ("high", "high")]),
-            make_option("delay", [0.25, 0.5, 0.75, 1]),
+            FluxOptions.default,
             ("direction", [
                 ("\u2193", Direction.FROM_TOP),
                 ("\u2191", Direction.FROM_BOT),
                 ("\u21c5", "BOTH"),
             ]),
-            SparkleOptions.curved,
+            ("intensity", [("low", "low"), ("medium", "medium"), ("high", "high")]),
+            make_option("delay", [0.25, 0.5, 0.75, 1]),
+            SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
 
@@ -640,6 +592,8 @@ class FallingSnow(ControllablePattern):
         
         self.controls = [
             make_option("colors", [6, 8, 10, 12, 16]),
+            FluxOptions.default,
+            FlitterOptions.default,
             ("fade", [
                 ("solid", 0.0),
                 ("linear", Curve(linear, [(0, 0), (1, -1)])),
@@ -653,9 +607,7 @@ class FallingSnow(ControllablePattern):
                 ("ioElastic", Curve(easeInOutElastic, [(0, -1), (0.5, 0), (1, -1)])),
                 ("oiElastic", Curve(easeInOutElastic, [(0, 0), (0.5, -1), (1, 0)])),
             ]),
-            FluxOptions.curved,
-            FlitterOptions.default,
-            SparkleOptions.curved,
+            SparkleOptions.default,
             SparkleFuncOptions.basic,
             ("streamers", [
                 ("light", self.mk_streamers("light")),
@@ -736,19 +688,18 @@ class FallingSnow(ControllablePattern):
 # Done: sparkle, wobble, spins, spirals, speed, width
 class Galaxus(ControllablePattern):
     def __init__(self):
-        self._wobble = 0.25
+        self._speed = 2
         self._spins = 3
         self._spirals = 6
-        self._speed = 2
         self._width = 0.1
+        self._wobble = 0.25
 
         self.controls = [
-            FluxOptions.curved,
-            ("wobble", FRACSL + [("off", 0)]),
-            make_option("spins", range(1, 7)),
-            make_option("spirals", range(2, 9)),
-            make_option("speed", [0.5, 1, 1.5, 2, 3, 4.5, 6]),
-            ("width", FRACSL[4:]),
+            FluxOptions.default,
+            ("spirals", INTS28),
+            ("speed", HALVES056),
+            ("wobble", FRACS + ONE_ZERO),
+            ("width", FRACS + ONE_ZERO),
             SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
@@ -812,7 +763,7 @@ class Galaxus(ControllablePattern):
         ]
         return combined_choices([
             streamer_choices(self._speed, streamers[0]),
-            streamer_choices(self._speed, streamers[1], delay_offset=1),
+            streamer_choices(self._speed, streamers[1], delay_offset=self._speed / 2),
         ])
 
     @property
@@ -877,9 +828,9 @@ class Groovy(ControllablePattern):
             FlitterOptions.default,
             FlickerOptions.default,
             FluxOptions.default,
-            ("distortion", FRACSL[3:]),
-            ("mid_distortion", FRACS[3:-3]),
-            make_option("mirrors", range(2, 7)),
+            ("distortion", FRACS),
+            ("mid_distortion", FRACS),
+            ("mirrors", INTS28),
             SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
@@ -1023,10 +974,10 @@ class Rainbro(ControllablePattern):
         self.controls = [
             RainbowOptions.default,
             FlitterOptions.default,
-            FluxOptions.curved,
+            FluxOptions.default,
             SpinOptions.default,
-            ("repeats", [("jumble", 0), ("2", 2), ("3", 3), ("4", 4), ("5", 5), ("6", 6), ("7", 7), ("8", 8)]),
-            make_option("spirals", [i/2 for i in range(7)]),
+            ("repeats", [("jumble", 0)] + INTS28),
+            ("spirals", HALVES053),
             SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
@@ -1110,10 +1061,10 @@ class SlidingDoor(ControllablePattern):
 
         self.controls = [
             RainbowOptions.default,
-            FluxOptions.curved,
-            ("mirror", [("jumble", 0), ("2", 2), ("3", 3), ("4", 4), ("5", 5), ("6", 6)]),
-            make_option("speed", range(1, 7)),
-            SparkleOptions.curved,
+            FluxOptions.default,
+            ("mirror", [("jumble", 0), INTS28]),
+            ("speed", INTS26),
+            SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
 
@@ -1242,13 +1193,13 @@ class SpiralTop(ControllablePattern):
         self._spirals = 1
 
         self.controls = [
-            FluxOptions.curved,
-            SpinOptions.bothways,
+            FluxOptions.default,
+            SpinOptions.default,
             SparkleOptions.default,
             ("spread", FRACS),
-            make_option("mirror", range(2, 9)),
-            make_option("speed", range(1, 6)),
-            make_option("spirals", [i/2 for i in range(2, 7)]),
+            ("mirror", INTS28),
+            ("speed", INTS16),
+            ("spirals", HALVES053),
         ]
 
         super(SpiralTop, self).__init__(
@@ -1310,13 +1261,13 @@ class TurningWindows(ControllablePattern):
         self._rainbow = 1
 
         self.controls = [
-            SpinOptions.bothways,
+            SpinOptions.default,
             SparkleOptions.default,
             RainbowOptions.default,
             FluxOptions.default,
-            make_option("delay", [0.25, 0.5, 0.75, 1]),
-            make_option("splits", [2, 3, 4, 5, 6, 8]),
-            make_option("repeats", [1, 2, 3, 4, 5, 6, 8]),
+            ("delay", QUARTERS),
+            ("splits", INTS28),
+            ("repeats", INTS18),
         ]
 
         base_windows = [None] * splits
@@ -1424,8 +1375,8 @@ class TwistedRainbows(ControllablePattern):
             SpinOptions.default,
             RainbowOptions.default,
             FluxOptions.default,
-            ("repeats", [("jumble", 0), ("2", 2), ("3", 3), ("4", 4), ("5", 5), ("6", 6)]),
-            make_option("splits", range(2, 9)),
+            ("repeats", [("jumble", 0)] + INTS28),
+            ("splits", INTS28),
             ("spiral", [
                 ("stepped", Curve(const, [
                     (0, -3), (3, 3),
