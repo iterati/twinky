@@ -54,14 +54,14 @@ class Curve:
         s = t % self.length
         bottom, top = self._find_control_points(s)
         start_t, start_v = self.control_points[bottom]
-        start_v = getv(start_v, t)
+        start_v = getv(start_v, s)
         end_t, end_v = self.control_points[top]
-        end_v = getv(end_v, t)
+        end_v = getv(end_v, s)
         ss = (s - start_t) / (end_t - start_t)
         return (self.shape_func(ss) * (end_v - start_v)) + start_v
 
     def __repr__(self):
-        return f"curve({self.control_points})"
+        return f"{self.__class__.__name__}({self.control_points})"
 
     def __add__(self, y):
         return Curve(self.shape_func, [(t, v + y) for (t, v) in self.control_points])
@@ -163,40 +163,40 @@ class CombinedCurve(Curve):
             if t > s:
                 idx = i
 
-        return self.curves[idx](t - self.starts[idx])
+        return self.curves[idx](s - self.starts[idx])
             
     def __add__(self, y):
         return CombinedCurve([
-            Curve(self.shape_func, [(t, v + y) for (t, v) in curve.control_points])
+            Curve(curve.shape_func, [(t, v + y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
 
     def __sub__(self, y):
         return CombinedCurve([
-            Curve(self.shape_func, [(t, v - y) for (t, v) in curve.control_points])
+            Curve(curve.shape_func, [(t, v - y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
 
     def __mul__(self, y):
         return CombinedCurve([
-            Curve(self.shape_func, [(t, v * y) for (t, v) in curve.control_points])
+            Curve(curve.shape_func, [(t, v * y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
 
     def __truediv__(self, y):
         return CombinedCurve([
-            Curve(self.shape_func, [(t, v / y) for (t, v) in curve.control_points])
+            Curve(curve.shape_func, [(t, v / y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
 
     def __floordiv__(self, y):
         return CombinedCurve([
-            Curve(self.shape_func, [(t, v // y) for (t, v) in curve.control_points])
+            Curve(curve.shape_func, [(t, v // y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
 
     def __mod__(self, y):
         return CombinedCurve([
-            Curve(self.shape_func, [(t, v % y) for (t, v) in curve.control_points])
+            Curve(curve.shape_func, [(t, v % y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])

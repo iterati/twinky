@@ -7,23 +7,22 @@ class Topology:
         return pixel_t
 
 
-class MirrorTopology(Topology):
-    def __init__(self, count: Param):
-        self.count = count
+class SpinTopology(Topology):
+    def __init__(self, angle: Param):
+        self.angle = angle
 
     def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
-        count = getv(self.count, t)
-        r = ((pixel_t * count) % 1) * 2
-        return r if r < 1.0 else 2.0 - r
+        angle = getv(self.angle, t)
+        return (pixel_t + angle) % 1
 
 
-class RepeatTopology(Topology):
-    def __init__(self, count: Param):
-        self.count = count
+class SpiralTopology(Topology):
+    def __init__(self, turn: Param):
+        self.turn = turn
 
     def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
-        count = getv(self.count, t)
-        return (pixel_t * count) % 1
+        turn = getv(self.turn, t)
+        return (pixel_t + (pixel_y * turn)) % 1
 
 
 class TurntTopology(Topology):
@@ -61,3 +60,22 @@ class DistortTopology(Topology):
             (1, 0),
         ])
         return pixel_t + getv(distort_func, pixel_y)
+
+
+class MirrorTopology(Topology):
+    def __init__(self, count: Param):
+        self.count = count
+
+    def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
+        count = getv(self.count, t)
+        r = ((pixel_t * count) % 1) * 2
+        return r if r < 1.0 else 2.0 - r
+
+
+class RepeatTopology(Topology):
+    def __init__(self, count: Param):
+        self.count = count
+
+    def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
+        count = getv(self.count, t)
+        return (pixel_t * count) % 1

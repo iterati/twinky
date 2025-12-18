@@ -160,7 +160,11 @@ class ControllablePattern(Pattern):
             name, options = self.controls[idx]
         except:
             raise Exception(self.controls, idx)
-        _, option = options[option_idx]
+        try:
+            _, option = options[option_idx]
+        except Exception as ex:
+            print(self.name, idx, option_idx, self.controls)
+            raise ex
         self.set_controls[idx] = option_idx
         setattr(self, name, option)
 

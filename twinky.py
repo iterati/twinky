@@ -49,13 +49,21 @@ from topologies import (
 from ui import get_thread_and_menu
 
 
-def mk_bounce(period, v):
+def mk_bump(period, v, reverse=False):
     return [
-        (0, 0),
-        (period * 0.25, v),
-        (period * 0.5, 0),
-        (period * 0.75, -v),
-        (period, 0),
+        (0, v if reverse else 0),
+        (period * 0.5, 0 if reverse else v),
+        (period, v if reverse else 0),
+    ]
+
+
+def mk_bounce(period, v, reverse=False):
+    return [
+        (0, v if reverse else 0),
+        (period * 0.25, 0 if reverse else v),
+        (period * 0.5, -v if reverse else 0),
+        (period * 0.75, 0 if reverse else -v),
+        (period, v if reverse else 0),
     ]
 
 
@@ -70,50 +78,50 @@ FRACS = [
     ("3/4", 3/4),
 ]
 SINES = [
-    ("1/4:6",  Curve(easeInOutSine, [(0, 0), (3, 1/4), (6, 0)])),
-    ("1/3:6",  Curve(easeInOutSine, [(0, 0), (3, 1/3), (6, 0)])),
-    ("1/2:6",  Curve(easeInOutSine, [(0, 0), (3, 1/2), (6, 0)])),
-    ("2/3:6",  Curve(easeInOutSine, [(0, 0), (3, 2/3), (6, 0)])),
-    ("3/4:6",  Curve(easeInOutSine, [(0, 0), (3, 3/4), (6, 0)])),
-    (  "1:6",  Curve(easeInOutSine, [(0, 0), (3, 1),   (6, 0)])),
-    ("1/4:12", Curve(easeInOutSine, [(0, 0), (6, 1/4), (12, 0)])),
-    ("1/3:12", Curve(easeInOutSine, [(0, 0), (6, 1/3), (12, 0)])),
-    ("1/2:12", Curve(easeInOutSine, [(0, 0), (6, 1/2), (12, 0)])),
-    ("2/3:12", Curve(easeInOutSine, [(0, 0), (6, 2/3), (12, 0)])),
-    ("3/4:12", Curve(easeInOutSine, [(0, 0), (6, 3/4), (12, 0)])),
-    (  "1:12", Curve(easeInOutSine, [(0, 0), (6, 1),   (12, 0)])),
-    ("1/4:30", Curve(easeInOutSine, [(0, 0), (15, 1/4), (30, 0)])),
-    ("1/3:30", Curve(easeInOutSine, [(0, 0), (15, 1/3), (30, 0)])),
-    ("1/2:30", Curve(easeInOutSine, [(0, 0), (15, 1/2), (30, 0)])),
-    ("2/3:30", Curve(easeInOutSine, [(0, 0), (15, 2/3), (30, 0)])),
-    ("3/4:30", Curve(easeInOutSine, [(0, 0), (15, 3/4), (30, 0)])),
-    (  "1:30", Curve(easeInOutSine, [(0, 0), (15, 1),   (30, 0)])),
+    ("1/4:6",  Curve(easeInOutSine, mk_bump(6, 1/4))),
+    ("1/3:6",  Curve(easeInOutSine, mk_bump(6, 1/3))),
+    ("1/2:6",  Curve(easeInOutSine, mk_bump(6, 1/2))),
+    ("2/3:6",  Curve(easeInOutSine, mk_bump(6, 2/3))),
+    ("3/4:6",  Curve(easeInOutSine, mk_bump(6, 3/4))),
+    (  "1:6",  Curve(easeInOutSine, mk_bump(6, 1))),
+    ("1/4:12", Curve(easeInOutSine, mk_bump(12, 1/4))),
+    ("1/3:12", Curve(easeInOutSine, mk_bump(12, 1/3))),
+    ("1/2:12", Curve(easeInOutSine, mk_bump(12, 1/2))),
+    ("2/3:12", Curve(easeInOutSine, mk_bump(12, 2/3))),
+    ("3/4:12", Curve(easeInOutSine, mk_bump(12, 3/4))),
+    (  "1:12", Curve(easeInOutSine, mk_bump(12, 1))),
+    ("1/4:30", Curve(easeInOutSine, mk_bump(30, 1/4))),
+    ("1/3:30", Curve(easeInOutSine, mk_bump(30, 1/3))),
+    ("1/2:30", Curve(easeInOutSine, mk_bump(30, 1/2))),
+    ("2/3:30", Curve(easeInOutSine, mk_bump(30, 2/3))),
+    ("3/4:30", Curve(easeInOutSine, mk_bump(30, 3/4))),
+    (  "1:30", Curve(easeInOutSine, mk_bump(30, 1))),
 ]
 QUARTER_SINES = [
-    ("0.25\u21c5 6",  Curve(easeInOutSine, [(0, 0),    (3, 0.25), (6, 0)])),
-    ("0.25\u21f5 6",  Curve(easeInOutSine, [(0, 0.25), (3, 0),    (6, 0.25)])),
-    ("0.50\u21c5 6",  Curve(easeInOutSine, [(0, 0),    (3, 0.50), (6, 0)])),
-    ("0.50\u21f5 6",  Curve(easeInOutSine, [(0, 0.50), (3, 0),    (6, 0.50)])),
-    ("0.75\u21c5 6",  Curve(easeInOutSine, [(0, 0),    (3, 0.75), (6, 0)])),
-    ("0.75\u21f5 6",  Curve(easeInOutSine, [(0, 0.75), (3, 0),    (6, 0.75)])),
-    ("1.00\u21c5 6",  Curve(easeInOutSine, [(0, 0),    (3, 1),    (6, 0)])),
-    ("1.00\u21f5 6",  Curve(easeInOutSine, [(0, 1),    (3, 0),    (6, 1)])),
-    ("0.25\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 0.25), (12, 0)])),
-    ("0.25\u21f5 12", Curve(easeInOutSine, [(0, 0.25), (6, 0),    (12, 0.25)])),
-    ("0.50\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 0.5),  (12, 0)])),
-    ("0.50\u21f5 12", Curve(easeInOutSine, [(0, 0.5),  (6, 0),    (12, 0.5)])),
-    ("0.75\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 0.75), (12, 0)])),
-    ("0.75\u21f5 12", Curve(easeInOutSine, [(0, 0.75), (6, 0),    (12, 0.75)])),
-    ("1.00\u21c5 12", Curve(easeInOutSine, [(0, 0),    (6, 1),    (12, 0)])),
-    ("1.00\u21f5 12", Curve(easeInOutSine, [(0, 1),    (6, 0),    (12, 1)])),
-    ("0.25\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 0.25), (30, 0)])),
-    ("0.25\u21f5 30", Curve(easeInOutSine, [(0, 0.25), (15, 0),    (30, 0.25)])),
-    ("0.50\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 0.5),  (30, 0)])),
-    ("0.50\u21f5 30", Curve(easeInOutSine, [(0, 0.5),  (15, 0),    (30, 0.5)])),
-    ("0.75\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 0.75), (30, 0)])),
-    ("0.75\u21f5 30", Curve(easeInOutSine, [(0, 0.75), (15, 0),    (30, 0.75)])),
-    ("1.00\u21c5 30", Curve(easeInOutSine, [(0, 0),    (15, 1),    (30, 0)])),
-    ("1.00\u21f5 30", Curve(easeInOutSine, [(0, 1),    (15, 0),    (30, 1)])),
+    ("0.25\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.25, True))),
+    ("0.25\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0.25, False))),
+    ("0.50\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.50, True))),
+    ("0.50\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0.50, False))),
+    ("0.75\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.75, True))),
+    ("0.75\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0.75, False))),
+    ("1.00\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 1.00, True))),
+    ("1.00\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 1.00, False))),
+    ("0.25\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.25, True))),
+    ("0.25\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0.25, False))),
+    ("0.50\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.50, True))),
+    ("0.50\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0.50, False))),
+    ("0.75\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.75, True))),
+    ("0.75\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0.75, False))),
+    ("1.00\u21c5 12", Curve(easeInOutSine, mk_bump(12, 1.00, True))),
+    ("1.00\u21f5 12", Curve(easeInOutSine, mk_bump(12, 1.00, False))),
+    ("0.25\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.25, True))),
+    ("0.25\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0.25, False))),
+    ("0.50\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.50, True))),
+    ("0.50\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0.50, False))),
+    ("0.75\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.75, True))),
+    ("0.75\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0.75, False))),
+    ("1.00\u21c5 30", Curve(easeInOutSine, mk_bump(30, 1.00, True))),
+    ("1.00\u21f5 30", Curve(easeInOutSine, mk_bump(30, 1.00, False))),
 ]
 BOUNCES = [
     ( "1/4:6",  Curve(easeInOutSine, mk_bounce(6, 1/4))),
@@ -182,18 +190,20 @@ class SpinOptions:
         ("\u21bb 3", -3),
         ("\u21bb 4", -4),
         ("\u21bb 5", -5),
-        ("\u21bb 6", -6),
         ("\u21ba 0.5", 0.5),
         ("\u21ba 1", 1),
         ("\u21ba 2", 2),
         ("\u21ba 3", 3),
         ("\u21ba 4", 4),
         ("\u21ba 5", 5),
-        ("\u21ba 6", 6),
-        ("1x\u21bb\u21ba x1", Curve(easeInOutSine, mk_bounce(60, 1))),
-        ("2x\u21bb\u21ba x1", Curve(easeInOutSine, mk_bounce(60, 2))),
-        ("1x\u21bb\u21ba x2", Curve(easeInOutSine, mk_bounce(30, 1))),
-        ("2x\u21bb\u21ba x2", Curve(easeInOutSine, mk_bounce(30, 2))),
+        ("1xsmoothx1", Curve(easeInOutSine, mk_bounce(60, 1))),
+        ("2xsmoothx1", Curve(easeInOutSine, mk_bounce(60, 2))),
+        ("1xsmoothx2", Curve(easeInOutSine, mk_bounce(30, 1))),
+        ("2xsmoothx2", Curve(easeInOutSine, mk_bounce(30, 2))),
+        ("1xjerkyx1", Curve(easeInSine, mk_bounce(60, 1))),
+        ("2xjerkyx1", Curve(easeInSine, mk_bounce(60, 2))),
+        ("1xjerkyx2", Curve(easeInSine, mk_bounce(30, 1))),
+        ("2xjerkyx2", Curve(easeInSine, mk_bounce(30, 2))),
         ("off", 0),
     ])
 
@@ -288,7 +298,14 @@ class StreamerFuncOptions:
 
 class BasicBitch(ControllablePattern):
     def __init__(self):
+        self._color_speed = 5
+        self._pulse_speed = 5
+        self._pulse_intensity = 1
+
         self.controls = [
+            ("color_speed", INTS16 + [("off", 0)]),
+            ("pulse_speed", INTS16 + [("off", 0)]),
+            ("pulse_intensity", FRACS + SINES),
             FlashOptions.default,
             FlickerOptions.default,
             FlitterOptions.default,
@@ -297,14 +314,46 @@ class BasicBitch(ControllablePattern):
             SparkleFuncOptions.basic,
         ]
 
-        super(BasicBitch, self).__init__(
-            "Basic Bitch",
-            base_color=BaseColor(l=0),
-            flash=0.0,
-            flicker=0.0,
-            flitter=0.0,
-            flux=0.0,
-        )
+        super(BasicBitch, self).__init__("Basic Bitch")
+
+    def update_values(self):
+        self.base_color = BaseColor(
+            h=0 if self._color_speed == 0 else Curve(linear, [
+                (0, -1),
+                (15 / self._color_speed, 1),
+                (30 / self._color_speed, -self.pulse_intensity),
+            ]), l=0 if self._pulse_speed == 0 else Curve(easeInOutSine, [
+                (0, -1),
+                (15 / self._pulse_speed, 0),
+                (30 / self._pulse_speed, -self.pulse_intensity),
+            ]))
+
+    @property
+    def color_speed(self):
+        return self._color_speed
+
+    @color_speed.setter
+    def color_speed(self, color_speed):
+        self._color_speed = color_speed
+        self.update_values()
+
+    @property
+    def pulse_speed(self):
+        return self._pulse_speed
+
+    @pulse_speed.setter
+    def pulse_speed(self, pulse_speed):
+        self._pulse_speed = pulse_speed
+        self.update_values()
+
+    @property
+    def pulse_intensity(self):
+        return self._pulse_intensity
+
+    @pulse_intensity.setter
+    def pulse_intensity(self, pulse_intensity):
+        self._pulse_intensity = pulse_intensity
+        self.update_values()
 
 class CircusTent(ControllablePattern):
     def __init__(self):
@@ -323,15 +372,12 @@ class CircusTent(ControllablePattern):
             StreamerFuncOptions.basic,
         ]
 
-        super(CircusTent, self).__init__(
-            "Circus Tent",
-            base_color=SplitColor(4, self.mk_split_funcs(1.5)),
-            topologies=[RepeatTopology(4)],
-            sparkles=0.5,
-            spin=0.0,
-            streamers=[],
-        )
+        super(CircusTent, self).__init__("Circus Tent")
 
+    def update_values(self):
+        self.base_color = SplitColor(4, self.mk_split_funcs(self._delay))
+        self.topologies = [RepeatTopology(self._repeats)]
+        
     @property
     def rainbow(self):
         return self._rainbow
@@ -414,10 +460,6 @@ class CircusTent(ControllablePattern):
         self._streamer_func = streamer_func
         self.update_values()
 
-    def update_values(self):
-        self.base_color = SplitColor(4, self.mk_split_funcs(self._delay))
-        self.topologies = [RepeatTopology(self._repeats)]
-        
 class CoiledSpring(ControllablePattern):
     def __init__(self):
         self._rainbow = 1
@@ -433,20 +475,13 @@ class CoiledSpring(ControllablePattern):
             ("speed", INTS16),
             ("spirals", HALVES053),
             ("width", FRACS),
+            FlickerOptions.default,
+            FlitterOptions.default,
             RainbowOptions.default,
             SpinOptions.default,
         ]
 
-        super(CoiledSpring, self).__init__(
-            "Coiled Spring",
-            base_color=WindowColor(0.75, [
-                BaseColor(w=0.75, s=0.0, l=-0.75, suppress=["sparkles", "streamers"]),
-                BaseColor(l=-1),
-            ]),
-            topologies=[RepeatTopology(self._repeats)],
-            spiral=0,
-            streamers=[],
-        )
+        super(CoiledSpring, self).__init__("Coiled Spring")
 
     def update_values(self):
         self.base_color = WindowColor(1 - self._split, [
@@ -556,11 +591,7 @@ class Confetti(ControllablePattern):
             SparkleFuncOptions.default,
         ]
 
-        super(Confetti, self).__init__(
-            "Confetti",
-            sparkles=0,
-            streamers=self.mk_streamer_choices(self._delay, Direction.FROM_TOP, (1, 1)),
-        )
+        super(Confetti, self).__init__("Confetti")
     
     def update_values(self):
         if self._intensity == "low":
@@ -634,6 +665,81 @@ class Confetti(ControllablePattern):
         self._rainbow = rainbow
         self.update_values()
 
+class DroppingPlates(ControllablePattern):
+    def __init__(self):
+        self._fade = None
+        self._mirror = 4
+        self._rainbow = 1
+        self._speed = 1
+
+        self.controls = [
+            ("mirror", INTS28),
+            ("speed", INTS16),
+            FadeOptions.default,
+            FlashOptions.default,
+            FlickerOptions.default,
+            FlitterOptions.default,
+            FluxOptions.default,
+            RainbowOptions.default,
+            SpiralOptions.curved,
+            SparkleOptions.default,
+            SparkleFuncOptions.default,
+        ]
+
+        super(DroppingPlates, self).__init__("Dropping Plates")
+
+    def update_values(self):
+        self.base_color = SplitColor(3, [
+            FallingColor(8, 3,
+                         speed=self._speed,
+                         fade_func=self._fade),
+            FallingColor(12, 5,
+                         speed=self._speed,
+                         fade_func=self._fade,
+                         hue_func=Curve(linear, [(0, -self._rainbow), (60, self._rainbow)])),
+            FallingColor(16, 7,
+                         speed=self._speed,
+                         fade_func=self._fade,
+                         hue_func=Curve(linear, [(0, self._rainbow), (60, -self._rainbow)])),
+        ])
+        self.topologies = [MirrorTopology(self._mirror)]
+
+    @property
+    def fade(self):
+        return self._fade
+
+    @fade.setter
+    def fade(self, fade):
+        self._fade = fade
+        self.update_values()
+
+    @property
+    def mirror(self):
+        return self._mirror
+
+    @mirror.setter
+    def mirror(self, mirror):
+        self._mirror = mirror
+        self.update_values()
+
+    @property
+    def rainbow(self):
+        return self._rainbow
+
+    @rainbow.setter
+    def rainbow(self, rainbow):
+        self._rainbow = rainbow
+        self.update_values()
+
+    @property
+    def speed(self):
+        return self._speed
+
+    @speed.setter
+    def speed(self, speed):
+        self._speed = speed
+        self.update_values()
+
 class FallingSnow(ControllablePattern):
     def __init__(self):
         self._colors = 8
@@ -654,14 +760,16 @@ class FallingSnow(ControllablePattern):
             ]),
         ]
 
-        super(FallingSnow, self).__init__(
-            "Falling Snow",
-            base_color=FallingColor(),
-            flitter=0.25,
-            flux=1/8,
-            sparkles=Curve(easeInOutSine, [(0, 0.25), (6, 0.5), (12, 0.25)]),
-            streamers=[],
+        super(FallingSnow, self).__init__("Falling Snow")
+
+    def update_values(self):
+        base_hue = self.base_color.base_hue
+        self.base_color = FallingColor(
+            self._colors,
+            (self._colors // 2) - 1,
+            fade_func=self._fade,
         )
+        self.base_color.init(base_hue)
 
     def mk_streamers(self, weight):
         if weight == "light":
@@ -712,15 +820,6 @@ class FallingSnow(ControllablePattern):
         self._fade = fade
         self.update_values()
 
-    def update_values(self):
-        base_hue = self.base_color.base_hue
-        self.base_color = FallingColor(
-            self._colors,
-            (self._colors // 2) - 1,
-            fade_func=self._fade,
-        )
-        self.base_color.init(base_hue)
-
 class Galaxus(ControllablePattern):
     def __init__(self):
         self._speed = 2
@@ -739,12 +838,10 @@ class Galaxus(ControllablePattern):
             SparkleFuncOptions.default,
         ]
 
-        super(Galaxus, self).__init__(
-            "Galaxus",
-            sparkles=0.25,
-            sparkle_func=self._sparkle_func,
-            streamers=self.mk_streamers(),
-        )
+        super(Galaxus, self).__init__("Galaxus")
+
+    def update_values(self):
+        self.streamers = self.mk_streamers()
 
     @staticmethod
     def _sparkle_func(color: Color) -> Color:
@@ -846,9 +943,6 @@ class Galaxus(ControllablePattern):
         self._speed = speed
         self.update_values()
 
-    def update_values(self):
-        self.streamers = self.mk_streamers()
-
 class Groovy(ControllablePattern):
     def __init__(self):
         self._rainbow = 1/8
@@ -868,43 +962,51 @@ class Groovy(ControllablePattern):
             SparkleFuncOptions.default,
         ]
 
-        super(Groovy, self).__init__(
-            "Groovy",
-            base_color=SplitColor(
-                8,
-                [
-                    BaseColor(
-                        l=0.0, spread=False, suppress=["sparkles"],
-                        h=Curve(easeInOutSine, [(0, 1/8), (15, 0), (30, 1/8)]),
-                    ),
-                    BaseColor(),
-                    BaseColor(),
-                    BaseColor(
-                        l=0.0, spread=False, suppress=["sparkles"],
-                    ),
-                    BaseColor(
-                        l=0.0, spread=False, suppress=["sparkles"],
-                    ),
-                    BaseColor(),
-                    BaseColor(),
-                    BaseColor(
-                        l=0.0, spread=False, suppress=["sparkles"],
-                        h=Curve(easeInOutSine, [(0, -1/8), (10, 0), (20, -1/8)]),
-                    ),
-                ],
-            ),
-            topologies=[
-                DistortTopology(
-                    easeInOutSine,
-                    Curve(easeInOutSine, [(0, 0.5), (30, -0.5), (60, 0.5)]),
-                    Curve(easeInOutSine, [(0, -0.5), (30, 0.5), (60, -0.5)]),
-                    Curve(easeInOutSine, [(0, 0.5), (5, 0.3), (10, 0.5), (15, 0.7), (20, 0.5)])
-                ),
-                MirrorTopology(2),
-            ],
-            sparkles=0.25,
-        )
+        super(Groovy, self).__init__("Groovy")
 
+    def update_values(self):
+        self.base_color = SplitColor(8, [
+            BaseColor(
+                l=0.0, spread=False, suppress=["sparkles"],
+                h=Curve(easeInOutSine, [
+                    (0, self._rainbow),
+                    (15, 0),
+                    (30, self._rainbow),
+                ])),
+            BaseColor(),
+            BaseColor(),
+            BaseColor(l=0.0, spread=False, suppress=["sparkles"]),
+            BaseColor(l=0.0, spread=False, suppress=["sparkles"]),
+            BaseColor(),
+            BaseColor(),
+            BaseColor(
+                l=0.0, spread=False, suppress=["sparkles"],
+                h=Curve(easeInOutSine, [
+                    (0, -self._rainbow),
+                    (10, 0),
+                    (20, -self._rainbow)])),
+        ])
+        self.topologies = [DistortTopology(easeInOutSine,
+            Curve(easeInOutSine, [
+                (0, self._distortion),
+                (30, -self._distortion),
+                (60, self._distortion),
+            ]),
+            Curve(easeInOutSine, [
+                (0, -self._distortion),
+                (30, self._distortion),
+                (60, -self._distortion),
+            ]),
+            Curve(easeInOutSine, [
+                (0, 0.5),
+                (5, 0.5 - (0.5 * self._mid_distortion)),
+                (10, 0.5),
+                (15, 0.5 + (0.5 * self._mid_distortion)),
+                (20, 0.5),
+            ])),
+            MirrorTopology(self._mirror),
+        ]
+    
     @property
     def rainbow(self):
         return self._rainbow
@@ -941,61 +1043,6 @@ class Groovy(ControllablePattern):
         self._mirror = mirror
         self.update_values()
 
-    def update_values(self):
-        self.base_color = SplitColor(
-            8,
-            [
-                BaseColor(
-                    l=0.0, spread=False, suppress=["sparkles"],
-                    h=Curve(easeInOutSine, [
-                        (0, self._rainbow),
-                        (15, 0),
-                        (30, self._rainbow),
-                    ]),
-                ),
-                BaseColor(),
-                BaseColor(),
-                BaseColor(
-                    l=0.0, spread=False, suppress=["sparkles"],
-                ),
-                BaseColor(
-                    l=0.0, spread=False, suppress=["sparkles"],
-                ),
-                BaseColor(),
-                BaseColor(),
-                BaseColor(
-                    l=0.0, spread=False, suppress=["sparkles"],
-                    h=Curve(easeInOutSine, [
-                        (0, -self._rainbow),
-                        (10, 0),
-                        (20, -self._rainbow)]),
-                ),
-            ],
-        )
-        self.topologies = [
-            DistortTopology(
-                easeInOutSine,
-                Curve(easeInOutSine, [
-                    (0, self._distortion),
-                    (30, -self._distortion),
-                    (60, self._distortion),
-                ]),
-                Curve(easeInOutSine, [
-                    (0, -self._distortion),
-                    (30, self._distortion),
-                    (60, -self._distortion),
-                ]),
-                Curve(easeInOutSine, [
-                    (0, 0.5),
-                    (5, 0.5 - (0.5 * self._mid_distortion)),
-                    (10, 0.5),
-                    (15, 0.5 + (0.5 * self._mid_distortion)),
-                    (20, 0.5),
-                ])
-            ),
-            MirrorTopology(self._mirror),
-        ]
-    
 class Rainbro(ControllablePattern):
     def __init__(self):
         self._rainbow = 1
@@ -1014,41 +1061,7 @@ class Rainbro(ControllablePattern):
             SparkleFuncOptions.default,
         ]
 
-        super(Rainbro, self).__init__(
-            "Rainbro",
-            base_color=BaseColor(l=0),
-            topologies=[RepeatTopology(Curve(const, [
-                    (0, 6),
-                    (7.5, 8),
-                    (22.5, 4),
-                    (37.5, 2),
-                    (52.5, 3),
-                    (60, 6),
-            ]))],
-            flitter=0.1,
-            flux=1/16,
-            spin=6,
-            spiral=0,
-            spread=0,
-        )
-
-    @property
-    def rainbow(self):
-        return self._rainbow
-
-    @rainbow.setter
-    def rainbow(self, rainbow):
-        self._rainbow = rainbow
-        self.update_values()
-
-    @property
-    def repeats(self):
-        return self._repeats
-
-    @repeats.setter
-    def repeats(self, repeats):
-        self._repeats = repeats
-        self.update_values()
+        super(Rainbro, self).__init__("Rainbro", base_color=BaseColor(l=0))
 
     def update_values(self):
         self.spread = Curve(easeInOutSine, [
@@ -1069,6 +1082,24 @@ class Rainbro(ControllablePattern):
         else:
             self.topologies= [RepeatTopology(self._repeats)]
 
+    @property
+    def rainbow(self):
+        return self._rainbow
+
+    @rainbow.setter
+    def rainbow(self, rainbow):
+        self._rainbow = rainbow
+        self.update_values()
+
+    @property
+    def repeats(self):
+        return self._repeats
+
+    @repeats.setter
+    def repeats(self, repeats):
+        self._repeats = repeats
+        self.update_values()
+
 class SlidingDoor(ControllablePattern):
     def __init__(self):
         self._mirror = 0
@@ -1087,60 +1118,7 @@ class SlidingDoor(ControllablePattern):
             SparkleFuncOptions.default,
         ]
 
-        super(SlidingDoor, self).__init__(
-            "Sliding Door",
-            base_color=WindowColor(
-                Curve(easeInOutSine, [(0, 0), (3, 1), (6, 0)]),
-                [
-                    BaseColor(l=-1, spread=False),
-                    BaseColor(
-                        h=Curve(const, [(0, 0), (6, 0.5), (12, 0)]),
-                        l=0.0,
-                        suppress=["sparkles", "streamers"],
-                        spread=False,
-                    ),
-                ],
-            ),
-            topologies=[MirrorTopology(Curve(const, [
-                (0, 4),
-                (6, 3),
-                (12, 6),
-                (18, 2),
-                (24, 5),
-                (30, 4),
-            ]))],
-            flux=1/16,
-            spread=Curve(easeInOutSine, [(0, 0.5), (15, -0.5), (30, 0.5)]),
-            sparkles=0.5,
-            streamers=[],
-        )
-
-    @property
-    def mirror(self):
-        return self._mirror
-
-    @mirror.setter
-    def mirror(self, mirror):
-        self._mirror = mirror
-        self.update_values()
-
-    @property
-    def rainbow(self):
-        return self._rainbow
-
-    @rainbow.setter
-    def rainbow(self, rainbow):
-        self._rainbow = rainbow
-        self.update_values()
-
-    @property
-    def speed(self):
-        return self._speed
-
-    @speed.setter
-    def speed(self, speed):
-        self._speed = speed
-        self.update_values()
+        super(SlidingDoor, self).__init__("Sliding Door")
 
     def update_values(self):
         self.base_color = WindowColor(
@@ -1178,6 +1156,33 @@ class SlidingDoor(ControllablePattern):
             (30, 4),
         ]) if self._mirror == 0 else self._mirror
         self.topologies = [MirrorTopology(mirror)]
+
+    @property
+    def mirror(self):
+        return self._mirror
+
+    @mirror.setter
+    def mirror(self, mirror):
+        self._mirror = mirror
+        self.update_values()
+
+    @property
+    def rainbow(self):
+        return self._rainbow
+
+    @rainbow.setter
+    def rainbow(self, rainbow):
+        self._rainbow = rainbow
+        self.update_values()
+
+    @property
+    def speed(self):
+        return self._speed
+
+    @speed.setter
+    def speed(self, speed):
+        self._speed = speed
+        self.update_values()
 
     def mk_streamers(self):
         streamers = [
@@ -1222,16 +1227,7 @@ class SpiralTop(ControllablePattern):
             SparkleFuncOptions.default,
         ]
 
-        super(SpiralTop, self).__init__(
-            "Spiral Top",
-            base_color=WindowColor(Curve(linear, [(0, 0), (3, 1)])),
-            topologies=[MirrorTopology(3)],
-            flux=1/16,
-            spin=Curve(easeInSine, [(0, 0), (15, 2), (30, 0), (45, -2), (60, 0)]),
-            spiral=Curve(linear, [(0, 0), (7.5, 2), (15, 0), (22.5, -2), (30, 0)]),
-            spread=1/3,
-            sparkles=0.15,
-        )
+        super(SpiralTop, self).__init__("Spiral Top")
 
     def update_values(self):
         self.base_color = WindowColor(Curve(linear, [(0, 0), (15 / self._speed, 1)]))
@@ -1272,7 +1268,7 @@ class SpiralTop(ControllablePattern):
         self.update_values()
 
 class TurningWindows(ControllablePattern):
-    def __init__(self, splits=8, repeats=4):
+    def __init__(self):
         self._delay = 0.25
         self._splits = 8
         self._repeats = 4
@@ -1291,32 +1287,7 @@ class TurningWindows(ControllablePattern):
             SparkleFuncOptions.default,
         ]
 
-        base_windows = [None] * splits
-        windows = []
-        for i in range(splits):
-            windows.append(base_windows[:i] + [BaseColor()] + base_windows[(i+1):])
-
-        super(TurningWindows, self).__init__(
-            "Turning Windows",
-            base_color=SplitColor(
-                splits,
-                periodic_choices(0.25, windows),
-                suppress=["sparkles"],
-            ),
-            topologies=[
-                RepeatTopology(repeats),
-                TurntTopology(
-                    repeats,
-                    CombinedCurve([
-                        Curve(easeOutSine, [(0, 0), (15, 1)]),
-                        Curve(easeOutSine, [(0, 0), (15, -1)]),
-                    ])
-                ),
-            ],
-            spin=0,
-            spread=0,
-            sparkles=0,
-        )
+        super(TurningWindows, self).__init__("Turning Windows")
 
     def update_values(self):
         base_windows = [None] * self._splits
@@ -1402,15 +1373,7 @@ class TwistedRainbows(ControllablePattern):
             StreamerFuncOptions.basic,
         ]
 
-        super(TwistedRainbows, self).__init__(
-            "Twisted Rainbows",
-            base_color=SplitColor(3),
-            topologies=[RepeatTopology(2)],
-            spin=0,
-            spread=0,
-            spiral=0,
-            streamers=[],
-        )
+        super(TwistedRainbows, self).__init__("Twisted Rainbows")
 
     def update_values(self):
         if self._repeats == 0:
@@ -1496,154 +1459,13 @@ class TwistedRainbows(ControllablePattern):
         self._splits = splits
         self.update_values()
 
-class DroppingPlates(ControllablePattern):
-    def __init__(self):
-        self._fade = None
-        self._mirror = 4
-        self._rainbow = 1
-        self._speed = 1
-
-        self.controls = [
-            ("mirror", INTS28),
-            ("speed", INTS16),
-            FadeOptions.default,
-            FlashOptions.default,
-            FlickerOptions.default,
-            FlitterOptions.default,
-            FluxOptions.default,
-            RainbowOptions.default,
-            SpiralOptions.curved,
-            SparkleOptions.default,
-            SparkleFuncOptions.default,
-        ]
-
-        super(DroppingPlates, self).__init__(
-            "Dropping Plates",
-            base_color=SplitColor(3, [
-                FallingColor(
-                    8, 3,
-                ),
-                FallingColor(
-                    12, 5,
-                    hue_func=Curve(linear, [(0, -1), (60, 1)]),
-                ),
-                FallingColor(
-                    16, 7,
-                    hue_func=Curve(linear, [(0, 1), (60, -1)]),
-                ),
-            ]),
-            topologies=[MirrorTopology(4)],
-        )
-
-    def update_values(self):
-        self.base_color = SplitColor(3, [
-            FallingColor(8, 3,
-                         speed=self._speed,
-                         fade_func=self._fade),
-            FallingColor(12, 5,
-                         speed=self._speed,
-                         fade_func=self._fade,
-                         hue_func=Curve(linear, [(0, -self._rainbow), (60, self._rainbow)])),
-            FallingColor(16, 7,
-                         speed=self._speed,
-                         fade_func=self._fade,
-                         hue_func=Curve(linear, [(0, self._rainbow), (60, -self._rainbow)])),
-        ])
-        self.topologies = [MirrorTopology(self._mirror)]
-
-    @property
-    def fade(self):
-        return self._fade
-
-    @fade.setter
-    def fade(self, fade):
-        self._fade = fade
-        self.update_values()
-
-    @property
-    def mirror(self):
-        return self._mirror
-
-    @mirror.setter
-    def mirror(self, mirror):
-        self._mirror = mirror
-        self.update_values()
-
-    @property
-    def rainbow(self):
-        return self._rainbow
-
-    @rainbow.setter
-    def rainbow(self, rainbow):
-        self._rainbow = rainbow
-        self.update_values()
-
-    @property
-    def speed(self):
-        return self._speed
-
-    @speed.setter
-    def speed(self, speed):
-        self._speed = speed
-        self.update_values()
-
-class Pulsar(ControllablePattern):
-    def __init__(self):
-        self._color_speed = 5
-        self._pulse_speed = 5
-
-        self.controls = [
-            ("color_speed", INTS16),
-            ("pulse_speed", INTS16),
-            FlashOptions.default,
-            FlickerOptions.default,
-            FlitterOptions.default,
-            FluxOptions.default,
-            SparkleOptions.default,
-            SparkleFuncOptions.default,
-        ]
-
-        super(Pulsar, self).__init__(
-            "Pulsar",
-            base_color=BaseColor(),
-        )
-
-    def update_values(self):
-        self.base_color = BaseColor(
-            h=Curve(linear, [
-                (0, -1),
-                (15 / self._color_speed, 1),
-                (30 / self._color_speed, -1),
-            ]), l=Curve(easeInOutSine, [
-                (0, -1),
-                (15 / self._pulse_speed, 0),
-                (30 / self._pulse_speed, -1),
-            ]))
-
-    @property
-    def color_speed(self):
-        return self._color_speed
-
-    @color_speed.setter
-    def color_speed(self, color_speed):
-        self._color_speed = color_speed
-        self.update_values()
-
-    @property
-    def pulse_speed(self):
-        return self._pulse_speed
-
-    @pulse_speed.setter
-    def pulse_speed(self, pulse_speed):
-        self._pulse_speed = pulse_speed
-        self.update_values()
-
 if __name__ == "__main__":
     patterns = [
         BasicBitch(),
         CircusTent(),
         CoiledSpring(),
         Confetti(),
+        DroppingPlates(),
         FallingSnow(),
         Galaxus(),
         Groovy(),
@@ -1652,11 +1474,9 @@ if __name__ == "__main__":
         SpiralTop(),
         TurningWindows(),
         TwistedRainbows(),
-        DroppingPlates(),
-        Pulsar(),
     ]
     animation = Blender(patterns)
-    # animation = Blender(patterns, -1, True)
+    # animation = Blender(patterns, 10, True)
     animation_thread, draw_menu = get_thread_and_menu(animation)
     animation_thread.start()
     curses.wrapper(draw_menu)
