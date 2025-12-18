@@ -27,9 +27,6 @@ def animation_thread_task(animation, command_queue):
         
         colors = animation.render(time.time())
         animation.write(colors)
-        # except Exception as ex:
-        #     print(animation.pattern.name)
-        #     raise ex
         while time.time() < next_frame:
             pass
         next_frame += 1/16
@@ -49,6 +46,10 @@ def set_control_option(idx, option_idx):
     def func(a):
         a.pattern.set_control_option(idx, option_idx)
     return func
+
+def randomize(a):
+    a.pattern.randomize()
+
 
 def make_draw_menu(animation, q):
     def draw_menu(stdscr):
@@ -180,11 +181,14 @@ def make_draw_menu(animation, q):
                     q.put(set_control_option(idx, option_idx))
 
             elif key == ord(' '):
-                q.put(unpause if animation.pause_change else q.put(pause))
+                q.put(unpause if animation.pause_change else pause)
 
             elif key == ord('q'):
                 q.put(_sentinel)
                 break
+
+            elif key == ord('r'):
+                q.put(randomize)
 
             elif key == curses.KEY_ENTER or key in [10, 13]:
                 item = menu_items[current_row]

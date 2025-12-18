@@ -5,7 +5,7 @@ from typing import Callable, TypeAlias
 ParamFunc: TypeAlias = Callable[[float], float]
 Param: TypeAlias = ParamFunc | float
 
-ControlPoint: TypeAlias = tuple[float, float]
+ControlPoint: TypeAlias = tuple[float, Param]
 ControlPoints: TypeAlias = list[ControlPoint]
 
 
@@ -15,10 +15,6 @@ def getv(v: Param, t: float) -> float:
 
 def const(_: float) -> float:
     return 0
-
-
-def reverselinear(t: float) -> float:
-    return 1.0 - t
 
 
 def rand(minv: float=0.0, maxv: float=1.0) -> ParamFunc:
@@ -58,7 +54,9 @@ class Curve:
         s = t % self.length
         bottom, top = self._find_control_points(s)
         start_t, start_v = self.control_points[bottom]
+        start_v = getv(start_v, t)
         end_t, end_v = self.control_points[top]
+        end_v = getv(end_v, t)
         ss = (s - start_t) / (end_t - start_t)
         return (self.shape_func(ss) * (end_v - start_v)) + start_v
 
@@ -101,6 +99,9 @@ class Curve:
     def __rmod__(self, y):
         return self.__mod__(y)
 
+    def __neg__(self):
+        return self.__mul__(-1)
+
 
 class Random(Curve):
     def __init__(self,
@@ -130,38 +131,20 @@ class Random(Curve):
     def __add__(self, y):
         return Random(self.minv + y, self.maxv + y, self.length)
 
-    def __radd__(self, y):
-        return self.__add__(y)
-
     def __sub__(self, y):
         return Random(self.minv - y, self.maxv + y, self.length)
-
-    def __rsub__(self, y):
-        return self.__sub__(y)
 
     def __mul__(self, y):
         return Random(self.minv * y, self.maxv + y, self.length)
 
-    def __rmul__(self, y):
-        return self.__mul__(y)
-
     def __truediv__(self, y):
         return Random(self.minv / y, self.maxv + y, self.length)
-
-    def __rtruediv__(self, y):
-        return self.__truediv__(y)
 
     def __floordiv__(self, y):
         return Random(self.minv // y, self.maxv + y, self.length)
 
-    def __rfloordiv__(self, y):
-        return self.__floordiv__(y)
-
     def __mod__(self, y):
         return Random(self.minv % y, self.maxv + y, self.length)
-
-    def __rmod__(self, y):
-        return self.__mod__(y)
 
 
 class CombinedCurve(Curve):
@@ -188,17 +171,11 @@ class CombinedCurve(Curve):
             for curve in self.curves
         ])
 
-    def __radd__(self, y):
-        return self.__add__(y)
-
     def __sub__(self, y):
         return CombinedCurve([
             Curve(self.shape_func, [(t, v - y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
-
-    def __rsub__(self, y):
-        return self.__sub__(y)
 
     def __mul__(self, y):
         return CombinedCurve([
@@ -206,17 +183,11 @@ class CombinedCurve(Curve):
             for curve in self.curves
         ])
 
-    def __rmul__(self, y):
-        return self.__mul__(y)
-
     def __truediv__(self, y):
         return CombinedCurve([
             Curve(self.shape_func, [(t, v / y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
-
-    def __rtruediv__(self, y):
-        return self.__truediv__(y)
 
     def __floordiv__(self, y):
         return CombinedCurve([
@@ -224,14 +195,8 @@ class CombinedCurve(Curve):
             for curve in self.curves
         ])
 
-    def __rfloordiv__(self, y):
-        return self.__floordiv__(y)
-
     def __mod__(self, y):
         return CombinedCurve([
             Curve(self.shape_func, [(t, v % y) for (t, v) in curve.control_points])
             for curve in self.curves
         ])
-
-    def __rmod__(self, y):
-        return self.__mul__(y)

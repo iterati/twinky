@@ -72,6 +72,7 @@ class StreamerFuncs(Enum):
     INVERT_WHITEN = setcolor_streamer(h=0.5, l=0.0, make_white=True)
     WHITEN = setcolor_streamer(w=0.75, s=0.0, l=-0.75)
     NOOP = setcolor_streamer()
+    RANDOM = setcolor_streamer(h=rand(), l=0)
 
 
 def streamer_choices(
@@ -81,7 +82,7 @@ def streamer_choices(
         delay_offset: float=0,
 ) -> StreamerParamFunc:
     def func(t: float) -> StreamerValues:
-        s = int(t + delay_offset) % (len(choices) * 6)
+        s = int(t + delay_offset) % (len(choices) * delay)
         if s % delay == 0:
             c = choices[int(s / delay) % len(choices)]
             if choose:
@@ -146,11 +147,18 @@ class Streamer:
         return t < self.initial_t + self.lifetime
 
     def contains(self, t, pixel):
+        if not self.alive(t):
+            return False
+        
         miny = self.y_func(t - self.initial_t)
-        maxy = miny + self.length
-        mino = (((pixel.y * self.spin) + self.angle) % 1) + 1
-        maxo = mino + self.width
-        return (miny <= pixel.y <= maxy) and (mino <= pixel.t + 1 <= maxo)
+        if pixel.y < miny or pixel.y > miny + self.length:
+            return False
+        
+        mino = ((pixel.y * self.spin) + self.angle) % 1
+        if mino + self.width > 1.0:
+            return mino < pixel.t or pixel.t < (mino + self.width) - 1
+        else:
+            return mino < pixel.t < mino + self.width
 
     def __repr__(self):
         return f"Streamer({self.angle},{self.spin},{self.length},{self.width},{self.lifetime})"

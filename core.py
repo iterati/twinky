@@ -93,9 +93,7 @@ class Lights:
     def __init__(self):
         dgen = xdiscover()
         devices = [next(dgen), next(dgen)]
-        # print("Found:", devices)
         self.interfaces = [Interface(device) for device in devices]
-        # print("Connected")
         self.udpclient = self.interfaces[0].udpclient
 
 
@@ -165,7 +163,6 @@ class ControllablePattern(Pattern):
         _, option = options[option_idx]
         self.set_controls[idx] = option_idx
         setattr(self, name, option)
-        # print(f"{name} {option} {getattr(self, name)}")
 
     def get_control_option(self, i: int) -> int:
         return self.set_controls[i]
@@ -345,14 +342,11 @@ class Blender:
                 self.next_pattern.base_color.init(getv(self._blend_func, self.transition_offset + t))
                 self.start_transition()
             else:
-                self.pattern = self.next_pattern
-                self.next_pattern = self._pick_next()
-                self.pattern = self.pattern
                 self.transitioning = False
                 self.pattern_end = self._t + self.pattern_length
+                self.pattern = self.next_pattern
+                self.next_pattern = self._pick_next()
             
-            print(self.pattern_name)
-
         if t >= self.next_sparkle:
             self.next_sparkle += self.sparkle_delay
             if self.transitioning:
