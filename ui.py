@@ -74,29 +74,19 @@ def make_draw_menu(animation, q):
                     x = w // 2 - len(animation.time_str) // 2
                     screen.addstr(y, x, animation.time_str)
                 elif item in controls:
-                    cidx = controls.index(item)
-                    options = animation.pattern.get_control_options(cidx)
-                    string = f"{item}: {' '.join(options)}"
+                    control_idx = controls.index(item)
+                    options = animation.pattern.get_control_options(control_idx)
+                    option_idx = animation.pattern.get_control_option(control_idx)
+                    option = options[option_idx]
+                    string = f"{item}: {option}"
                     x = w // 2 - len(string) // 2
-
-                    selected_option = animation.pattern.get_control_option(cidx)
                     if selected_row_idx == idx:
                         screen.attron(curses.A_REVERSE)
                         screen.addstr(y, x, item)
                         screen.attroff(curses.A_REVERSE)
-                        screen.addstr(y, x + len(item), ": ")
+                        screen.addstr(y, x + len(item), f": {option}")
                     else:
-                        screen.addstr(y, x, f'{item}: ')
-
-                    l = len(item) + 2
-                    for j, option in enumerate(options):
-                        if j == selected_option:
-                            screen.attron(curses.A_REVERSE)
-                            screen.addstr(y, x + l, option)
-                            screen.attroff(curses.A_REVERSE)
-                        else:
-                            screen.addstr(y, x + l, option)
-                        l += len(option) + 1
+                        screen.addstr(y, x, string)
                 else:
                     x = w // 2 - len(item) // 2
                     if idx == selected_row_idx:
@@ -108,12 +98,10 @@ def make_draw_menu(animation, q):
 
             screen.refresh()
 
-        lowest_row = 4
-        current_row = lowest_row
-        while True:
+        def get_menu_items(a):
             controls = animation.pattern.get_controls() if isinstance(animation.pattern, ControllablePattern) else []
             patterns = [p.name for p in animation.patterns]
-            menu_items = [
+            return [
                 '[PAUSED]' if animation.pause_change else '',
                 "PATTERN_NAME",
                 "TIME_STR",
@@ -124,10 +112,30 @@ def make_draw_menu(animation, q):
                 None,
                 "EXIT",
             ]
+            
 
+        lowest_row = 4
+        current_row = (
+            lowest_row
+            if isinstance(animation.pattern, ControllablePattern) else
+            get_menu_items(animation).index(animation.pattern.name)
+        )
+        curr_pattern = animation.pattern
+        while True:
+            controls = animation.pattern.get_controls() if isinstance(animation.pattern, ControllablePattern) else []
+            patterns = [p.name for p in animation.patterns]
+            menu_items = get_menu_items(animation)
             highest_row = len(menu_items) - 1
             if current_row > highest_row:
                 current_row = highest_row
+
+            if curr_pattern != animation.pattern:
+                current_row = (
+                    5
+                    if isinstance(animation.pattern, ControllablePattern) else
+                    menu_items.index(animation.pattern.name)
+                )
+                curr_pattern = animation.pattern
 
             print_menu(stdscr, current_row, menu_items)
             key = stdscr.getch()
@@ -170,6 +178,10 @@ def make_draw_menu(animation, q):
 
             elif key == ord(' '):
                 q.put(unpause if animation.pause_change else q.put(pause))
+
+            elif key == ord('q'):
+                q.put(_sentinel)
+                break
 
             elif key == curses.KEY_ENTER or key in [10, 13]:
                 item = menu_items[current_row]

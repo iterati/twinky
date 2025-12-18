@@ -4,7 +4,7 @@ from pytweening import linear, easeInOutCubic
 import struct
 from xled_plus.ledcolor import hsl_color, set_color_style
 
-from param import Param, Curve, getv
+from param import Param, Curve, ParamFunc, getv
 
 
 set_color_style('8col')
@@ -141,10 +141,13 @@ def setcolor(w: float | None=None,
 
 
 class ColorFuncs(Enum):
-    WHITEN = setcolor(w=0.75, s=0.0, l=-0.75)
+    NOOP = setcolor()
+    BASE = setcolor(l=0.0)
+    BASE_WHITEN = setcolor(l=0.0, make_white=True)
     BLANK = setcolor(w=0, l=-1)
     INVERT = setcolor(h=0.5, l=0.0)
-    BASE = setcolor(l=0.0)
+    INVERT_WHITEN = setcolor(h=0.5, l=0.0, make_white=True)
+    WHITEN = setcolor(w=0.75, s=0.0, l=-0.75)
 
 
 class WindowColor(BaseColor):
@@ -211,22 +214,20 @@ class FallingColor(BaseColor):
     def __init__(self,
                  num_colors: int=8,
                  skip_colors: int=3,
-                 suppress: list[str] | None=None):
+                 suppress: list[str] | None=None,
+                 fade_func: Param=Curve(easeInOutCubic, [(0, -1), (0.5, 0), (1, -1)])):
         super(FallingColor, self).__init__(suppress=suppress)
         self._num_colors = num_colors
         self._skip_colors = skip_colors
         self._ycurve = Curve(linear, [(0, 0), (60, num_colors)])
-        self._lcurve = Curve(easeInOutCubic, [(0, -1), (0.5, 0), (1, -1)])
+        self._lcurve = fade_func
 
     def _h(self, pixel_y: float) -> float:
         return ((int(pixel_y) * self._skip_colors) % self._num_colors) / self._num_colors
 
     def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
         pixel_y += getv(self._ycurve, t)
-        color = Color(
-            0,
-            self.base_hue + self._h(pixel_y),
-            1,
-            getv(self._lcurve, pixel_y),
-        )
+        l = getv(self._lcurve, pixel_y)
+        l = -l**2 if l < 0 else l**2
+        color = Color(0, self.base_hue + self._h(pixel_y), 1, l)
         return color, self.suppress

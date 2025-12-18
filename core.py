@@ -7,7 +7,7 @@ from typing import Callable, TypeAlias
 from xled.discover import xdiscover
 from xled.control import ControlInterface
 
-from colors import Color, BaseColor, ColorFuncs, BaseColorFuncsParam
+from colors import Color, BaseColor, ColorFuncs
 from param import Param, getv, Curve
 from streamer import Streamer, StreamerParam, getv_streamers
 from topologies import Topology
@@ -138,11 +138,12 @@ Controls: TypeAlias = list[Control]
 
 class ControllablePattern(Pattern):
     controls = []
-    set_controls = []
 
     def __init__(self, name, **kwargs):
         super(ControllablePattern, self).__init__(name, **kwargs)
 
+        self.set_controls = [0] * len(self.controls)
+        self.randomize()
         for idx, option_idx in enumerate(self.set_controls):
             self.set_control_option(idx, option_idx)
 
@@ -157,7 +158,10 @@ class ControllablePattern(Pattern):
         return [name for name, _ in options]
 
     def set_control_option(self, idx: int, option_idx: int):
-        name, options = self.controls[idx]
+        try:
+            name, options = self.controls[idx]
+        except:
+            raise Exception(self.controls, idx)
         _, option = options[option_idx]
         self.set_controls[idx] = option_idx
         setattr(self, name, option)
@@ -165,6 +169,14 @@ class ControllablePattern(Pattern):
 
     def get_control_option(self, i: int) -> int:
         return self.set_controls[i]
+
+    def update_values(self):
+        pass
+
+    def randomize(self):
+        for idx, (_, options) in enumerate(self.controls):
+            option_idx = random.randint(0, len(options) - 1)
+            self.set_control_option(idx, option_idx)
 
 
 class Blender:
@@ -189,7 +201,11 @@ class Blender:
             for strand, interface in enumerate(self.lights.interfaces)
         ]
         self.running = False
-        self.pattern = self.patterns[start_idx if start_idx is not None else -1]
+        self.pattern = self.patterns[
+            start_idx
+            if start_idx is not None else
+            random.randint(0, len(patterns) - 1)
+        ]
         self.next_pattern = self._pick_next()
         self.transitioning = False
         self._init_t = 0.0
@@ -201,7 +217,10 @@ class Blender:
         return self.light_pixels[0] + self.light_pixels[1]
 
     def _pick_next(self):
-        return random.choice([p for p in self.patterns if p.name != self.pattern.name])
+        choice = random.choice([p for p in self.patterns if p.name != self.pattern.name])
+        if isinstance(choice, ControllablePattern):
+            choice.randomize()
+        return choice
 
     def init(self, t: float):
         for interface in self.lights.interfaces:
@@ -239,7 +258,6 @@ class Blender:
 
         colors = []
         for pixel in self.pixels:
-            print(pattern.spiral, getv(pattern.spiral, t), pixel.y)
             pixel_t = (
                 pixel.t
               + getv(pattern.spin, t)

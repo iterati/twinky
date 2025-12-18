@@ -4,7 +4,7 @@ from typing import Callable, TypeAlias
 from pytweening import linear
 
 from core import Color
-from param import Curve, Param, getv
+from param import Curve, Param, getv, rand
 
 
 StreamerValue: TypeAlias = dict
@@ -43,11 +43,35 @@ def setcolor_streamer(w: Param | None=None,
     return func
 
 
+class RandomColorStreamerFunc:
+    def __init__(self,
+                 minh,
+                 maxh,
+                 w: Param | None=None,
+                 s: Param | None=None,
+                 l: Param | None=None):
+        self.w = w
+        self.h = rand(minh, maxh)(0)
+        self.s = s
+        self.l = l
+
+    def __call__(self, color: Color, t: float, pixel_x: float, pixel_y: float) -> Color:
+        return Color(
+            getv(self.w, t) if self.w is not None else color.w,
+            color.h + self.h,
+            getv(self.s, t) if self.s is not None else color.s,
+            getv(self.l, t) if self.l is not None else color.l,
+        )
+
+
 class StreamerFuncs(Enum):
-    WHITEN = setcolor_streamer(w=0.75, s=0.0, l=-0.75)
+    BASE = setcolor_streamer(l=0.0)
+    BASE_WHITEN = setcolor_streamer(l=0.0, make_white=True)
     BLANK = setcolor_streamer(w=0, l=-1)
     INVERT = setcolor_streamer(h=0.5, l=0.0)
-    BASE = setcolor_streamer(l=0.0)
+    INVERT_WHITEN = setcolor_streamer(h=0.5, l=0.0, make_white=True)
+    WHITEN = setcolor_streamer(w=0.75, s=0.0, l=-0.75)
+    NOOP = setcolor_streamer()
 
 
 def streamer_choices(

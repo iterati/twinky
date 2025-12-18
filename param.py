@@ -17,6 +17,10 @@ def const(_: float) -> float:
     return 0
 
 
+def reverselinear(t: float) -> float:
+    return 1.0 - t
+
+
 def rand(minv: float=0.0, maxv: float=1.0) -> ParamFunc:
     def func(_: float) -> float:
         s = random.random()
