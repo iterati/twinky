@@ -49,21 +49,27 @@ from topologies import (
 from ui import get_thread_and_menu
 
 
-def mk_bump(period, v, reverse=False):
+def mk_bump(period, s, e=None):
+    if e is None:
+        e = s
+        s = 0
     return [
-        (0, v if reverse else 0),
-        (period * 0.5, 0 if reverse else v),
-        (period, v if reverse else 0),
+        (0, s),
+        (period * 0.5, e),
+        (period, s),
     ]
 
 
-def mk_bounce(period, v, reverse=False):
+def mk_bounce(period, s, e=None):
+    if e is None:
+        e = s
+        s = 0
     return [
-        (0, v if reverse else 0),
-        (period * 0.25, 0 if reverse else v),
-        (period * 0.5, -v if reverse else 0),
-        (period * 0.75, 0 if reverse else -v),
-        (period, v if reverse else 0),
+        (0, s),
+        (period * 0.25, e),
+        (period * 0.5, -s),
+        (period * 0.75, -e),
+        (period, s),
     ]
 
 
@@ -98,30 +104,30 @@ SINES = [
     (  "1:30", Curve(easeInOutSine, mk_bump(30, 1))),
 ]
 QUARTER_SINES = [
-    ("0.25\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.25, True))),
-    ("0.25\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0.25, False))),
-    ("0.50\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.50, True))),
-    ("0.50\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0.50, False))),
-    ("0.75\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.75, True))),
-    ("0.75\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0.75, False))),
-    ("1.00\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 1.00, True))),
-    ("1.00\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 1.00, False))),
-    ("0.25\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.25, True))),
-    ("0.25\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0.25, False))),
-    ("0.50\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.50, True))),
-    ("0.50\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0.50, False))),
-    ("0.75\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.75, True))),
-    ("0.75\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0.75, False))),
-    ("1.00\u21c5 12", Curve(easeInOutSine, mk_bump(12, 1.00, True))),
-    ("1.00\u21f5 12", Curve(easeInOutSine, mk_bump(12, 1.00, False))),
-    ("0.25\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.25, True))),
-    ("0.25\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0.25, False))),
-    ("0.50\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.50, True))),
-    ("0.50\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0.50, False))),
-    ("0.75\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.75, True))),
-    ("0.75\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0.75, False))),
-    ("1.00\u21c5 30", Curve(easeInOutSine, mk_bump(30, 1.00, True))),
-    ("1.00\u21f5 30", Curve(easeInOutSine, mk_bump(30, 1.00, False))),
+    ("0.25\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.25, 0))),
+    ("0.25\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 0.25))),
+    ("0.50\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.50, 0))),
+    ("0.50\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 0.50))),
+    ("0.75\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.75, 0))),
+    ("0.75\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 0.75))),
+    ("1.00\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 1.00, 0))),
+    ("1.00\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 1.00))),
+    ("0.25\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.25, 0))),
+    ("0.25\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0, 0.25))),
+    ("0.50\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.50, 0))),
+    ("0.50\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0, 0.50))),
+    ("0.75\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.75, 0))),
+    ("0.75\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0, 0.75))),
+    ("1.00\u21c5 12", Curve(easeInOutSine, mk_bump(12, 1.00, 0))),
+    ("1.00\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0, 1.00))),
+    ("0.25\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.25, 0))),
+    ("0.25\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0, 0.25))),
+    ("0.50\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.50, 0))),
+    ("0.50\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0, 0.50))),
+    ("0.75\u21c5 30", Curve(easeInOutSine, mk_bump(30, 0.75, 0))),
+    ("0.75\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0, 0.75))),
+    ("1.00\u21c5 30", Curve(easeInOutSine, mk_bump(30, 1.00, 0))),
+    ("1.00\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0, 1.00))),
 ]
 BOUNCES = [
     ( "1/4:6",  Curve(easeInOutSine, mk_bounce(6, 1/4))),
@@ -303,8 +309,8 @@ class BasicBitch(ControllablePattern):
         self._pulse_intensity = 1
 
         self.controls = [
-            ("color_speed", INTS16 + [("off", 0)]),
-            ("pulse_speed", INTS16 + [("off", 0)]),
+            ("color_speed", HALVES056 + [("off", 0)]),
+            ("pulse_speed", HALVES056 + [("off", 0)]),
             ("pulse_intensity", FRACS + SINES),
             FlashOptions.default,
             FlickerOptions.default,
@@ -319,11 +325,11 @@ class BasicBitch(ControllablePattern):
     def update_values(self):
         self.base_color = BaseColor(
             h=0 if self._color_speed == 0 else Curve(linear, [
-                (0, -1),
+                (0, -self._pulse_intensity),
                 (15 / self._color_speed, 1),
                 (30 / self._color_speed, -self.pulse_intensity),
             ]), l=0 if self._pulse_speed == 0 else Curve(easeInOutSine, [
-                (0, -1),
+                (0, -self._pulse_intensity),
                 (15 / self._pulse_speed, 0),
                 (30 / self._pulse_speed, -self.pulse_intensity),
             ]))
@@ -472,7 +478,7 @@ class CoiledSpring(ControllablePattern):
         self.controls = [
             ("split", FRACS),
             ("repeats", INTS28),
-            ("speed", INTS16),
+            ("speed", HALVES056),
             ("spirals", HALVES053),
             ("width", FRACS),
             FlickerOptions.default,
@@ -674,7 +680,7 @@ class DroppingPlates(ControllablePattern):
 
         self.controls = [
             ("mirror", INTS28),
-            ("speed", INTS16),
+            ("speed", HALVES056),
             FadeOptions.default,
             FlashOptions.default,
             FlickerOptions.default,
@@ -945,15 +951,15 @@ class Galaxus(ControllablePattern):
 
 class Groovy(ControllablePattern):
     def __init__(self):
-        self._rainbow = 1/8
         self._distortion = 0.5
         self._mid_distortion = 0.5
-        self._mirror = 2
+        self._speed = 0.5
+        self._rainbow = 1/8
 
         self.controls = [
-            ("mirror", INTS28),
             ("distortion", FRACS),
             ("mid_distortion", FRACS),
+            ("speed", HALVES053),
             FlickerOptions.default,
             FlitterOptions.default,
             FluxOptions.default,
@@ -965,46 +971,25 @@ class Groovy(ControllablePattern):
         super(Groovy, self).__init__("Groovy")
 
     def update_values(self):
-        self.base_color = SplitColor(8, [
+        self.base_color = SplitColor(6, [
             BaseColor(
                 l=0.0, spread=False, suppress=["sparkles"],
-                h=Curve(easeInOutSine, [
-                    (0, self._rainbow),
-                    (15, 0),
-                    (30, self._rainbow),
-                ])),
-            BaseColor(),
-            BaseColor(),
+                h=Curve(easeInOutSine, mk_bump(30 / self._speed, self._rainbow, 0))),
+            BaseColor(
+                h=Curve(easeInOutSine, mk_bump(20 / self._speed, self._rainbow * 0.5, 0))),
             BaseColor(l=0.0, spread=False, suppress=["sparkles"]),
             BaseColor(l=0.0, spread=False, suppress=["sparkles"]),
-            BaseColor(),
-            BaseColor(),
+            BaseColor(
+                h=Curve(easeInOutSine, mk_bump(30 / self._speed, self._rainbow * 0.5, 0))),
             BaseColor(
                 l=0.0, spread=False, suppress=["sparkles"],
-                h=Curve(easeInOutSine, [
-                    (0, -self._rainbow),
-                    (10, 0),
-                    (20, -self._rainbow)])),
+                h=Curve(easeInOutSine, mk_bump(20 / self._speed, -self.rainbow, 0))),
         ])
         self.topologies = [DistortTopology(easeInOutSine,
-            Curve(easeInOutSine, [
-                (0, self._distortion),
-                (30, -self._distortion),
-                (60, self._distortion),
-            ]),
-            Curve(easeInOutSine, [
-                (0, -self._distortion),
-                (30, self._distortion),
-                (60, -self._distortion),
-            ]),
-            Curve(easeInOutSine, [
-                (0, 0.5),
-                (5, 0.5 - (0.5 * self._mid_distortion)),
-                (10, 0.5),
-                (15, 0.5 + (0.5 * self._mid_distortion)),
-                (20, 0.5),
-            ])),
-            MirrorTopology(self._mirror),
+            Curve(easeInOutSine, mk_bump(30 / self._speed, self._distortion, -self.distortion)),
+            Curve(easeInOutSine, mk_bounce(30 / self._speed, -self.distortion, self.distortion)),
+            Curve(easeInOutSine, mk_bounce(20 / self._speed, 0.5, self._mid_distortion * 0.5))),
+            MirrorTopology(2),
         ]
     
     @property
@@ -1035,12 +1020,12 @@ class Groovy(ControllablePattern):
         self.update_values()
 
     @property
-    def mirror(self):
-        return self._mirror
+    def speed(self):
+        return self._speed
 
-    @mirror.setter
-    def mirror(self, mirror):
-        self._mirror = mirror
+    @speed.setter
+    def speed(self, speed):
+        self._speed = speed
         self.update_values()
 
 class Rainbro(ControllablePattern):
@@ -1107,7 +1092,7 @@ class SlidingDoor(ControllablePattern):
         self._speed = 1
 
         self.controls = [
-            ("speed", INTS26),
+            ("speed", HALVES056),
             ("mirror", [("jumble", 0)] + INTS28),
             FlashOptions.default,
             FlickerOptions.default,
@@ -1216,7 +1201,7 @@ class SpiralTop(ControllablePattern):
 
         self.controls = [
             ("mirror", INTS28),
-            ("speed", INTS16),
+            ("speed", HALVES056),
             ("spread", FRACS),
             ("spirals", HALVES053),
             FlickerOptions.default,
