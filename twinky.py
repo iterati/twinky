@@ -1371,7 +1371,7 @@ class TwistedRainbows(ControllablePattern):
 
         self.controls = [
             SpinOptions.default,
-            RainbowOptions.default,
+            RainbowOptions.nocurve,
             FluxOptions.default,
             ("repeats", [("jumble", 0)] + INTS28),
             ("splits", INTS28),
@@ -1503,7 +1503,7 @@ if __name__ == "__main__":
         TurningWindows(),
         TwistedRainbows(),
     ]
-    animation = Blender(patterns, 7)
+    animation = Blender(patterns)
     animation_thread, draw_menu = get_thread_and_menu(animation)
     animation_thread.start()
     curses.wrapper(draw_menu)
