@@ -25,7 +25,8 @@ def setcolor_streamer(w: Param | None=None,
                       h: Param | None=None,
                       s: Param | None=None,
                       l: Param | None=None,
-                      make_white: bool=False) -> StreamerFunc:
+                      make_white: bool=False,
+                      ignore_color: bool=False) -> StreamerFunc:
     def func(color: Color, t: float, pixel_t: float, pixel_y: float) -> Color:
         if color.l != -1.0 and make_white:
             return Color(
@@ -36,7 +37,7 @@ def setcolor_streamer(w: Param | None=None,
 
         return Color(
             w=getv(w, t) if w is not None else color.w,
-            h=color.h + (0 if h is None else getv(h, t)),
+            h=(0 if ignore_color else color.h) + (0 if h is None else getv(h, t)),
             s=getv(s, t) if s is not None else color.s,
             l=getv(l, t) if l is not None else color.l,
         )
@@ -126,10 +127,10 @@ class Streamer:
                  lifetime: Param=6.0):
         self.initial_t = initial_t
         self.reverse = move_dir != Direction.FROM_TOP
-        if move_dir == Direction.FROM_TOP:
-            spind = -1 if spin_dir == Spin.CLOCKWISE else 1
-        else:
-            spind = 1 if spin_dir == Spin.CLOCKWISE else -1
+        #if move_dir == Direction.FROM_TOP:
+        spind = -1 if spin_dir == Spin.CLOCKWISE else 1
+        #else:
+        #    spind = 1 if spin_dir == Spin.CLOCKWISE else -1
 
         self.angle = random.random() if angle is None else angle
         self.spin = spind * getv(spin, initial_t)
