@@ -836,10 +836,11 @@ class Galaxus(ControllablePattern):
 
         self.controls = [
             ("speed", HALVES056),
-            ("wobble", FRACS + ONE_ZERO),
-            ("spirals", INTS28),
-            ("width", FRACS + ONE_ZERO),
-            FluxOptions.default,
+            ("wobble", FRACS + SINES + ONE_ZERO),
+            ("spirals", INTS26),
+            ("width", FRACS + SINES),
+            FlickerOptions.default,
+            FlitterOptions.default,
             SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
@@ -865,19 +866,19 @@ class Galaxus(ControllablePattern):
                         "spin_dir": spin_dir,
                         "angle": offset + (i / self._spirals) + (o / (self._spirals * self._spins)),
                         "spin": 0.5,
-                        "length": 1,
+                        "length": 6 / self._speed,
                         "width": self._width / self._spirals,
-                        "lifetime": self._speed * 1.5,
+                        "lifetime": 9 / self._speed,
                         "func": func,
                     } for i in range(self._spirals)
                 ] for o in range(self._spins)
-            ] for move_dir, spin_dir, offset, func in zip(
+                  for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
+          ] for move_dir, offset, func in zip(
                 [Direction.FROM_BOT, Direction.FROM_TOP],
-                [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE],
                 [0, 0.5 / self._spirals],
                 [
                     setcolor_streamer(
-                        l=0,
+                        l=0, ignore_color=True,
                         h=Curve(easeInOutSine, [
                             (0, 0),
                             (7.5, -self._wobble),
@@ -887,7 +888,7 @@ class Galaxus(ControllablePattern):
                         ]),
                     ),
                     setcolor_streamer(
-                        l=0,
+                        l=0, ignore_color=True,
                         h=Curve(easeInOutSine, [
                             (0, 0.5),
                             (5, 0.5 - self._wobble),
@@ -900,8 +901,8 @@ class Galaxus(ControllablePattern):
             )
         ]
         return combined_choices([
-            streamer_choices(self._speed, streamers[0]),
-            streamer_choices(self._speed, streamers[1], delay_offset=self._speed / 2),
+            streamer_choices(int(6 / self._speed), streamers[0]),
+            streamer_choices(int(6 / self._speed), streamers[1]),#, delay_offset=(6 / self._speed) / 2),
         ])
 
     @property
