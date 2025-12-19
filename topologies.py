@@ -32,7 +32,7 @@ class TurntTopology(Topology):
 
     def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
         count = getv(self.count, t)
-        turn = getv(self.turn, t)
+        turn = getv(self.turn, t) / count
         y_bin = int(pixel_y * count)
         return (pixel_t + (y_bin * turn)) % 1
 

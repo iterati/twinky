@@ -52,16 +52,24 @@ class RandomColorStreamerFunc:
                  s: Param | None=None,
                  l: Param | None=None):
         self.w = w
-        self.h = rand(minh, maxh)(0)
+        self.minh = minh
+        self.maxh = maxh
+        self._h = None
         self.s = s
         self.l = l
 
+    def h(self, t):
+        if self._h is None:
+            self._h = rand(getv(self.minh, t), getv(self.maxh, t))(0)
+            
+        return self._h
+
     def __call__(self, color: Color, t: float, pixel_x: float, pixel_y: float) -> Color:
         return Color(
-            getv(self.w, t) if self.w is not None else color.w,
-            color.h + self.h,
-            getv(self.s, t) if self.s is not None else color.s,
-            getv(self.l, t) if self.l is not None else color.l,
+            w=getv(self.w, t) if self.w is not None else color.w,
+            h=self.h(t),
+            s=getv(self.s, t) if self.s is not None else color.s,
+            l=getv(self.l, t) if self.l is not None else color.l,
         )
 
 

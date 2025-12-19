@@ -82,36 +82,37 @@ FRACS = [
     ("1/2", 1/2),
     ("2/3", 2/3),
     ("3/4", 3/4),
+    ("1", 1),
 ]
-SINES = [
-    ("1/4:6",  Curve(easeInOutSine, mk_bump(6, 1/4))),
-    ("1/3:6",  Curve(easeInOutSine, mk_bump(6, 1/3))),
-    ("1/2:6",  Curve(easeInOutSine, mk_bump(6, 1/2))),
-    ("2/3:6",  Curve(easeInOutSine, mk_bump(6, 2/3))),
-    ("3/4:6",  Curve(easeInOutSine, mk_bump(6, 3/4))),
-    (  "1:6",  Curve(easeInOutSine, mk_bump(6, 1))),
+BUMPS = [
+    ("1/4:6",  Curve(easeInOutSine, mk_bump( 6, 1/4))),
+    ("1/3:6",  Curve(easeInOutSine, mk_bump( 6, 1/3))),
+    ("1/2:6",  Curve(easeInOutSine, mk_bump( 6, 1/2))),
+    ("2/3:6",  Curve(easeInOutSine, mk_bump( 6, 2/3))),
+    ("3/4:6",  Curve(easeInOutSine, mk_bump( 6, 3/4))),
+    (  "1:6",  Curve(easeInOutSine, mk_bump( 6, 1/1))),
     ("1/4:12", Curve(easeInOutSine, mk_bump(12, 1/4))),
     ("1/3:12", Curve(easeInOutSine, mk_bump(12, 1/3))),
     ("1/2:12", Curve(easeInOutSine, mk_bump(12, 1/2))),
     ("2/3:12", Curve(easeInOutSine, mk_bump(12, 2/3))),
     ("3/4:12", Curve(easeInOutSine, mk_bump(12, 3/4))),
-    (  "1:12", Curve(easeInOutSine, mk_bump(12, 1))),
+    (  "1:12", Curve(easeInOutSine, mk_bump(12, 1/1))),
     ("1/4:30", Curve(easeInOutSine, mk_bump(30, 1/4))),
     ("1/3:30", Curve(easeInOutSine, mk_bump(30, 1/3))),
     ("1/2:30", Curve(easeInOutSine, mk_bump(30, 1/2))),
     ("2/3:30", Curve(easeInOutSine, mk_bump(30, 2/3))),
     ("3/4:30", Curve(easeInOutSine, mk_bump(30, 3/4))),
-    (  "1:30", Curve(easeInOutSine, mk_bump(30, 1))),
+    (  "1:30", Curve(easeInOutSine, mk_bump(30, 1/1))),
 ]
 QUARTER_SINES = [
-    ("0.25\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.25, 0))),
-    ("0.25\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 0.25))),
-    ("0.50\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.50, 0))),
-    ("0.50\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 0.50))),
-    ("0.75\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 0.75, 0))),
-    ("0.75\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 0.75))),
-    ("1.00\u21c5 6",  Curve(easeInOutSine, mk_bump(6, 1.00, 0))),
-    ("1.00\u21f5 6",  Curve(easeInOutSine, mk_bump(6, 0, 1.00))),
+    ("0.25\u21c5 6",  Curve(easeInOutSine, mk_bump( 6, 0.25, 0))),
+    ("0.25\u21f5 6",  Curve(easeInOutSine, mk_bump( 6, 0, 0.25))),
+    ("0.50\u21c5 6",  Curve(easeInOutSine, mk_bump( 6, 0.50, 0))),
+    ("0.50\u21f5 6",  Curve(easeInOutSine, mk_bump( 6, 0, 0.50))),
+    ("0.75\u21c5 6",  Curve(easeInOutSine, mk_bump( 6, 0.75, 0))),
+    ("0.75\u21f5 6",  Curve(easeInOutSine, mk_bump( 6, 0, 0.75))),
+    ("1.00\u21c5 6",  Curve(easeInOutSine, mk_bump( 6, 1.00, 0))),
+    ("1.00\u21f5 6",  Curve(easeInOutSine, mk_bump( 6, 0, 1.00))),
     ("0.25\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.25, 0))),
     ("0.25\u21f5 12", Curve(easeInOutSine, mk_bump(12, 0, 0.25))),
     ("0.50\u21c5 12", Curve(easeInOutSine, mk_bump(12, 0.50, 0))),
@@ -130,26 +131,26 @@ QUARTER_SINES = [
     ("1.00\u21f5 30", Curve(easeInOutSine, mk_bump(30, 0, 1.00))),
 ]
 BOUNCES = [
-    ( "1/4:6",  Curve(easeInOutSine, mk_bounce(6, 1/4))),
-    ( "1/3:6",  Curve(easeInOutSine, mk_bounce(6, 1/3))),
-    ( "1/2:6",  Curve(easeInOutSine, mk_bounce(6, 1/2))),
-    ( "2/3:6",  Curve(easeInOutSine, mk_bounce(6, 2/3))),
-    ( "3/4:6",  Curve(easeInOutSine, mk_bounce(6, 3/4))),
-    (   "1:6",  Curve(easeInOutSine, mk_bounce(6, 1))),
+    ( "1/4:6",  Curve(easeInOutSine, mk_bounce( 6, 1/4))),
+    ( "1/3:6",  Curve(easeInOutSine, mk_bounce( 6, 1/3))),
+    ( "1/2:6",  Curve(easeInOutSine, mk_bounce( 6, 1/2))),
+    ( "2/3:6",  Curve(easeInOutSine, mk_bounce( 6, 2/3))),
+    ( "3/4:6",  Curve(easeInOutSine, mk_bounce( 6, 3/4))),
+    (   "1:6",  Curve(easeInOutSine, mk_bounce( 6, 1/1))),
     ("1/4:12",  Curve(easeInOutSine, mk_bounce(12, 1/4))),
     ("1/3:12",  Curve(easeInOutSine, mk_bounce(12, 1/3))),
     ("1/2:12",  Curve(easeInOutSine, mk_bounce(12, 1/2))),
     ("2/3:12",  Curve(easeInOutSine, mk_bounce(12, 2/3))),
     ("3/4:12",  Curve(easeInOutSine, mk_bounce(12, 3/4))),
-    (  "1:12",  Curve(easeInOutSine, mk_bounce(12, 1))),
+    (  "1:12",  Curve(easeInOutSine, mk_bounce(12, 1/1))),
     ("1/4:30",  Curve(easeInOutSine, mk_bounce(30, 1/4))),
     ("1/3:30",  Curve(easeInOutSine, mk_bounce(30, 1/3))),
     ("1/2:30",  Curve(easeInOutSine, mk_bounce(30, 1/2))),
     ("2/3:30",  Curve(easeInOutSine, mk_bounce(30, 2/3))),
     ("3/4:30",  Curve(easeInOutSine, mk_bounce(30, 3/4))),
-    (  "1:30",  Curve(easeInOutSine, mk_bounce(30, 1))),
+    (  "1:30",  Curve(easeInOutSine, mk_bounce(30, 1/1))),
 ]
-ONE_ZERO = [("1", 1), ("off", 0)]
+OFF = [("off", 0)]
 INTS16 = [("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5), ("6", 6)]
 INTS18 = INTS16 + [("7", 7), ("8", 8)]
 INTS26 = INTS16[1:] 
@@ -174,19 +175,19 @@ class FadeOptions:
     ])
 
 class FlashOptions:
-    default = ("flash", FRACS + QUARTER_SINES + ONE_ZERO)
+    default = ("flash", OFF + FRACS + BUMPS)
 
 class FlickerOptions:
-    default = ("flicker", FRACS + QUARTER_SINES + ONE_ZERO)
+    default = ("flicker", OFF + FRACS + BUMPS)
 
 class FlitterOptions:
-    default = ("flitter", FRACS + QUARTER_SINES + ONE_ZERO)
+    default = ("flitter", OFF + FRACS + BUMPS)
 
 class FluxOptions:
-    default = ("flux", FRACS + BOUNCES + ONE_ZERO)
+    default = ("flux", OFF + FRACS + BOUNCES)
 
 class RainbowOptions:
-    default = ("rainbow", FRACS + SINES + ONE_ZERO)
+    default = ("rainbow", OFF + FRACS + BUMPS)
 
 class SpinOptions:
     default = ("spin", [
@@ -206,45 +207,43 @@ class SpinOptions:
         ("2xsmoothx1", Curve(easeInOutSine, mk_bounce(60, 2))),
         ("1xsmoothx2", Curve(easeInOutSine, mk_bounce(30, 1))),
         ("2xsmoothx2", Curve(easeInOutSine, mk_bounce(30, 2))),
-        ("1xjerkyx1", Curve(easeInSine, mk_bounce(60, 1))),
-        ("2xjerkyx1", Curve(easeInSine, mk_bounce(60, 2))),
-        ("1xjerkyx2", Curve(easeInSine, mk_bounce(30, 1))),
-        ("2xjerkyx2", Curve(easeInSine, mk_bounce(30, 2))),
+        ("1xjerkyx1", Curve(easeOutSine, mk_bounce(60, 1))),
+        ("2xjerkyx1", Curve(easeOutSine, mk_bounce(60, 2))),
+        ("1xjerkyx2", Curve(easeOutSine, mk_bounce(30, 1))),
+        ("2xjerkyx2", Curve(easeOutSine, mk_bounce(30, 2))),
+        ("1xbouncyx1", Curve(easeOutBounce, mk_bounce(60, 1))),
+        ("2xbouncyx1", Curve(easeOutBounce, mk_bounce(60, 2))),
+        ("1xbouncyx2", Curve(easeOutBounce, mk_bounce(30, 1))),
+        ("2xbouncyx2", Curve(easeOutBounce, mk_bounce(30, 2))),
         ("off", 0),
     ])
 
 class SpiralOptions:
     const = ("spiral", [
-        ("stepped", Curve(const, [
-            (0, -3), (3, 3),
-            (9, -1.5), (15, 1.5),
-            (21, -0.5), (27, 0.5),
-            (33, -1), (39, 1),
-            (45, -2), (51, 2),
-            (57, -3), (60, -3)
+        ("stepped", CombinedCurve([
+            Curve(const, [(t, v), (t+3, -v), (t+6, v)])
+            for t, v in enumerate([3, 1.5, 0.5, 1, 2, 3])
         ])),
         ("flip0.5", Curve(const, mk_bounce(12, 0.5))),
         ("flip1.0", Curve(const, mk_bounce(12, 1))),
         ("flip1.5", Curve(const, mk_bounce(12, 1.5))),
         ("flip2.0", Curve(const, mk_bounce(12, 2))),
-        ("flip3.0", Curve(const, mk_bounce(12, 3))),
+        ("off", 0),
     ])
     curved = ("spiral", [
         ("0.5:12", Curve(easeInOutSine, mk_bounce(12, 0.5))),
         ("1.0:12", Curve(easeInOutSine, mk_bounce(12, 1))),
         ("1.5:12", Curve(easeInOutSine, mk_bounce(12, 1.5))),
         ("2.0:12", Curve(easeInOutSine, mk_bounce(12, 2))),
-        ("3.0:12", Curve(easeInOutSine, mk_bounce(12, 3))),
         ("0.5:30", Curve(easeInOutSine, mk_bounce(30, 0.5))),
         ("1.0:30", Curve(easeInOutSine, mk_bounce(30, 1))),
         ("1.5:30", Curve(easeInOutSine, mk_bounce(30, 1.5))),
         ("2.0:30", Curve(easeInOutSine, mk_bounce(30, 2))),
-        ("3.0:30", Curve(easeInOutSine, mk_bounce(30, 3))),
         ("0.5:60", Curve(easeInOutSine, mk_bounce(60, 0.5))),
         ("1.0:60", Curve(easeInOutSine, mk_bounce(60, 1))),
         ("1.5:60", Curve(easeInOutSine, mk_bounce(60, 1.5))),
         ("2.0:60", Curve(easeInOutSine, mk_bounce(60, 2))),
-        ("3.0:60", Curve(easeInOutSine, mk_bounce(60, 3))),
+        ("off", 0),
     ])
     
 class SparkleOptions:
@@ -309,9 +308,9 @@ class BasicBitch(ControllablePattern):
         self._pulse_intensity = 1
 
         self.controls = [
-            ("color_speed", HALVES056 + [("off", 0)]),
-            ("pulse_speed", HALVES056 + [("off", 0)]),
-            ("pulse_intensity", FRACS + SINES),
+            ("color_speed", [("off", 0)] + HALVES056),
+            ("pulse_speed", [("off", 0)] + HALVES056),
+            ("pulse_intensity", FRACS),
             FlashOptions.default,
             FlickerOptions.default,
             FlitterOptions.default,
@@ -325,13 +324,15 @@ class BasicBitch(ControllablePattern):
     def update_values(self):
         self.base_color = BaseColor(
             h=0 if self._color_speed == 0 else Curve(linear, [
-                (0, -self._pulse_intensity),
-                (15 / self._color_speed, 1),
-                (30 / self._color_speed, -self.pulse_intensity),
+                (0  / self._color_speed,  0),
+                (15 / self._color_speed,  1),
+                (30 / self._color_speed,  0),
+                (45 / self._color_speed, -1),
+                (60 / self._color_speed,  0),
             ]), l=0 if self._pulse_speed == 0 else Curve(easeInOutSine, [
-                (0, -self._pulse_intensity),
+                (0  / self._pulse_speed, -self._pulse_intensity),
                 (15 / self._pulse_speed, 0),
-                (30 / self._pulse_speed, -self.pulse_intensity),
+                (30 / self._pulse_speed, -self._pulse_intensity),
             ]))
 
     @property
@@ -373,6 +374,7 @@ class CircusTent(ControllablePattern):
             ("delay", HALVES053),
             RainbowOptions.default,
             SpinOptions.default,
+            SpiralOptions.curved,
             SparkleOptions.default,
             SparkleFuncOptions.basic,
             StreamerFuncOptions.basic,
@@ -394,22 +396,19 @@ class CircusTent(ControllablePattern):
         self.update_values()
 
     def mk_streamers(self):
-        return streamer_choices(
-            3,
+        return streamer_choices(3, [
             [
-                [
-                    {
-                        "move_dir": move_dir,
-                        "spin_dir": spin_dir,
-                        "spin": Curve(const, [(0, 1), (3, 0.5), (6, 1)]),
-                        "length": 1.0,
-                        "width": Curve(const, [(0, 0.1), (3, 0.15), (6, 0.1)]),
-                        "lifetime": 6.0,
-                        "func": self._streamer_func,
-                    } for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
-                ] for move_dir in [Direction.FROM_BOT, Direction.FROM_TOP]
-            ],
-        ) 
+                {
+                    "move_dir": move_dir,
+                    "spin_dir": spin_dir,
+                    "spin": Curve(const, [(0, 1), (3, 0.5), (6, 1)]),
+                    "length": 1.0,
+                    "width": Curve(const, [(0, 0.1), (3, 0.15), (6, 0.1)]),
+                    "lifetime": 6.0,
+                    "func": self._streamer_func,
+                } for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
+            ] for move_dir in [Direction.FROM_BOT, Direction.FROM_TOP]
+        ]) 
 
     def mk_split_funcs(self, delay):
         return periodic_choices(delay, [
@@ -471,16 +470,14 @@ class CoiledSpring(ControllablePattern):
         self._rainbow = 1
         self._repeats = 3
         self._split = 0.25
-        self._width = 0.1
         self._spirals = 2
         self._speed = 1
 
         self.controls = [
-            ("split", FRACS),
+            ("split", FRACS + BUMPS),
             ("repeats", INTS28),
             ("speed", HALVES056),
             ("spirals", HALVES053),
-            ("width", FRACS),
             FlickerOptions.default,
             FlitterOptions.default,
             RainbowOptions.default,
@@ -496,7 +493,7 @@ class CoiledSpring(ControllablePattern):
         ])
         self.topologies = [RepeatTopology(self._repeats)]
         self.spiral=Curve(easeOutBounce, [
-            (0, self._spirals),
+            ( 0, self._spirals),
             (15, -self._spirals),
             (30, self._spirals),
         ])
@@ -506,11 +503,11 @@ class CoiledSpring(ControllablePattern):
                 "spin_dir": Spin.CLOCKWISE,
                 "angle": (i/self._repeats) + (o/(self._repeats * 4)),
                 "spin": Curve(easeOutBounce, [
-                    (0, self._spirals),
+                    ( 0 / self._speed, self._spirals),
                     (30 / self._speed, -self._spirals),
                     (60 / self._speed, self._spirals)]),
                 "length": 2.0,
-                "width": self._width / self._repeats,
+                "width": self._split / self._repeats,
                 "lifetime": 2.0,
                 "func": setcolor_streamer(h=i * (self._rainbow / 4), w=0, s=1, l=0.0),
             } for i in range(self._repeats)
@@ -553,15 +550,6 @@ class CoiledSpring(ControllablePattern):
         self.update_values()
 
     @property
-    def width(self):
-        return self._width
-
-    @width.setter
-    def width(self, width):
-        self._width = width
-        self.update_values()
-
-    @property
     def spirals(self):
         return self._spirals
 
@@ -585,9 +573,11 @@ class Confetti(ControllablePattern):
             ]),
             ("delay", QUARTERS),
             ("intensity", [
-                ("low", "low"),
-                ("medium", "medium"),
-                ("high", "high"),
+                ("off", (0, 0)),
+                ("low", (0, 1)),
+                ("medium", (0, 2)),
+                ("high", (0, 4)),
+                ("extreme", (1, 4)),
             ]),
             FlickerOptions.default,
             FlitterOptions.default,
@@ -600,21 +590,14 @@ class Confetti(ControllablePattern):
         super(Confetti, self).__init__("Confetti")
     
     def update_values(self):
-        if self._intensity == "low":
-            choose = (0, 1)
-        elif self._intensity == "medium":
-            choose = (0, 2)
-        else:
-            choose = (1, 2)
-            
         if self._direction == "BOTH":
             self.streamers = combined_choices([
-                self.mk_streamer_choices(self._delay, Direction.FROM_TOP, choose),
-                self.mk_streamer_choices(self._delay, Direction.FROM_BOT, choose),
+                self.mk_streamer_choices(self._delay, Direction.FROM_TOP, self._intensity),
+                self.mk_streamer_choices(self._delay, Direction.FROM_BOT, self._intensity),
             ])
         else:
             self.streamers = self.mk_streamer_choices(
-                self._delay, self._direction, (choose[0] * 2, choose[1] * 2))
+                self._delay, self._direction, (self._intensity[0] * 2, self._intensity[1] * 2))
 
     def mk_streamer_choices(self, delay, move_dir, choose):
         return streamer_choices(delay,
@@ -626,8 +609,9 @@ class Confetti(ControllablePattern):
                     "width": width,
                     "length": lambda _: choice([0.25, 0.5])(),
                     "lifetime": lambda _: rand(3, 6)(),
-                    "func": RandomColorStreamerFunc(
-                        -self._rainbow / 2, self.rainbow / 2, w=0, s=1, l=0),
+                    "func": RandomColorStreamerFunc(-self._rainbow / 2,
+                                                    self.rainbow / 2,
+                                                    w=0, s=1, l=0),
                 }
                 for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
                 for spin, width in [(0.5, 0.1), (1, 0.15), (1.5, 0.2)]
@@ -682,7 +666,6 @@ class DroppingPlates(ControllablePattern):
             ("mirror", INTS28),
             ("speed", HALVES056),
             FadeOptions.default,
-            FlashOptions.default,
             FlickerOptions.default,
             FlitterOptions.default,
             FluxOptions.default,
@@ -788,25 +771,21 @@ class FallingSnow(ControllablePattern):
             func = setcolor_streamer(w=0.5, l=-0.5)
             choose = (0, 4)
 
-        return streamer_choices(
-            1,
-            [[
-                {
-                    "move_dir": move_dir,
-                    "spin_dir": spin_dir,
-                    "spin": spin,
-                    "width": width,
-                    "length": 0.5,
-                    "lifetime": lifetime,
-                    "func": func,
-                }
+        return streamer_choices(1, [[
+            {
+                "move_dir": move_dir,
+                "spin_dir": spin_dir,
+                "spin": spin,
+                "width": width,
+                "length": 0.5,
+                "lifetime": lifetime,
+                "func": func,
+            }
                     for move_dir in [Direction.FROM_BOT, Direction.FROM_TOP]
                     for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
                     for lifetime in [3, 4.5, 6, 7.5]
                     for spin, width in [(2, 0.2), (3, 0.15)]
-            ]],
-            choose=choose,
-        ) 
+        ]], choose=choose) 
 
     @property
     def colors(self):
@@ -836,11 +815,12 @@ class Galaxus(ControllablePattern):
 
         self.controls = [
             ("speed", HALVES056),
-            ("wobble", FRACS + SINES + ONE_ZERO),
+            ("wobble", OFF + FRACS + BUMPS),
             ("spirals", INTS26),
-            ("width", FRACS + SINES),
+            ("width", FRACS + BUMPS),
             FlickerOptions.default,
             FlitterOptions.default,
+            FluxOptions.default,
             SparkleOptions.default,
             SparkleFuncOptions.default,
         ]
@@ -902,7 +882,7 @@ class Galaxus(ControllablePattern):
         ]
         return combined_choices([
             streamer_choices(int(6 / self._speed), streamers[0]),
-            streamer_choices(int(6 / self._speed), streamers[1]),#, delay_offset=(6 / self._speed) / 2),
+            streamer_choices(int(6 / self._speed), streamers[1], delay_offset=(6 / self._speed) / 2),
         ])
 
     @property
@@ -958,8 +938,8 @@ class Groovy(ControllablePattern):
         self._rainbow = 1/8
 
         self.controls = [
-            ("distortion", FRACS),
-            ("mid_distortion", FRACS),
+            ("distortion", FRACS + BUMPS),
+            ("mid_distortion", FRACS + BUMPS),
             ("speed", HALVES053),
             FlickerOptions.default,
             FlitterOptions.default,
@@ -1037,7 +1017,6 @@ class Rainbro(ControllablePattern):
         self.controls = [
             ("repeats", [("jumble", 0)] + INTS28),
             SpiralOptions.curved,
-            FlashOptions.default,
             FlickerOptions.default,
             FlitterOptions.default,
             FluxOptions.default,
@@ -1094,14 +1073,14 @@ class SlidingDoor(ControllablePattern):
 
         self.controls = [
             ("speed", HALVES056),
-            ("mirror", [("jumble", 0)] + INTS28),
-            FlashOptions.default,
+            ("mirror", [("jumble", 0)] + INTS16),
             FlickerOptions.default,
-            FlitterOptions.default,
             FluxOptions.default,
             RainbowOptions.default,
+            SpiralOptions.curved,
             SparkleOptions.default,
             SparkleFuncOptions.default,
+            ("streamers", [("on", self.mk_streamers()), ("off", [])]),
         ]
 
         super(SlidingDoor, self).__init__("Sliding Door")
@@ -1127,7 +1106,6 @@ class SlidingDoor(ControllablePattern):
                 ),
             ],
         )
-        self.streamers = self.mk_streamers()
         self.spread = Curve(easeInOutSine, [
             (0, self._rainbow / 2),
             (15, -self._rainbow / 2),
@@ -1203,14 +1181,14 @@ class SpiralTop(ControllablePattern):
         self.controls = [
             ("mirror", INTS28),
             ("speed", HALVES056),
-            ("spread", FRACS),
+            ("spread", FRACS[1:-1]),
             ("spirals", HALVES053),
             FlickerOptions.default,
             FlitterOptions.default,
             FluxOptions.default,
             SpinOptions.default,
             SparkleOptions.default,
-            SparkleFuncOptions.default,
+            SparkleFuncOptions.basic,
         ]
 
         super(SpiralTop, self).__init__("Spiral Top")
@@ -1256,14 +1234,16 @@ class SpiralTop(ControllablePattern):
 class TurningWindows(ControllablePattern):
     def __init__(self):
         self._delay = 0.25
-        self._splits = 8
+        self._splits = 4
+        self._tiers = 4
         self._repeats = 4
         self._rainbow = 1
 
         self.controls = [
-            ("splits", INTS28),
-            ("repeats", INTS18),
-            ("delay", QUARTERS),
+            ("splits", INTS26),
+            ("tiers", INTS26),
+            ("repeats", INTS26),
+            ("delay", QUARTERS + HALVES053[2:]),
             RainbowOptions.default,
             FlickerOptions.default,
             FlitterOptions.default,
@@ -1286,15 +1266,15 @@ class TurningWindows(ControllablePattern):
             periodic_choices(self._delay, windows),
             suppress=["sparkles"],
         )
+        # repeats * splits = segments
+        # turn 0, ... splits
+        turnt_curve = Curve(linear, [(
+            self._delay * i,
+            (self._tiers / (self._repeats * self._splits)) * (i / self._splits)
+        ) for i in range(6 * self._splits)])
         self.topologies = [
             RepeatTopology(self._repeats),
-            TurntTopology(
-                self.repeats,
-                CombinedCurve([
-                        Curve(easeOutSine, [(0, 0), (15, 1)]),
-                        Curve(easeOutSine, [(0, 0), (15, -1)]),
-                ])
-            )
+            TurntTopology(self._tiers, turnt_curve)
         ]
         self.spread = Curve(linear, [
             (0, 0),
@@ -1304,6 +1284,15 @@ class TurningWindows(ControllablePattern):
             (60, 0),
         ])
         
+    @property
+    def tiers(self):
+        return self._tiers
+
+    @tiers.setter
+    def tiers(self, tiers):
+        self._tiers = tiers
+        self.update_values()
+
     @property
     def delay(self):
         return self._delay
@@ -1340,129 +1329,24 @@ class TurningWindows(ControllablePattern):
         self._splits = splits
         self.update_values()
 
-class TwistedRainbows(ControllablePattern):
-    def __init__(self):
-        self._repeats = 0
-        self._rainbow = 1
-        self._splits = 3
-        self._streamer_func = StreamerFuncs.WHITEN
-
-        self.controls = [
-            ("splits", INTS28),
-            ("repeats", [("jumble", 0)] + INTS28),
-            SpinOptions.default,
-            FlickerOptions.default,
-            FlitterOptions.default,
-            FluxOptions.default,
-            RainbowOptions.default,
-            SpiralOptions.const,
-            StreamerFuncOptions.basic,
-        ]
-
-        super(TwistedRainbows, self).__init__("Twisted Rainbows")
-
-    def update_values(self):
-        if self._repeats == 0:
-           repeats = Curve(const, [
-                (0, 1),
-                (12, 3),
-                (24, 5),
-                (36, 4),
-                (48, 2),
-                (60, 1)
-            ]) 
-        else:
-            repeats = self._repeats
-
-        self.base_color = SplitColor(self._splits)
-        self.topologies = [RepeatTopology(repeats)]
-        self.spread = Curve(easeInOutCubic, [
-            (0, self._rainbow / 2),
-            (3, 0),
-            (6, -self._rainbow / 2),
-            (9, 0),
-            (12, self._rainbow / 2),
-        ])
-        self.spiral = Curve(const, [
-            (0, -3), (3, 3),
-            (9, -1.5), (15, 1.5),
-            (21, -0.5), (27, 0.5),
-            (33, -1), (39, 1),
-            (45, -2), (51, 2),
-            (57, -3), (60, -3)
-        ])
-        self.streamers = streamer_choices(
-            1,
-            [[
-                {
-                    "move_dir": move_dir,
-                    "spin_dir": spin_dir,
-                    "spin": 2.0,
-                    "length": 2.0,
-                    "width": 0.15,
-                    "lifetime": 3,
-                    "func": self._streamer_func,
-                }
-                    for move_dir in [Direction.FROM_BOT, Direction.FROM_TOP]
-                    for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
-            ]],
-            choose=(0, 2),
-        )
-
-    @property
-    def streamer_func(self):
-        return self._streamer_func
-
-    @streamer_func.setter
-    def streamer_func(self, streamer_func):
-        self._streamer_func = streamer_func
-        self.update_values()
-
-    @property
-    def repeats(self):
-        return self._repeats
-
-    @repeats.setter
-    def repeats(self, repeats):
-        self._repeats = repeats
-        self.update_values()
-
-    @property
-    def rainbow(self):
-        return self._rainbow
-
-    @rainbow.setter
-    def rainbow(self, rainbow):
-        self._rainbow = rainbow
-        self.update_values()
-
-    @property
-    def splits(self):
-        return self._splits
-
-    @splits.setter
-    def splits(self, splits):
-        self._splits = splits
-        self.update_values()
 
 if __name__ == "__main__":
     patterns = [
-        BasicBitch(),
-        CircusTent(),
-        CoiledSpring(),
-        Confetti(),
-        DroppingPlates(),
-        FallingSnow(),
-        Galaxus(),
-        Groovy(),
-        Rainbro(),
-        SlidingDoor(),
-        SpiralTop(),
-        TurningWindows(),
-        TwistedRainbows(),
+        BasicBitch(),       # 0 
+        CircusTent(),       # 1
+        CoiledSpring(),     # 2
+        Confetti(),         # 3
+        DroppingPlates(),   # 4
+        FallingSnow(),      # 5
+        Galaxus(),          # 6
+        Groovy(),           # 7
+        Rainbro(),          # 8
+        SlidingDoor(),      # 9
+        SpiralTop(),        # 10
+        TurningWindows(),   # 11
     ]
-    animation = Blender(patterns)
-    # animation = Blender(patterns, 10, True)
+    # animation = Blender(patterns)
+    animation = Blender(patterns, 10, True)
     animation_thread, draw_menu = get_thread_and_menu(animation)
     animation_thread.start()
     curses.wrapper(draw_menu)

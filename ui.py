@@ -112,10 +112,7 @@ def make_draw_menu(animation, q):
                 None,
             ] + controls + [
                 None,
-            ] + patterns + [
-                None,
-                "EXIT",
-            ]
+            ] + patterns
             
 
         lowest_row = 4
@@ -135,7 +132,7 @@ def make_draw_menu(animation, q):
 
             if curr_pattern != animation.pattern:
                 current_row = (
-                    5
+                    lowest_row
                     if isinstance(animation.pattern, ControllablePattern) else
                     menu_items.index(animation.pattern.name)
                 )
@@ -192,10 +189,7 @@ def make_draw_menu(animation, q):
 
             elif key == curses.KEY_ENTER or key in [10, 13]:
                 item = menu_items[current_row]
-                if item == "EXIT":
-                    q.put(_sentinel)
-                    break
-                elif item in patterns:
+                if item in patterns:
                     pattern_idx = patterns.index(item)
                     q.put(switch_idx(pattern_idx))
 

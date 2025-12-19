@@ -73,7 +73,7 @@ class Curve:
         return Curve(self.shape_func, [(t, v - y) for (t, v) in self.control_points])
 
     def __rsub__(self, y):
-        return self.__sub__(y)
+        return Curve(self.shape_func, [(t, y - v) for (t, v) in self.control_points])
 
     def __mul__(self, y):
         return Curve(self.shape_func, [(t, v * y) for (t, v) in self.control_points])
@@ -85,19 +85,19 @@ class Curve:
         return Curve(self.shape_func, [(t, v / y) for (t, v) in self.control_points])
 
     def __rtruediv__(self, y):
-        return self.__truediv__(y)
+        return Curve(self.shape_func, [(t, y / v) for (t, v) in self.control_points])
 
     def __floordiv__(self, y):
         return Curve(self.shape_func, [(t, v // y) for (t, v) in self.control_points])
 
     def __floorrdiv__(self, y):
-        return self.__floordiv__(y)
+        return Curve(self.shape_func, [(t, y // v) for (t, v) in self.control_points])
 
     def __mod__(self, y):
         return Curve(self.shape_func, [(t, v % y) for (t, v) in self.control_points])
 
     def __rmod__(self, y):
-        return self.__mod__(y)
+        return Curve(self.shape_func, [(t, y % v) for (t, v) in self.control_points])
 
     def __neg__(self):
         return self.__mul__(-1)
