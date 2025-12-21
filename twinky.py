@@ -1,10 +1,36 @@
 import curses
-from core import Blender
-from ui import animation_thread_task, _sentinel
-from queue import Queue
+from ui import animation_thread_task
+from queue import Queue, Empty
 from threading import Thread
+import time
+from core import Blender
 from control import *
 
+_sentinel = object()
+
+def animation_thread_task(animation, command_queue):
+    start_time = time.time()
+    animation.init(start_time)
+    next_frame = start_time + (1/16)
+    while True:
+        try:
+            command = command_queue.get(False)
+            if command is not None:
+                if command is _sentinel:
+                    print("Stopping animation")
+                    command_queue.put(_sentinel)
+                    break
+                else:
+                    command(animation)
+                command_queue.task_done()
+        except Empty:
+            pass
+        
+        colors = animation.render(time.time())
+        animation.write(colors)
+        while time.time() < next_frame:
+            pass
+        next_frame += 1/16
 
 def switch_pattern(idx):
     def func(a):
