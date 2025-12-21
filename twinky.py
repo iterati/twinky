@@ -1,5 +1,4 @@
 import curses
-from ui import animation_thread_task
 from queue import Queue, Empty
 from threading import Thread
 import time
