@@ -1,5 +1,5 @@
 import random
-from typing import Callable, TypeAlias
+from typing import Any, Callable, TypeAlias
 
 
 ParamFunc: TypeAlias = Callable[[float], float]
@@ -25,8 +25,8 @@ def rand(minv: float=0.0, maxv: float=1.0) -> ParamFunc:
     return func
 
 
-def choice(choices: Callable[[float], list[float]] | list[float]) -> ParamFunc:
-    def func(t: float) -> float:
+def choice(choices: Callable[[float], list[Any]] | list[Any]) -> ParamFunc:
+    def func(t: float) -> Any:
         c = choices(t) if callable(choices) else choices
         return random.choice(c)
 
@@ -34,7 +34,7 @@ def choice(choices: Callable[[float], list[float]] | list[float]) -> ParamFunc:
 
 
 class Curve:
-    def __init__(self, shape_func: ParamFunc, control_points: ControlPoints):
+    def __init__(self, shape_func: Callable[[float], float], control_points: ControlPoints):
         self.shape_func = shape_func
         self.control_points = control_points
         self.length = self.control_points[-1][0] if len(self.control_points) > 0 else 0
@@ -50,7 +50,7 @@ class Curve:
 
         return (bottom, bottom + 1)
 
-    def __call__(self, t: float) -> float:
+    def __call__(self, t: float) -> Any:
         s = t % self.length
         bottom, top = self._find_control_points(s)
         start_t, start_v = self.control_points[bottom]
@@ -122,7 +122,7 @@ class Random(Curve):
 
             self.length = length
 
-    def __call__(self, t: float) -> float:
+    def __call__(self, t: float) -> Any:
         s = random.random()
         minv = getv(self.minv, t)
         maxv = getv(self.maxv, t)
@@ -156,7 +156,7 @@ class CombinedCurve(Curve):
             self.starts.append(self.length)
             self.length += curve.length
 
-    def __call__(self, t: float) -> float:
+    def __call__(self, t: float) -> Any:
         s = t % self.length
         idx = 0
         for i, s in enumerate(self.starts):

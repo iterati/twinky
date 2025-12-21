@@ -95,7 +95,11 @@ def streamer_choices(
         if s % delay == 0:
             c = choices[int(s / delay) % len(choices)]
             if choose:
-                return random.choices(c, k=random.randint(*choose))
+                if choose[0] == choose[1]:
+                    pick = choose[0]
+                else:
+                    pick = random.randint(*choose)
+                return random.choices(c, k=pick)
             else:
                 return c
         else:
@@ -118,8 +122,8 @@ class Direction(Enum):
 
 
 class Spin(Enum):
-    CLOCKWISE = 0
-    COUNTERCLOCKWISE = 1
+    CLOCKWISE = 1
+    COUNTERCLOCKWISE = -1
 
 
 class Streamer:
@@ -135,13 +139,10 @@ class Streamer:
                  lifetime: Param=6.0):
         self.initial_t = initial_t
         self.reverse = move_dir != Direction.FROM_TOP
-        #if move_dir == Direction.FROM_TOP:
-        spind = -1 if spin_dir == Spin.CLOCKWISE else 1
-        #else:
-        #    spind = 1 if spin_dir == Spin.CLOCKWISE else -1
-
         self.angle = random.random() if angle is None else angle
-        self.spin = spind * getv(spin, initial_t)
+        self.spin_dir = 1 if spin_dir == Spin.CLOCKWISE else -1
+        # self.spin = spin
+        self.spin = getv(spin, initial_t)
         self.length = getv(length, initial_t)
         self.width = getv(width, initial_t)
         self.lifetime = getv(lifetime, initial_t)
@@ -163,7 +164,10 @@ class Streamer:
         if pixel.y < miny or pixel.y > miny + self.length:
             return False
         
-        mino = ((pixel.y * self.spin) + self.angle) % 1
+        mino = (
+            (pixel.y * self.spin * self.spin_dir)
+            + getv(self.angle, t)
+        ) % 1
         if mino + self.width > 1.0:
             return mino < pixel.t or pixel.t < (mino + self.width) - 1
         else:

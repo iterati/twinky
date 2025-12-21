@@ -115,8 +115,8 @@ def getv_funcs(v: BaseColorFuncsParam, t: float) -> BaseColorFuncs:
     return v(t) if callable(v) else v
 
 
-def periodic_choices(delay: float, choices: list[BaseColorFuncs]) -> BaseColorFuncsParam:
-    def func(t: float) -> BaseColorFuncs:
+def periodic_choices(delay: float, choices):
+    def func(t: float):
         return choices[int(t / delay) % len(choices)]
 
     return func
@@ -220,7 +220,7 @@ class FallingColor(BaseColor):
                  num_colors: int=8,
                  skip_colors: int=3,
                  offset: float=0,
-                 speed: float=1,
+                 period: float=60,
                  suppress: list[str] | None=None,
                  fade_func: Param | None=None,
                  hue_func: Param| None=None):
@@ -228,10 +228,13 @@ class FallingColor(BaseColor):
         self._num_colors = num_colors
         self._skip_colors = skip_colors
         self._offset = offset
-        self._speed = speed
         self._fade_func = fade_func if fade_func is not None else Curve(easeInOutCubic, [(0, -1), (0.5, 0), (1, -1)])
         self._hue_func = hue_func if hue_func is not None else Curve(const, [(0, 0), (1, 0)])
-        self._ycurve = Curve(linear, [(0, 0), (60 / self._speed, num_colors)])
+        self._period = period
+
+    @property
+    def ycurve(self):
+        return Curve(linear, [(0, 0), (self._period, self._num_colors)])
 
     def _h(self, t: float, pixel_y: float) -> float:
         r = ((int(pixel_y) * self._skip_colors) % self._num_colors) / self._num_colors
@@ -240,7 +243,7 @@ class FallingColor(BaseColor):
 
     def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
         s = (t + self._offset) % 60
-        pixel_y += getv(self._ycurve, s)
+        pixel_y += getv(self.ycurve, s)
         l = getv(self._fade_func, pixel_y)
         l = ((l + 1) ** 2) - 1
         color = Color(0, self.base_hue + self._h(s, pixel_y), 1, l)

@@ -8,6 +8,7 @@ from xled.discover import xdiscover
 from xled.control import ControlInterface
 
 from colors import Color, BaseColor, ColorFuncs
+from control import WiredPattern
 from param import Param, getv, Curve
 from streamer import Streamer, StreamerParam, getv_streamers
 from topologies import Topology
@@ -188,14 +189,14 @@ class Blender:
     transition_offset = pattern_length - transition_length
 
     def __init__(self,
-                 patterns: list[Pattern],
+                 patterns: list[WiredPattern],
                  start_idx: int | None=None,
                  pause_change: bool=False):
         self.lights = Lights()
         self.patterns = patterns
         self.start_idx = start_idx
         self.pause_change = pause_change
-        self._blend_func = Curve(linear, [(0, 0), (60, 1)])
+        self._blend_func = Curve(linear, [(0, 0), (66, 1)])
         self.buffers = [io.BytesIO() for _ in self.lights.interfaces]
         self.light_pixels = [
             [Pixel(strand, idx, **p) for idx, p in enumerate(interface.layout)]
@@ -233,6 +234,7 @@ class Blender:
             self.pattern = random.choice(self.patterns)
         self.next_pattern = self._pick_next()
         self.pattern.base_color.init(getv(self._blend_func, t))
+        self.pattern.randomize()
 
         self._init_t = t
         self._t = t
@@ -350,6 +352,7 @@ class Blender:
                 self.pattern_end = self._t + self.pattern_length
                 self.pattern = self.next_pattern
                 self.next_pattern = self._pick_next()
+                self.pattern.randomize()
             
         if t >= self.next_sparkle:
             self.next_sparkle += self.sparkle_delay
