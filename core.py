@@ -266,7 +266,18 @@ class Blender:
             self.next_streamer += self.streamer_delay
             streamer_defs = getv_streamers(self.pattern.streamers, t - self.pattern_start)
             self.streamers.extend([
-                Streamer(t, t - self.pattern_start, **streamer_def)
+                Streamer(
+                    t,
+                    t - self.pattern_start,
+                    streamer_def.func,
+                    streamer_def.move_dir,
+                    streamer_def.spin_dir,
+                    streamer_def.angle,
+                    streamer_def.spin,
+                    streamer_def.length,
+                    streamer_def.width,
+                    streamer_def.lifetime,
+                )
                 for streamer_def in streamer_defs
             ])
 

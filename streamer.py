@@ -1,10 +1,10 @@
 from enum import Enum
 import random
-from typing import TypeAlias, TypedDict, NotRequired
+from typing import TypeAlias
 from pytweening import linear
 
 from core import Color
-from param import Curve, CurveFunc, Param, getv, rand
+from param import Curve, Param, getv, rand
 
 class Direction(Enum):
     FROM_BOT = 0
@@ -86,29 +86,39 @@ class Streamer:
     def __init__(self,
                  initial_t: float,
                  norm_t: float,
-                 func: StreamerFunc,
-                 move_dir: Direction=Direction.FROM_BOT,
-                 spin_dir: Spin=Spin.CLOCKWISE,
+                 func: StreamerFunc | None=None,
+                 move_dir: Direction | None=None,
+                 spin_dir: Spin | None=None,
                  angle: Param | None=None,
-                 spin: Param=1.0,
-                 length: Param=1.0,
-                 width: Param=0.1,
-                 lifetime: Param=6.0):
+                 spin: Param | None=None,
+                 length: Param | None=None,
+                 width: Param | None=None,
+                 lifetime: Param | None=None):
         self.initial_t = initial_t
         self.norm_t = norm_t
+        move_dir = move_dir if move_dir is not None else Direction.FROM_BOT
+        spin_dir = spin_dir if spin_dir is not None else Spin.CLOCKWISE
+        angle = angle if angle is not None else random.random()
+        spin = spin if spin is not None else 1.0
+        length = length if length is not None else 1.0
+        width = width if width is not None else 0.1
+        lifetime = lifetime if lifetime is not None else 1.0
+
         self.reverse = move_dir != Direction.FROM_TOP
-        self.angle = random.random() if angle is None else angle
+        self.func = func if func is not None else StreamerFunc()
+        self.move_dir = move_dir
         self.spin_dir = 1 if spin_dir == Spin.CLOCKWISE else -1
+        self.angle = angle
         self.spin = getv(spin, norm_t)
         self.length = getv(length, norm_t)
         self.width = getv(width, norm_t)
         self.lifetime = getv(lifetime, norm_t)
-        self.func = func
 
+    @property
+    def y_func(self):
         if self.reverse:
-            self.y_func = Curve(linear, [(0, -self.length), (self.lifetime, 1)])
-        else:
-            self.y_func = Curve(linear, [(0, 1), (self.lifetime, -self.length)])
+            return Curve(linear, [(0, -self.length), (self.lifetime, 1)])
+        return Curve(linear, [(0, 1), (self.lifetime, -self.length)])
 
     def alive(self, t):
         return t < self.initial_t + self.lifetime
@@ -133,16 +143,25 @@ class Streamer:
     def __repr__(self):
         return f"Streamer({self.angle},{self.spin},{self.length},{self.width},{self.lifetime})"
 
-class StreamerValue(TypedDict):
-    func: NotRequired[StreamerFunc]
-    move_dir: NotRequired[Direction]
-    spin_dir: NotRequired[Spin]
-    angle: NotRequired[Param | CurveFunc]
-    spin: NotRequired[Param | CurveFunc]
-    length: NotRequired[Param | CurveFunc]
-    width: NotRequired[Param | CurveFunc]
-    lifetime: NotRequired[Param | CurveFunc]
-    
+class StreamerValue:
+    def __init__(self,
+                 func: StreamerFunc | None=None,
+                 move_dir: Direction | None=None,
+                 spin_dir: Spin | None=None,
+                 angle: Param | None=None,
+                 spin: Param | None=None,
+                 length: Param | None=None,
+                 width: Param | None=None,
+                 lifetime: Param | None=None):
+        self.func = func
+        self.move_dir = move_dir
+        self.spin_dir = spin_dir
+        self.angle = angle
+        self.spin = spin
+        self.length = length
+        self.width = width
+        self.lifetime = lifetime
+
 StreamerValues: TypeAlias = list[StreamerValue]
 
 class StreamerChoices:
