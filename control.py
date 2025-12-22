@@ -25,6 +25,7 @@ from colors import (
     periodic_choices,
 )
 from param import (
+    CurveFunc,
     Curve,
     Param,
     const,
@@ -34,11 +35,12 @@ from param import (
 from streamer import (
     Direction,
     Spin,
-    StreamerParam,
+    StreamerFunc,
     RandomColorStreamerFunc,
-    combined_choices,
-    streamer_choices,
-    setcolor_streamer,
+    StreamerValue,
+    StreamerParam,
+    StreamerChoices,
+    CombinedChoices,
 )
 from topologies import (
     Topology,
@@ -47,7 +49,7 @@ from topologies import (
     RepeatTopology,
     TurntTopology,
 )
-
+from utils import (mk_bounce, mk_bump)
 
 class Pattern:
     def __init__(self,
@@ -78,39 +80,13 @@ class Pattern:
         self.sparkle_func = sparkle_func if sparkle_func is not None else ColorFuncs.WHITEN
         self.streamers = streamers if streamers is not None else []
 
-
-def mk_bump(period, s, e=None):
-    if e is None:
-        e = s
-        s = 0
-    return [
-        (0,            s),
-        (period * 0.5, e),
-        (period,       s),
-    ]
-
-def mk_bounce(period, s, e=None):
-    if e is None:
-        e = s
-        s = 0
-    return [
-        (0,             s),
-        (period * 0.25, e),
-        (period * 0.5,  -s),
-        (period * 0.75, -e),
-        (period,        s),
-    ]
-
-OptionValue: TypeAlias = Curve | Callable[[float], float] | float | bool 
-
 class Option:
     def __init__(self, name: str, value):
         self.name = name
         self.value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.name}:{self.value}"
-
 
 ZERO = [Option("0", 0)]
 FRACS = [Option(n, v) for n, v in [
@@ -148,7 +124,6 @@ CURVES = [Option(n, f) for n, f in [
     ("circIO", easeInOutCirc),
 ]]
 
-
 class Control:
     def __init__(self, name: str, options: list[Option]):
         self.name = name
@@ -171,14 +146,12 @@ class Control:
     def value(self):
         return self.selected.value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.name}({self.selected})"
-
 
 class ToggleControl(Control):
     def __init__(self, name: str):
         super(ToggleControl, self).__init__(name, [Option("On", True), Option("Off", False)])
-
 
 class Feature:
     def __init__(self, name: str, controls: list[Control]):
@@ -186,7 +159,7 @@ class Feature:
         self.controls = controls
 
     @property
-    def value(self):
+    def value(self) -> dict:
         return {}
 
     def visible_controls(self) -> list[Control]:
@@ -209,9 +182,112 @@ class Feature:
         except Exception:
             raise ValueError(f"{cidx}, {len(self.visible_controls())}")
 
+class BumpFeature(Feature):
+    def __init__(self,
+                 name: str,
+                 attr_name: str):
+        self.attr_name = attr_name
+        self._enabled = ToggleControl("Enabled")
+        self._start = Control("Start", ZERO + FRACS)
+        self._end = Control("End", ZERO + FRACS)
+        self._curved = ToggleControl("Curved")
+        self._curve = Control("Curve", CURVES)
+        self._period = Control("Period", PERIODS)
+
+        super(BumpFeature, self).__init__(name, [
+            self._enabled,
+            self._start,
+            self._end,
+            self._curved,
+            self._curve,
+            self._period,
+        ])
+
+    @property
+    def value(self) -> dict:
+        if not self._enabled.value:
+            val = 0
+        elif not self._curved.value:
+            val = self._start.value
+        else:
+            val = Curve(self._curve.value, mk_bump(
+                self._period.value,
+                self._start.value,
+                self._end.value,
+            ))
+        return {self.attr_name: val}
+
+    def visible_controls(self) -> list[Control]:
+        if not self._enabled.value:
+            return self.controls[:1]
+        if not self._curved.value:
+            return [self._enabled, self._start, self._curved]
+        else:
+            return self.controls
+
+class BounceFeature(Feature):
+    def __init__(self,
+                 name: str,
+                 attr_name: str):
+        self.attr_name = attr_name
+        self._enabled = ToggleControl("Enabled")
+        self._curved = ToggleControl("Curved")
+        self._curve = Control("Curve", CURVES)
+        self._period = Control("Period", PERIODS)
+        self._value = Control("Value", FRACS)
+
+        super(BounceFeature, self).__init__(name, [
+            self._enabled,
+            self._value,
+            self._curved,
+            self._curve,
+            self._period,
+        ])
+
+    @property
+    def value(self) -> dict:
+        if not self._enabled.value:
+            val = 0
+        elif not self._curved.value:
+            val = self._value.value
+        else:
+            val = Curve(self._curve.value, mk_bounce(
+                self._period.value,
+                self._value.value,
+            ))
+        return {self.attr_name: val}
+
+    def visible_controls(self):
+        if not self._enabled.value:
+            return self.controls[:1]
+        if not self._curved.value:
+            return [self._enabled, self._value, self._curved]
+        else:
+            return self.controls
+
+class FlashFeature(BumpFeature):
+    def __init__(self):
+        super(FlashFeature, self).__init__("Flash", "flash")
+
+class FlickerFeature(BumpFeature):
+    def __init__(self):
+        super(FlickerFeature, self).__init__("Flicker", "flicker")
+
+class FlitterFeature(BumpFeature):
+    def __init__(self):
+        super(FlitterFeature, self).__init__("Flitter", "flitter")
+
+class FluxFeature(BounceFeature):
+    def __init__(self):
+        super(FluxFeature, self).__init__("Flux", "flux")
 
 class SparklesFeature(Feature):
-    def _mk_sparkle(self, w=None, h=None, s=None, l=None, make_white=False):
+    def _mk_sparkle(self,
+                    w: float | None=None,
+                    h: float | None=None,
+                    s: float | None=None,
+                    l: float | None=None,
+                    make_white: bool=False):
         def func(color: Color) -> Color:
             if color.l != -1.0 and make_white:
                 return Color(w=0.75, s=0.0, l=-0.75)
@@ -251,7 +327,7 @@ class SparklesFeature(Feature):
             l=color.l,
         )
 
-    def __init__(self, rainbow=None, flux=None):
+    def __init__(self, rainbow: Control | None=None, flux: FluxFeature | None=None):
         self.rainbow = rainbow
         self.flux = flux
         effects = [
@@ -302,7 +378,7 @@ class SparklesFeature(Feature):
             return [self._enabled]
 
     @property
-    def value(self):
+    def value(self) -> dict:
         if self._curved.value:
             sparkles = Curve(self._curve.value, mk_bump(
                 self._period.value,
@@ -318,95 +394,6 @@ class SparklesFeature(Feature):
     def randomize(self):
         for c in self.controls:
             c.randomize()
-
-class BumpFeature(Feature):
-    def __init__(self,
-                 name: str,
-                 attr_name: str):
-        self.attr_name = attr_name
-        self._enabled = ToggleControl("Enabled")
-        self._start = Control("Start", ZERO + FRACS)
-        self._end = Control("End", ZERO + FRACS)
-        self._curved = ToggleControl("Curved")
-        self._curve = Control("Curve", CURVES)
-        self._period = Control("Period", PERIODS)
-
-        super(BumpFeature, self).__init__(name, [
-            self._enabled,
-            self._start,
-            self._end,
-            self._curved,
-            self._curve,
-            self._period,
-        ])
-
-    @property
-    def value(self):
-        if not self._enabled.value:
-            val = 0
-        elif not self._curved.value:
-            val = self._start.value
-        else:
-            val = Curve(self._curve.value, mk_bump(
-                self._period.value,
-                self._start.value,
-                self._end.value,
-            ))
-        return {self.attr_name: val}
-
-    def visible_controls(self):
-        if not self._enabled.value:
-            return self.controls[:1]
-        if not self._curved.value:
-            return [self._enabled, self._start, self._curved]
-        else:
-            return self.controls
-
-class BounceFeature(Feature):
-    def __init__(self,
-                 name: str,
-                 attr_name: str):
-        self.attr_name = attr_name
-        self._enabled = ToggleControl("Enabled")
-        self._curved = ToggleControl("Curved")
-        self._curve = Control("Curve", CURVES)
-        self._period = Control("Period", PERIODS)
-        self._value = Control("Value", FRACS)
-
-        super(BounceFeature, self).__init__(name, [
-            self._enabled,
-            self._value,
-            self._curved,
-            self._curve,
-            self._period,
-        ])
-
-    @property
-    def value(self):
-        if not self._enabled.value:
-            val = 0
-        elif not self._curved.value:
-            val = self._value.value
-        else:
-            val = Curve(self._curve.value, mk_bounce(
-                self._period.value,
-                self._value.value,
-            ))
-        return {self.attr_name: val}
-
-    def visible_controls(self):
-        if not self._enabled.value:
-            return self.controls[:1]
-        if not self._curved.value:
-            return [self._enabled, self._value, self._curved]
-        else:
-            return self.controls
-
-
-FlashFeature = lambda: BumpFeature("Flash", "flash")
-FlickerFeature = lambda: BumpFeature("Flicker", "flicker")
-FlitterFeature = lambda: BumpFeature("Flitter", "flitter")
-FluxFeature = lambda: BounceFeature("Flux", "flux")
 
 class SpiralFeature(Feature):
     def __init__(self):
@@ -474,7 +461,6 @@ class SpinFeature(Feature):
         else:
             return self.controls
 
-
 class WiredPattern(Pattern):
     def __init__(self, name, **kwargs):
         super(WiredPattern, self).__init__(name, **kwargs)
@@ -514,7 +500,6 @@ class RepeatTopologyFeature(Feature):
     def value(self):
         Topology = RepeatTopology if self._mirrored.value else MirrorTopology
         return {"topologies": [Topology(self._count.value)]}
-
 
 class BasicBitchFeature(Feature):
     def __init__(self):
@@ -718,22 +703,20 @@ class CoiledSpringFeature(Feature):
             self._spiral_period.value,
             self._max_spiral.value,
         ))
-        streamers = streamer_choices(2, [[
-            {
-                "move_dir": Direction.FROM_BOT,
-                "spin_dir": Spin.CLOCKWISE,
-                "angle": (i / self._spirals.value) + (o / (self._spirals.value * 4)),
-                "spin": Curve(self._spiral_curve.value, mk_bump(
-                    self._spiral_period.value,
-                    self._max_spiral.value,
-                    -self._max_spiral.value,
-                )),
-                "length": 2.0,
-                "width": self._split.value / self._spirals.value,
-                "lifetime": 2.0,
-                "func": setcolor_streamer(h=i * (rainbow / 4), w=0, s=1, l=0.0),
-            } for i in range(self._spirals.value)
-        ] for o in range(4)])
+        streamers = StreamerChoices(2, [[StreamerValue(
+            move_dir=Direction.FROM_BOT,
+            spin_dir=Spin.CLOCKWISE,
+            angle=(i / self._spirals.value) + (o / (self._spirals.value * 4)),
+            spin=Curve(self._spiral_curve.value, mk_bump(
+                self._spiral_period.value,
+                self._max_spiral.value,
+                -self._max_spiral.value,
+            )),
+            length=2.0,
+            width=self._split.value / self._spirals.value,
+            lifetime=2.0,
+            func=StreamerFunc(h=i * (rainbow / 4), w=0, s=1, l=0.0),
+        ) for i in range(self._spirals.value)] for o in range(4)])
 
         return {
             "base_color": base_color,
@@ -802,19 +785,18 @@ class ConfettiFeature(Feature):
             ))
         else:
             rainbow = self._rainbow.value
-        streamers = combined_choices([
-            streamer_choices(
-                self._delay.value,
-                [[
-                    {
-                        "move_dir": move_dir,
-                        "spin_dir": spin_dir,
-                        "spin": spin,
-                        "width": width,
-                        "length": choice([0.25, 0.5]),
-                        "lifetime": rand(3, 6),
-                        "func": RandomColorStreamerFunc(-rainbow / 2, rainbow / 2, w=0, s=1, l=0),
-                    }
+        streamers = CombinedChoices([
+            StreamerChoices(
+                self._delay.value, [[
+                    StreamerValue(
+                        move_dir=move_dir,
+                        spin_dir=spin_dir,
+                        spin=spin,
+                        width=width,
+                        length=choice([0.25, 0.5]),
+                        lifetime=rand(3, 6),
+                        func=RandomColorStreamerFunc(-rainbow / 2, rainbow / 2, w=0, s=1, l=0),
+                    )
                     for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
                     for spin, width in [(0.5, 0.1), (1, 0.15), (1.5, 0.2)]
                     for _ in range(4)
@@ -824,7 +806,6 @@ class ConfettiFeature(Feature):
         ])
         return {"streamers": streamers}
         
-
 class Confetti(WiredPattern):
     def __init__(self):
         self._base = ConfettiFeature()
@@ -840,7 +821,6 @@ class Confetti(WiredPattern):
                 flux=self._flux,
             ),
         ]
-
 
 class DroppingPlatesFeature(Feature):
     def __init__(self):
@@ -928,7 +908,6 @@ class DroppingPlates(WiredPattern):
                 flux=self._flux,
             ),
         ]
-
 
 class FallingSnowFeature(Feature):
     def __init__(self):
@@ -1022,23 +1001,23 @@ class GalaxusFeature(Feature):
         else:
             rainbow = self._rainbow.value
 
-        funcs = [setcolor_streamer(l=0, ignore_color=True, h=Curve(
+        funcs = [StreamerFunc(l=0, ignore_color=True, h=Curve(
             self._rainbow_curve.value,
             mk_bounce(self._rainbow_period.value, 0, i * rainbow)
         )) for i in [1, -1]]
         streamers = [
             [
                 [
-                    {
-                        "move_dir": move_dir,
-                        "spin_dir": spin_dir,
-                        "angle": offset + (i / self._spirals.value) + (o / (self._spirals.value ** 2)),
-                        "spin": 0.5,
-                        "length": 1.5,
-                        "width": width / self._spirals.value,
-                        "lifetime": 1.5 * self._delay.value,
-                        "func": func,
-                    } for i in range(self._spirals.value)
+                    StreamerValue(
+                        move_dir=move_dir,
+                        spin_dir=spin_dir,
+                        angle=offset + (i / self._spirals.value) + (o / (self._spirals.value ** 2)),
+                        spin=0.5,
+                        length=1.5,
+                        width=width / self._spirals.value,
+                        lifetime=1.5 * self._delay.value,
+                        func=func,
+                    ) for i in range(self._spirals.value)
                 ]
                 for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
                 for o in range(self._spirals.value)
@@ -1048,9 +1027,9 @@ class GalaxusFeature(Feature):
                 funcs,
             )
         ]
-        return {"streamers": combined_choices([
-            streamer_choices(self._delay.value, streamers[0]),
-            streamer_choices(self._delay.value, streamers[1],
+        return {"streamers": CombinedChoices([
+            StreamerChoices(self._delay.value, streamers[0]),
+            StreamerChoices(self._delay.value, streamers[1],
                              delay_offset=self._delay.value / 2),
         ])}
 
@@ -1225,24 +1204,24 @@ class SlidingDoorFeature(Feature):
             s = [
                 [
                     [
-                        {
-                            "move_dir": move_dir,
-                            "spin_dir": spin_dir,
-                            "spin": Curve(const, mk_bump(self._streamer_delay.value * 2, 1, 0.5)),
-                            "length": 1.0,
-                            "width": Curve(const, mk_bump(self._streamer_delay.value * 2, 0.1, 0.15)),
-                            "lifetime": 2 * self._streamer_delay.value,
-                            "func": func,
-                        } for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
+                        StreamerValue(
+                            move_dir=move_dir,
+                            spin_dir=spin_dir,
+                            spin=Curve(const, mk_bump(self._streamer_delay.value * 2, 1, 0.5)),
+                            length=1.0,
+                            width=Curve(const, mk_bump(self._streamer_delay.value * 2, 0.1, 0.15)),
+                            lifetime=2 * self._streamer_delay.value,
+                            func=func,
+                        ) for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
                     ] for move_dir in [Direction.FROM_BOT, Direction.FROM_TOP]
                 ] for func in [
-                    setcolor_streamer(h=rainbow * 0.25, l=0, make_white=True),
-                    setcolor_streamer(h=-rainbow * 0.25, l=0.75, make_white=True),
+                    StreamerFunc(h=rainbow * 0.25, l=0, make_white=True),
+                    StreamerFunc(h=-rainbow * 0.25, l=0.75, make_white=True),
                 ]
             ]
-            streamers = combined_choices([
-                streamer_choices(self._streamer_delay.value, s[0]),
-                streamer_choices(self._streamer_delay.value, s[1]),
+            streamers = CombinedChoices([
+                StreamerChoices(self._streamer_delay.value, s[0]),
+                StreamerChoices(self._streamer_delay.value, s[1]),
             ])
         else:
             streamers = []

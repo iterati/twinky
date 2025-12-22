@@ -1,34 +1,36 @@
 from enum import Enum
 import random
-from typing import Callable, TypeAlias
+from typing import TypeAlias, TypedDict, NotRequired
 from pytweening import linear
 
 from core import Color
-from param import Curve, Param, getv, rand
+from param import Curve, CurveFunc, Param, getv, rand
 
+class Direction(Enum):
+    FROM_BOT = 0
+    FROM_TOP = 1
 
-StreamerValue: TypeAlias = dict
-StreamerValues: TypeAlias = list[dict]
-StreamerParamFunc: TypeAlias = Callable[[float], StreamerValues]
-StreamerParam: TypeAlias = StreamerParamFunc | StreamerValues
-StreamerParams: TypeAlias = list[StreamerParam]
+class Spin(Enum):
+    CLOCKWISE = 1
+    COUNTERCLOCKWISE = -1
 
-StreamerFunc: TypeAlias = Callable[[Color, float, float, float], Color]
-StreamerFuncParam: TypeAlias = Callable[[Color, float, float, float], Color] | Color
+class StreamerFunc:
+    def __init__(self,
+                 w: Param | None=None,
+                 h: Param | None=None,
+                 s: Param | None=None,
+                 l: Param | None=None,
+                 make_white: bool=False,
+                 ignore_color: bool=False):
+        self.w = w
+        self.h = h
+        self.s = s
+        self.l = l
+        self.make_white = make_white
+        self.ignore_color = ignore_color
 
-
-def getv_streamers(v: StreamerParam, t: float) -> StreamerValues:
-    return v(t) if callable(v) else v
-
-
-def setcolor_streamer(w: Param | None=None,
-                      h: Param | None=None,
-                      s: Param | None=None,
-                      l: Param | None=None,
-                      make_white: bool=False,
-                      ignore_color: bool=False) -> StreamerFunc:
-    def func(color: Color, t: float, pixel_t: float, pixel_y: float) -> Color:
-        if color.l != -1.0 and make_white:
+    def __call__(self, color: Color, t: float, pixel_x: float, pixel_y: float) -> Color:
+        if color.l != -1.0 and self.make_white:
             return Color(
                 w=0.75,
                 s=0.0,
@@ -36,18 +38,19 @@ def setcolor_streamer(w: Param | None=None,
             )
 
         return Color(
-            w=getv(w, t) if w is not None else color.w,
-            h=(0 if ignore_color else color.h) + (0 if h is None else getv(h, t)),
-            s=getv(s, t) if s is not None else color.s,
-            l=getv(l, t) if l is not None else color.l,
+            w=getv(self.w, t) if self.w is not None else color.w,
+            h=(
+                (0 if self.ignore_color else color.h)
+                + (0 if self.h is None else getv(self.h, t))
+            ),
+            s=getv(self.s, t) if self.s is not None else color.s,
+            l=getv(self.l, t) if self.l is not None else color.l,
         )
-    return func
 
-
-class RandomColorStreamerFunc:
+class RandomColorStreamerFunc(StreamerFunc):
     def __init__(self,
-                 minh,
-                 maxh,
+                 minh: Param,
+                 maxh: Param,
                  w: Param | None=None,
                  s: Param | None=None,
                  l: Param | None=None):
@@ -58,7 +61,7 @@ class RandomColorStreamerFunc:
         self.s = s
         self.l = l
 
-    def h(self, t):
+    def h(self, t: float) -> float:
         if self._h is None:
             self._h = rand(getv(self.minh, t), getv(self.maxh, t))(0)
             
@@ -71,60 +74,6 @@ class RandomColorStreamerFunc:
             s=getv(self.s, t) if self.s is not None else color.s,
             l=getv(self.l, t) if self.l is not None else color.l,
         )
-
-
-class StreamerFuncs(Enum):
-    BASE = setcolor_streamer(l=0.0)
-    BASE_WHITEN = setcolor_streamer(l=0.0, make_white=True)
-    BLANK = setcolor_streamer(w=0, l=-1)
-    INVERT = setcolor_streamer(h=0.5, l=0.0)
-    INVERT_WHITEN = setcolor_streamer(h=0.5, l=0.0, make_white=True)
-    WHITEN = setcolor_streamer(w=0.75, s=0.0, l=-0.75)
-    NOOP = setcolor_streamer()
-    RANDOM = setcolor_streamer(h=rand(), l=0)
-
-
-def streamer_choices(
-        delay: float,
-        choices: list[StreamerValues],
-        choose: tuple[int, int] | None=None,
-        delay_offset: float=0,
-) -> StreamerParamFunc:
-    def func(t: float) -> StreamerValues:
-        s = int(t + delay_offset) % (len(choices) * delay)
-        if s % delay == 0:
-            c = choices[int(s / delay) % len(choices)]
-            if choose:
-                if choose[0] == choose[1]:
-                    pick = choose[0]
-                else:
-                    pick = random.randint(*choose)
-                return random.choices(c, k=pick)
-            else:
-                return c
-        else:
-            return []
-    return func
-
-
-def combined_choices(funcs: list[StreamerParamFunc]) -> StreamerParamFunc:
-    def func(t: float) -> StreamerValues:
-        r = []
-        for f in funcs:
-            r.extend(f(t))
-        return r
-    return func
-
-
-class Direction(Enum):
-    FROM_BOT = 0
-    FROM_TOP = 1
-
-
-class Spin(Enum):
-    CLOCKWISE = 1
-    COUNTERCLOCKWISE = -1
-
 
 class Streamer:
     def __init__(self,
@@ -141,7 +90,6 @@ class Streamer:
         self.reverse = move_dir != Direction.FROM_TOP
         self.angle = random.random() if angle is None else angle
         self.spin_dir = 1 if spin_dir == Spin.CLOCKWISE else -1
-        # self.spin = spin
         self.spin = getv(spin, initial_t)
         self.length = getv(length, initial_t)
         self.width = getv(width, initial_t)
@@ -175,3 +123,57 @@ class Streamer:
 
     def __repr__(self):
         return f"Streamer({self.angle},{self.spin},{self.length},{self.width},{self.lifetime})"
+
+class StreamerValue(TypedDict):
+    func: NotRequired[StreamerFunc]
+    move_dir: NotRequired[Direction]
+    spin_dir: NotRequired[Spin]
+    angle: NotRequired[Param | CurveFunc]
+    spin: NotRequired[Param | CurveFunc]
+    length: NotRequired[Param | CurveFunc]
+    width: NotRequired[Param | CurveFunc]
+    lifetime: NotRequired[Param | CurveFunc]
+    
+StreamerValues: TypeAlias = list[StreamerValue]
+
+class StreamerChoices:
+    def __init__(self,
+                 delay: float,
+                 choices: list[StreamerValues],
+                 choose: tuple[int, int] | None=None,
+                 delay_offset: float=0):
+        self.delay = delay
+        self.choices = choices
+        self.choose = choose
+        self.delay_offset = delay_offset
+
+    def __call__(self, t: float) -> StreamerValues:
+        s = int(t + self.delay_offset) % (len(self.choices) * self.delay)
+        if s % self.delay != 0:
+            return []
+
+        c = self.choices[int(s / self.delay) % len(self.choices)]
+        if self.choose:
+            pick = (
+                self.choose[0]
+                if self.choose[0] == self.choose[1] else
+                random.randint(*self.choose)
+            )
+            return random.choices(c, k=pick)
+            
+        return c
+
+class CombinedChoices(StreamerChoices):
+    def __init__(self, streamer_choices: list[StreamerChoices]):
+        self.streamer_choices = streamer_choices
+
+    def __call__(self, t: float) -> StreamerValues:
+        r = []
+        for sc in self.streamer_choices:
+            r.extend(sc(t))
+        return r
+
+StreamerParam: TypeAlias = StreamerChoices | StreamerValues
+
+def getv_streamers(v: StreamerParam, t: float) -> StreamerValues:
+    return v(t) if isinstance(v, StreamerChoices) else v

@@ -5,11 +5,10 @@ import struct
 from xled_plus.ledcolor import hsl_color, set_color_style
 
 from param import Param, Curve, getv, const, rand
-
+from utils import mk_bump
 
 set_color_style('8col')
 # set_color_style('linear')
-
 
 class Color:
     def __init__(self, w=0.0, h=0.0, s=1.0, l=-1.0):
@@ -63,10 +62,9 @@ class Color:
 
     def __repr__(self):
         return f"{self.w} {self.h} {self.s} {self.l}"
-        
 
+# list[str] are suppression strings - could move to an enum for better type safety
 BaseColorValue: TypeAlias = tuple[Color, list[str]]
-
 
 class BaseColor:
     def __init__(self,
@@ -105,55 +103,8 @@ class BaseColor:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.color_w},{self.color_h},{self.color_s},{self.color_l})"
 
-
-BaseColorFunc: TypeAlias = BaseColor
-BaseColorFuncs: TypeAlias = list[BaseColorFunc | None]
+BaseColorFuncs: TypeAlias = list[BaseColor]
 BaseColorFuncsParam: TypeAlias = Callable[[float], BaseColorFuncs] | BaseColorFuncs
-
-
-def getv_funcs(v: BaseColorFuncsParam, t: float) -> BaseColorFuncs:
-    return v(t) if callable(v) else v
-
-
-def periodic_choices(delay: float, choices):
-    def func(t: float):
-        return choices[int(t / delay) % len(choices)]
-
-    return func
-
-
-def setcolor(w: float | None=None,
-             h: float | None=None,
-             s: float | None=None,
-             l: float | None=None,
-             make_white: bool=False) -> Callable[[Color], Color]:
-    def func(color: Color) -> Color:
-        if color.l != -1.0 and make_white:
-            return Color(
-                w=0.75,
-                s=0.0,
-                l=-0.75,
-            )
-
-        return Color(
-            w=w if w is not None else color.w,
-            h=color.h + (0 if h is None else h),
-            s=s if s is not None else color.s,
-            l=l if l is not None else color.l,
-        )
-    return func
-
-
-class ColorFuncs(Enum):
-    NOOP = setcolor()
-    BASE = setcolor(l=0.0)
-    BASE_WHITEN = setcolor(l=0.0, make_white=True)
-    BLANK = setcolor(w=0, l=-1)
-    INVERT = setcolor(h=0.5, l=0.0)
-    INVERT_WHITEN = setcolor(h=0.5, l=0.0, make_white=True)
-    WHITEN = setcolor(w=0.75, s=0.0, l=-0.75)
-    RANDOM = lambda _: Color(h=rand()(0), l=0)
-
 
 class WindowColor(BaseColor):
     def __init__(self,
@@ -186,7 +137,6 @@ class WindowColor(BaseColor):
     def __repr__(self):
         return f"Window({self.ratio}, {self.funcs})"
 
-
 class SplitColor(BaseColor):
     def __init__(self,
                  count: Param,
@@ -214,7 +164,6 @@ class SplitColor(BaseColor):
     def __repr__(self):
         return f"Split({self.count}, {self.funcs})"
 
-
 class FallingColor(BaseColor):
     def __init__(self,
                  num_colors: int=8,
@@ -222,18 +171,26 @@ class FallingColor(BaseColor):
                  offset: float=0,
                  period: float=60,
                  suppress: list[str] | None=None,
-                 fade_func: Param | None=None,
-                 hue_func: Param| None=None):
+                 fade_func: Curve | float=1,
+                 hue_func: Curve | None=None):
         super(FallingColor, self).__init__(suppress=suppress)
         self._num_colors = num_colors
         self._skip_colors = skip_colors
         self._offset = offset
-        self._fade_func = fade_func if fade_func is not None else Curve(easeInOutCubic, [(0, -1), (0.5, 0), (1, -1)])
-        self._hue_func = hue_func if hue_func is not None else Curve(const, [(0, 0), (1, 0)])
+        self._fade_func = (
+            fade_func
+            if isinstance(fade_func, Curve) else
+            Curve(easeInOutCubic, mk_bump(1, -fade_func, 0))
+        )
+        self._hue_func = (
+            hue_func
+            if hue_func is not None else
+            Curve(const, [(0, 0), (1, 0)])
+        )
         self._period = period
 
     @property
-    def ycurve(self):
+    def ycurve(self) -> Curve:
         return Curve(linear, [(0, 0), (self._period, self._num_colors)])
 
     def _h(self, t: float, pixel_y: float) -> float:
@@ -248,3 +205,41 @@ class FallingColor(BaseColor):
         l = ((l + 1) ** 2) - 1
         color = Color(0, self.base_hue + self._h(s, pixel_y), 1, l)
         return color, self.suppress
+
+def setcolor(w: float | None=None,
+             h: float | None=None,
+             s: float | None=None,
+             l: float | None=None,
+             make_white: bool=False) -> Callable[[Color], Color]:
+    def func(color: Color) -> Color:
+        if color.l != -1.0 and make_white:
+            return Color(
+                w=0.75,
+                s=0.0,
+                l=-0.75,
+            )
+
+        return Color(
+            w=w if w is not None else color.w,
+            h=color.h + (0 if h is None else h),
+            s=s if s is not None else color.s,
+            l=l if l is not None else color.l,
+        )
+    return func
+
+class ColorFuncs(Enum):
+    BASE = setcolor(l=0.0)
+    BASE_WHITEN = setcolor(l=0.0, make_white=True)
+    BLANK = setcolor(w=0, l=-1)
+    INVERT = setcolor(h=0.5, l=0.0)
+    INVERT_WHITEN = setcolor(h=0.5, l=0.0, make_white=True)
+    WHITEN = setcolor(w=0.75, s=0.0, l=-0.75)
+    RANDOM = lambda _: Color(h=rand()(0), l=0)
+
+def getv_funcs(v: BaseColorFuncsParam, t: float) -> BaseColorFuncs:
+    return v(t) if callable(v) else v
+
+def periodic_choices(delay: float, choices: list[BaseColorFuncs]):
+    def func(t: float) -> BaseColorFuncs:
+        return choices[int(t / delay) % len(choices)]
+    return func

@@ -1,11 +1,8 @@
-from param import Param, ParamFunc, Curve, getv
-from pytweening import easeInOutSine
-
+from param import Param, CurveFunc, Curve, getv
 
 class Topology:
     def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
         return pixel_t
-
 
 class SpinTopology(Topology):
     def __init__(self, angle: Param):
@@ -15,15 +12,21 @@ class SpinTopology(Topology):
         angle = getv(self.angle, t)
         return (pixel_t + angle) % 1
 
-
 class SpiralTopology(Topology):
     def __init__(self, turn: Param):
         self.turn = turn
 
     def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
         turn = getv(self.turn, t)
-        return (pixel_t + (pixel_y * turn)) % 1
+        return (pixel_t + ((pixel_y - 0.5) * turn)) % 1
 
+class TwistTopology(Topology):
+    def __init__(self, turn: Param):
+        self.turn = turn
+
+    def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
+        turn = getv(self.turn, t)
+        return (pixel_t + (pixel_y * turn)) % 1
 
 class TurntTopology(Topology):
     def __init__(self, count: Param, turn: Param):
@@ -36,10 +39,9 @@ class TurntTopology(Topology):
         y_bin = int(pixel_y * count)
         return (pixel_t + (y_bin * turn)) % 1
 
-
 class DistortTopology(Topology):
     def __init__(self,
-                 shape_func: ParamFunc,
+                 shape_func: CurveFunc,
                  top_d: Param=0,
                  bot_d: Param=0,
                  mid: Param=0.5):
@@ -61,7 +63,6 @@ class DistortTopology(Topology):
         ])
         return pixel_t + getv(distort_func, pixel_y)
 
-
 class MirrorTopology(Topology):
     def __init__(self, count: Param):
         self.count = count
@@ -70,7 +71,6 @@ class MirrorTopology(Topology):
         count = getv(self.count, t)
         r = ((pixel_t * count) % 1) * 2
         return r if r < 1.0 else 2.0 - r
-
 
 class RepeatTopology(Topology):
     def __init__(self, count: Param):
