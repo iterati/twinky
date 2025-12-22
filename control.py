@@ -211,30 +211,78 @@ class Feature:
 
 
 class SparklesFeature(Feature):
-    def __init__(self):
+    def _mk_sparkle(self, w=None, h=None, s=None, l=None, make_white=False):
+        def func(color: Color) -> Color:
+            if color.l != -1.0 and make_white:
+                return Color(w=0.75, s=0.0, l=-0.75)
+            return Color(
+                w=w if w is not None else color.w,
+                h=h if h is not None else color.h,
+                s=s if s is not None else color.s,
+                l=l if l is not None else color.l,
+            )
+        return func
+
+    def random_sparkle(self, color: Color) -> Color:
+        return Color(
+            w=color.w,
+            h=color.h + rand(-0.5, 0.5)(0),
+            s=color.s,
+            l=color.l,
+        )
+
+    def rainbow_sparkle(self, color: Color) -> Color:
+        if self.rainbow is None:
+            return color
+        return Color(
+            w=color.w,
+            h=color.h + rand(-self.rainbow.value / 2, self.rainbow.value / 2)(0),
+            s=color.s,
+            l=color.l,
+        )
+
+    def flux_sparkle(self, color: Color) -> Color:
+        if self.flux is None:
+            return color
+        return Color(
+            w=color.w,
+            h=color.h + rand(-self.flux._value.value / 2, self.flux._value.value / 2)(0),
+            s=color.s,
+            l=color.l,
+        )
+
+    def __init__(self, rainbow=None, flux=None):
+        self.rainbow = rainbow
+        self.flux = flux
+        effects = [
+            ("base", self._mk_sparkle(l=0)),
+            ("base_whiten", self._mk_sparkle(l=0, make_white=True)),
+            ("blank", self._mk_sparkle(l=-1)),
+            ("invert", self._mk_sparkle(h=0.5, l=0)),
+            ("invert_whiten", self._mk_sparkle(h=0.5, l=0, make_white=True)),
+            ("whiten", self._mk_sparkle(w=0.75, s=0, l=-0.75)),
+            ("random", self.random_sparkle),
+        ]
+        if self.rainbow is not None:
+            effects.append(("Rainbow", self.rainbow_sparkle))
+        if self.flux is not None:
+            effects.append(("Flux", self.flux_sparkle))
+
         self._enabled = ToggleControl("Enabled")
         self._curved = ToggleControl("Curved")
         self._curve = Control("Curve", CURVES)
         self._period = Control("Period", PERIODS)
         self._start = Control("Start", ZERO + FRACS)
         self._end = Control("End", ZERO + FRACS)
-        self._effect = Control("Effect", [Option(n, v) for n, v in [
-            ("base", ColorFuncs.BASE),
-            ("base_whiten", ColorFuncs.BASE_WHITEN),
-            ("blank", ColorFuncs.BLANK),
-            ("invert", ColorFuncs.INVERT),
-            ("invert_whiten", ColorFuncs.INVERT_WHITEN),
-            ("whiten", ColorFuncs.WHITEN),
-            ("random", ColorFuncs.RANDOM),
-        ]]) 
+        self._effect = Control("Effect", [Option(n, v) for n, v in effects]) 
 
         super(SparklesFeature, self).__init__("Sparkles", [
             self._enabled,
+            self._start,
+            self._end,
             self._curved,
             self._curve,
             self._period,
-            self._start,
-            self._end,
             self._effect,
         ])
 
@@ -243,7 +291,13 @@ class SparklesFeature(Feature):
             if self._curved.value:
                 return self.controls
             else:
-                return [self._enabled, self._curve, self._start, self._effect]
+                return [
+                    self._enabled,
+                    self._start,
+                    self._curved,
+                    self._curve,
+                    self._effect,
+                ]
         else:
             return [self._enabled]
 
@@ -447,6 +501,20 @@ class WiredPattern(Pattern):
             c.randomize()
         self.update()
     
+class RepeatTopologyFeature(Feature):
+    def __init__(self):
+        self._count = Control("Repeats", INTS16)
+        self._mirrored = ToggleControl("Mirrored")
+        super(RepeatTopologyFeature, self).__init__("Repeats", [
+            self._count,
+            self._mirrored,
+        ])
+
+    @property
+    def value(self):
+        Topology = RepeatTopology if self._mirrored.value else MirrorTopology
+        return {"topologies": [Topology(self._count.value)]}
+
 
 class BasicBitchFeature(Feature):
     def __init__(self):
@@ -478,22 +546,24 @@ class BasicBitch(WiredPattern):
         super(BasicBitch, self).__init__("Basic Bitch")
         self.features = [
             BasicBitchFeature(),
-            SparklesFeature(),
             FlashFeature(),
             FlickerFeature(),
             FlitterFeature(),
             FluxFeature(),
+            SparklesFeature(),
         ]
 
 class CircusTentFeature(Feature):
     def __init__(self):
-        self._delay = Control("Delay", HALVES056)
+        self._delay = Control("Delay", [Option("0.25", 0.25)] + HALVES053)
+        self._splits = Control("splits", [Option(str(v), v) for v in [2, 3, 4]])
         self._rainbow = Control("Rainbow", ZERO + FRACS)
         self._curved = ToggleControl("Rainbow Curved")
         self._curve = Control("Rainbow Curve", CURVES)
         self._period = Control("Rainbow Period", PERIODS)
         super(CircusTentFeature, self).__init__("Circus Tent", [
             self._delay,
+            self._splits,
             self._rainbow,
             self._curved,
             self._curve,
@@ -509,52 +579,86 @@ class CircusTentFeature(Feature):
             ))
         else:
             rainbow = self._rainbow.value
-        fns = [[
-            BaseColor(h=rainbow * 0.25, l=-1),
-            BaseColor(h=rainbow * 0.0, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.75,l=-1),
-            BaseColor(h=rainbow * 0.5, l=0, suppress=["sparkles"]),
-        ], [
-            BaseColor(h=rainbow * 0.25, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.0, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.75, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.5, l=0, suppress=["sparkles"]),
-        ], [
-            BaseColor(h=rainbow * 0.25, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.0, l=-1),
-            BaseColor(h=rainbow * 0.75, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.5, l=-1),
-        ], [
-            BaseColor(h=rainbow * 0.25, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.0, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.75, l=0, suppress=["sparkles"]),
-            BaseColor(h=rainbow * 0.5, l=0, suppress=["sparkles"]),
-        ]]
-        return {"base_color": SplitColor(4, periodic_choices(self._delay.value, fns))}
 
-class RepeatTopologyFeature(Feature):
-    def __init__(self):
-        self._count = Control("Repeats", INTS16)
-        self._mirrored = ToggleControl("Mirrored")
-        super(RepeatTopologyFeature, self).__init__("Repeats", [
-            self._count,
-            self._mirrored,
-        ])
+        if self._splits.value == 2:
+            fns = [[
+                BaseColor(h=rainbow * 0.0, l=-1),
+                BaseColor(h=rainbow * 0.5, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 0.0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.5, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 0.0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.5, l=-1),
+            ], [
+                BaseColor(h=rainbow * 0.0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.5, l=0, suppress=["sparkles"]),
+            ]]
 
-    @property
-    def value(self):
-        Topology = RepeatTopology if self._mirrored.value else MirrorTopology
-        return {"topologies": [Topology(self._count.value)]}
+        elif self._splits.value == 3:
+            fns = [[
+                BaseColor(h=rainbow * 1/3, l=-1),
+                BaseColor(h=rainbow *   0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 2/3, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 1/3, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow *   0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 2/3, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 1/3, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow *   0, l=-1),
+                BaseColor(h=rainbow * 2/3, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 1/3, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow *   0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 2/3, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 1/3, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow *   0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 2/3, l=-1),
+            ], [
+                BaseColor(h=rainbow * 1/3, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow *   0, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 2/3, l=0, suppress=["sparkles"]),
+            ]]
+        else:
+            fns = [[
+                BaseColor(h=rainbow * 0.00, l=-1),
+                BaseColor(h=rainbow * 0.25, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.50, l=-1),
+                BaseColor(h=rainbow * 0.75, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 0.00, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.25, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.50, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.75, l=0, suppress=["sparkles"]),
+            ], [
+                BaseColor(h=rainbow * 0.00, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.25, l=-1),
+                BaseColor(h=rainbow * 0.50, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.75, l=-1),
+            ], [
+                BaseColor(h=rainbow * 0.00, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.25, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.50, l=0, suppress=["sparkles"]),
+                BaseColor(h=rainbow * 0.75, l=0, suppress=["sparkles"]),
+            ]]
+        return {
+            "base_color": SplitColor(
+                self._splits.value,
+                periodic_choices(self._delay.value, fns),
+            )}
 
 class CircusTent(WiredPattern):
     def __init__(self):
+        self._base = CircusTentFeature()
         super(CircusTent, self).__init__("Circus Tent")
         self.features = [
-            CircusTentFeature(),
+            self._base,
             RepeatTopologyFeature(),
             SpinFeature(),
             SpiralFeature(),
-            SparklesFeature(),
+            SparklesFeature(rainbow=self._base._rainbow),
             FlickerFeature(),
             FlitterFeature(),
             FluxFeature(),
@@ -669,7 +773,7 @@ class ConfettiFeature(Feature):
             ("\u21c5 ", [Direction.FROM_TOP, Direction.FROM_TOP]),
         ]])
         self._delay = Control("Delay", [Option(str(v), v) for v in [
-            0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0,
+            0.25, 0.5, 0.75, 1.0, 1.5
         ]])
         self._min = Control("Min Streamers", [Option(str(v), v) for v in range(2)])
         self._max = Control("Max Streamers", [Option(str(v), v) for v in range(1, 5)])
@@ -723,13 +827,18 @@ class ConfettiFeature(Feature):
 
 class Confetti(WiredPattern):
     def __init__(self):
+        self._base = ConfettiFeature()
+        self._flux = FluxFeature()
         super(Confetti, self).__init__("Confetti")
         self.features = [
-            ConfettiFeature(),
+            self._base,
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._rainbow,
+                flux=self._flux,
+            ),
         ]
 
 
@@ -803,16 +912,21 @@ class DroppingPlatesFeature(Feature):
     
 class DroppingPlates(WiredPattern):
     def __init__(self):
+        self._base = DroppingPlatesFeature()
+        self._flux = FluxFeature()
         super(DroppingPlates, self).__init__("DroppingPlates")
         self.features = [
-            DroppingPlatesFeature(),
+            self._base,
             RepeatTopologyFeature(),
             SpinFeature(),
             SpiralFeature(),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._rainbow,
+                flux=self._flux,
+            ),
         ]
 
 
@@ -856,13 +970,14 @@ class FallingSnowFeature(Feature):
 
 class FallingSnow(WiredPattern):
     def __init__(self):
+        self._flux = FluxFeature()
         super(FallingSnow, self).__init__("Falling Snow")
         self.features = [
             FallingSnowFeature(),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(flux=self._flux),
         ]
 
 class GalaxusFeature(Feature):
@@ -953,13 +1068,18 @@ class GalaxusFeature(Feature):
 
 class Galaxus(WiredPattern):
     def __init__(self):
+        self._base = GalaxusFeature()
+        self._flux = FluxFeature()
         super(Galaxus, self).__init__("Galaxus")
         self.features = [
             GalaxusFeature(),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._rainbow,
+                flux=self._flux,
+            ),
         ]
 
 class GroovyFeature(Feature):
@@ -1047,13 +1167,18 @@ class GroovyFeature(Feature):
 
 class Groovy(WiredPattern):
     def __init__(self):
+        self._base = GroovyFeature() 
+        self._flux = FluxFeature()
         super(Groovy, self).__init__("Groovy")
         self.features = [
-            GroovyFeature(),
+            self._base,
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._rainbow,
+                flux=self._flux,
+            ),
         ]
 
 class SlidingDoorFeature(Feature):
@@ -1156,16 +1281,21 @@ class SlidingDoorFeature(Feature):
 
 class SlidingDoor(WiredPattern):
     def __init__(self):
+        self._base = SlidingDoorFeature()
+        self._flux = FluxFeature()
         super(SlidingDoor, self).__init__("Sliding Door")
         self.features = [
-            SlidingDoorFeature(),
+            self._base,
             RepeatTopologyFeature(),
             SpinFeature(),
             SpiralFeature(),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._rainbow,
+                flux=self._flux,
+            ),
         ]
 
 class SpiralTopFeature(Feature):
@@ -1200,16 +1330,21 @@ class SpiralTopFeature(Feature):
 
 class SpiralTop(WiredPattern):
     def __init__(self):
+        self._base = SpiralTopFeature() 
+        self._flux = FluxFeature()
         super(SpiralTop, self).__init__("Spiral Top")
         self.features = [
-            SpiralTopFeature(),
+            self._base,
             RepeatTopologyFeature(),
             SpinFeature(),
             SpiralFeature(),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._spread,
+                flux=self._flux,
+            ),
         ]
 
 class TurningWindowsFeature(Feature):
@@ -1271,12 +1406,17 @@ class TurningWindowsFeature(Feature):
 
 class TurningWindows(WiredPattern):
     def __init__(self):
+        self._base = TurningWindowsFeature()
+        self._flux = FluxFeature()
         super(TurningWindows, self).__init__("Turning Windows")
         self.features = [
-            TurningWindowsFeature(),
+            self._base,
             SpinFeature(),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._rainbow,
+                flux=self._flux,
+            ),
         ]
