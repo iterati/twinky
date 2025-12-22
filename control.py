@@ -1,4 +1,5 @@
 from pytweening import (
+    easeInOutElastic,
     linear,
     easeInSine,
     easeOutSine,
@@ -25,7 +26,6 @@ from colors import (
     periodic_choices,
 )
 from param import (
-    CurveFunc,
     Curve,
     Param,
     const,
@@ -43,7 +43,7 @@ from streamer import (
     CombinedChoices,
 )
 from topologies import (
-    SpinTopology,
+    # SpinTopology,
     SpiralTopology,
     Topology,
     DistortTopology,
@@ -336,31 +336,30 @@ class SparklesFeature(Feature):
         ])
 
     def visible_controls(self) -> list[Control]:
-        if self._enabled.value:
-            if self._curved.value:
-                return self.controls
-            else:
-                return [
-                    self._enabled,
-                    self._start,
-                    self._curved,
-                    self._curve,
-                    self._effect,
-                ]
-        else:
+        if not self._enabled.value:
             return [self._enabled]
+        if not self._curved.value:
+            return [
+                self._enabled,
+                self._curved,
+                self._start,
+                self._effect,
+            ]
+        return self.controls
 
     @property
     def value(self) -> dict:
-        if self._curved.value:
+        if not self._enabled.value:
+            sparkles = 0
+        elif self._curved.value:
             sparkles = Curve(self._curve.value, mk_bump(
                 self._period.value,
                 self._start.value,
                 self._end.value))
         else:
-            sparkles = self.controls[5].value
+            sparkles = self._start.value
         return {
-            "sparkles": sparkles if self._enabled.value else 0,
+            "sparkles": sparkles,
             "sparkle_func": self._effect.value,
         }
 
@@ -913,7 +912,7 @@ class Confetti(WiredPattern):
             ),
         ]
 
-class DroppingPlatesFeature(Feature):
+class RainbowStormFeature(Feature):
     def __init__(self):
         self._fade = Control("Fade", ZERO + [Option("linear", "linear")] + CURVES)
         self._fade_direction = Control("Fade Direction", [Option(n, v) for n, v in [
@@ -928,7 +927,7 @@ class DroppingPlatesFeature(Feature):
         self._rainbow_curved = ToggleControl("Rainbow Curved")
         self._rainbow_curve = Control("Rainbow Curve", CURVES)
         self._rainbow_period = Control("Rainbow Period", PERIODS)
-        super(DroppingPlatesFeature, self).__init__("Dropping Plates", [
+        super(RainbowStormFeature, self).__init__("Rainbow Storm", [
             self._fade,
             self._fade_direction,
             self._period0,
@@ -965,11 +964,11 @@ class DroppingPlatesFeature(Feature):
             rainbow = self._rainbow.value / 2
         return {
             "base_color": SplitColor(3, [
-                FallingColor(8, 3, period=self._period0.value, fade_func=fade),
-                FallingColor(12, 5, period=self._period1.value,
+                FallingColor(8, 3/8, period=self._period0.value, fade_func=fade),
+                FallingColor(12, 5/12, period=self._period1.value,
                              hue_func=rainbow,
                              fade_func=fade),
-                FallingColor(16, 7, period=self._period2.value,
+                FallingColor(16, 7/16, period=self._period2.value,
                              hue_func=-rainbow,
                              fade_func=fade),
             ])
@@ -981,11 +980,11 @@ class DroppingPlatesFeature(Feature):
         else:
             return self.controls
     
-class DroppingPlates(WiredPattern):
+class RainbowStorm(WiredPattern):
     def __init__(self):
-        self._base = DroppingPlatesFeature()
+        self._base = RainbowStormFeature()
         self._flux = FluxFeature()
-        super(DroppingPlates, self).__init__("DroppingPlates")
+        super(RainbowStorm, self).__init__("Rainbow Storm")
         self.features = [
             self._base,
             RepeatTopologyFeature(),
@@ -1005,6 +1004,19 @@ class FallingSnowFeature(Feature):
         self._colors = Control("Colors", [Option(str(v), v) for v in [
             6, 8, 10, 12, 16,
         ]])
+        self._skip = Control("Color Skip", [Option(n, v) for n, v in [
+            ("1/8", 1/8),
+            ("1/6", 1/6),
+            ("1/4", 1/4),
+            ("1/3", 1/3),
+            ("3/8", 3/8),
+            ("1/2", 1/2),
+            ("2/3", 2/3),
+            ("5/8", 5/8),
+            ("3/4", 3/4),
+            ("5/6", 5/6),
+            ("7/8", 7/8),
+        ]])
         self._fade = Control("Fade", ZERO + [Option("linear", "linear")] + CURVES)
         self._fade_direction = Control("Fade Direction", [Option(n, v) for n, v in [
             ("\u2193 ", 1),
@@ -1013,6 +1025,7 @@ class FallingSnowFeature(Feature):
 
         super(FallingSnowFeature, self).__init__("Falling Snow", [
             self._colors,
+            self._skip,
             self._fade,
             self._fade_direction,
         ])
@@ -1034,7 +1047,7 @@ class FallingSnowFeature(Feature):
 
         return {"base_color": FallingColor(
             self._colors.value,
-            (self._colors.value // 2) -1,
+            self._skip.value,
             fade_func=fade,
         )}
 

@@ -66,7 +66,6 @@ class Menu:
     def print_menu(self, screen):
         screen.clear()
         h, w = screen.getmaxyx()
-        midw = w // 2
         colw = (w - 2) // 3
 
         pattern = self.animation.pattern
@@ -78,7 +77,6 @@ class Menu:
         screen.addstr(0, 0, line)
         
         # top shows animation name and time if not paused
-        title = self.animation.pattern_name
         screen.addstr(1, 0, '\u2551')
         screen.addstr(
             1,
@@ -101,7 +99,7 @@ class Menu:
         line += '\u2563'
         screen.addstr(2, 0, line)
 
-        for i in range(3, 19):
+        for i in range(3, h-2):
             screen.addstr(i, 0, '\u2551')
             screen.addstr(i, colw, '\u2502')
             screen.addstr(i, colw*2, '\u2502')
@@ -114,7 +112,7 @@ class Menu:
         line += '\u2567'
         line += '\u2550' * ((w - 1) - len(line))
         line += '\u255d'
-        screen.addstr(19, 0, line)
+        screen.addstr(h-2, 0, line)
 
         # left shows patterns
         for i, p in enumerate(self.animation.patterns):
@@ -145,13 +143,15 @@ class Menu:
 
         screen.refresh()
 
-    def handle_input(self, screen) -> bool:
-        maxrow = [
+    @property
+    def maxrow(self):
+        return [
             len(self.animation.patterns),
             len(self.animation.pattern.features),
             len(self.animation.pattern.features[self.selected_row[1]].visible_controls()),
         ]
 
+    def handle_input(self, screen) -> bool:
         key = screen.getch()
         if key == ord('q'):
             self.queue.put(_sentinel)
@@ -165,24 +165,26 @@ class Menu:
             self.queue.put(pauseplay)
         elif key == curses.KEY_LEFT:
             self.selected_column = (self.selected_column - 1) % 3
-            self.selected_row[self.selected_column] %= maxrow[self.selected_column]
+            self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]
         elif key == curses.KEY_RIGHT:
             self.selected_column = (self.selected_column + 1) % 3
-            self.selected_row[self.selected_column] %= maxrow[self.selected_column]
+            self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]
         elif key == curses.KEY_UP:
             self.selected_row[self.selected_column] -= 1
-            self.selected_row[self.selected_column] %= maxrow[self.selected_column]
+            self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]
         elif key == curses.KEY_DOWN:
             self.selected_row[self.selected_column] += 1
-            self.selected_row[self.selected_column] %= maxrow[self.selected_column]
+            self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]
         elif key in [ord('-'), ord('_')] :
             if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
                 self.queue.put(setoption(self.selected_row[1], 0, 1))
+                self.selected_row[2] = 0
             elif self.selected_column == 2:
                 self.queue.put(change(self.selected_row[1], self.selected_row[2], -1))
         elif key in [ord('='), ord('+')] :
             if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
                 self.queue.put(setoption(self.selected_row[1], 0, 0))
+                self.selected_row[2] = 0
             elif self.selected_column == 2:
                 self.queue.put(change(self.selected_row[1], self.selected_row[2], 1))
         return False
@@ -222,16 +224,16 @@ if __name__ == "__main__":
         CircusTent(),
         CoiledSpring(),
         Confetti(),
-        DroppingPlates(),
         FallingSnow(),
         Galaxus(),
         Groovy(),
+        RainbowStorm(),
         SlidingDoor(),
         SpiralTop(),
         Twirl(),
     ]
     queue = Queue()
-    animation = Blender(patterns, 2, False)
+    animation = Blender(patterns, 7, False)
     animation.pattern.randomize()
     animation_thread = Thread(
         target=animation_thread_task,

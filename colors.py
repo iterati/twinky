@@ -170,7 +170,7 @@ class SplitColor(BaseColor):
 class FallingColor(BaseColor):
     def __init__(self,
                  num_colors: int=8,
-                 skip_colors: int=3,
+                 skip: Param=3/8,
                  offset: float=0,
                  period: float=60,
                  suppress: list[str] | None=None,
@@ -178,36 +178,35 @@ class FallingColor(BaseColor):
                  hue_func: Curve | None=None):
         super(FallingColor, self).__init__(suppress=suppress)
         self._num_colors = num_colors
-        self._skip_colors = skip_colors
+        self._skip = skip
         self._offset = offset
+        self._period = period
         self._fade_func = (
             fade_func
             if isinstance(fade_func, Curve) else
             Curve(easeInOutCubic, mk_bump(1, -fade_func, 0))
         )
-        self._hue_func = (
-            hue_func
-            if hue_func is not None else
-            Curve(const, [(0, 0), (1, 0)])
-        )
-        self._period = period
+        self._hue_func = 0 if hue_func is None else hue_func
 
     @property
     def ycurve(self) -> Curve:
         return Curve(linear, [(0, 0), (self._period, self._num_colors)])
-
-    def _h(self, t: float, pixel_y: float) -> float:
-        r = ((int(pixel_y) * self._skip_colors) % self._num_colors) / self._num_colors
-        r += getv(self._hue_func, t)
-        return r
 
     def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
         s = (t + self._offset) % 60
         pixel_y += getv(self.ycurve, s)
         l = getv(self._fade_func, pixel_y)
         l = ((l + 1) ** 2) - 1
-        color = Color(0, self.base_hue + self._h(s, pixel_y), 1, l)
-        return color, self.suppress
+        h = int(pixel_y) * getv(self._skip, t)
+        h += blend
+        h += getv(self._hue_func, t)
+
+        return Color(
+            w=0,
+            h=h,
+            s=1,
+            l=l,
+        ), self.suppress
 
 def setcolor(w: float | None=None,
              h: float | None=None,

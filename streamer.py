@@ -56,23 +56,19 @@ class StreamerFunc:
 
 class RandomColorStreamerFunc(StreamerFunc):
     def __init__(self,
-                 minh: Param,
-                 maxh: Param,
+                 minh: Param=0.0,
+                 maxh: Param=1.0,
                  w: Param | None=None,
                  s: Param | None=None,
                  l: Param | None=None):
-        self.w = w
         self.minh = minh
         self.maxh = maxh
-        self._h = None
+        self.w = w
         self.s = s
         self.l = l
 
     def h(self, t: float) -> float:
-        if self._h is None:
-            self._h = rand(getv(self.minh, t), getv(self.maxh, t))(0)
-            
-        return self._h
+        return rand(getv(self.minh, t), getv(self.maxh, t))(t)
 
     def __call__(self, color: Color, t: float) -> Color:
         return Color(
