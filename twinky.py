@@ -54,6 +54,7 @@ def randomize(a):
 def pauseplay(a):
     a.pause_change = not a.pause_change
 
+
 class Menu:
     def __init__(self, animation, queue):
         self.animation = animation
@@ -64,57 +65,81 @@ class Menu:
 
     def print_menu(self, screen):
         screen.clear()
-        _, w = screen.getmaxyx()
+        h, w = screen.getmaxyx()
         midw = w // 2
         colw = (w - 2) // 3
 
         pattern = self.animation.pattern
         feature = pattern.features[self.selected_row[1]]
 
+        line = '\u2554'
+        line += '\u2550' * (w - 2)
+        line += '\u2557'
+        screen.addstr(0, 0, line)
+        
         # top shows animation name and time if not paused
-        title = f"{self.animation.pattern.name}: "
-        title += 'PAUSED' if self.animation.pause_change else self.animation.time_str
-        screen.addstr(1, midw - (len(title) // 2), title)
+        title = self.animation.pattern.name
+        title += f"->{self.animation.next_pattern.name}" if self.animation.transitioning else ""
+        title += ": "
+        title += "PAUSED" if self.animation.pause_change else self.animation.time_str
+        spaces = (w - (len(title) + 1)) // 2
+        line = '\u2551 \u2985\u2986'
+        line += ' ' * (spaces - 3)
+        line += title
+        line += ' ' * (spaces - 3)
+        line += '\u2985\u2986 \u2551'
+        screen.addstr(1, 0, line)
+
+        line = '\u2560'
+        line += '\u2550' * (colw - len(line))
+        line += '\u2564'
+        line += '\u2550' * ((2*colw) - len(line))
+        line += '\u2564'
+        line += '\u2550' * ((w - 1) - len(line))
+        line += '\u2563'
+        screen.addstr(2, 0, line)
+
+        for i in range(3, 19):
+            screen.addstr(i, 0, '\u2551')
+            screen.addstr(i, colw, '\u2502')
+            screen.addstr(i, colw*2, '\u2502')
+            screen.addstr(i, w-1, '\u2551')
+
+        line = '\u255a'
+        line += '\u2550' * (colw - len(line))
+        line += '\u2567'
+        line += '\u2550' * ((2*colw) - len(line))
+        line += '\u2567'
+        line += '\u2550' * ((w - 1) - len(line))
+        line += '\u255d'
+        screen.addstr(19, 0, line)
 
         # left shows patterns
         for i, p in enumerate(self.animation.patterns):
-            mid = colw // 2
-            pair = 0
+            pair = curses.color_pair(0)
             if self.selected_row[0] == i:
-                pair = 2 if self.selected_column == 0 else 3
-            screen.addstr(
-                3 + i,
-                mid - (len(p.name) // 2),
-                p.name,
-                curses.color_pair(pair),
-            )
+                pair = curses.color_pair(1)
+                if self.selected_column == 0:
+                    pair |= curses.A_BOLD
+            screen.addstr(3 + i, 2, p.name, pair)
 
         # middle shows main settings
         for i, f in enumerate(pattern.features):
-            mid = (colw // 2) + colw
-            pair = 0
+            pair = curses.color_pair(0)
             if self.selected_row[1] == i:
-                pair = 2 if self.selected_column == 1 else 3
-            screen.addstr(
-                3 + i,
-                mid - (len(f.name) // 2),
-                f.name,
-                curses.color_pair(pair),
-            )
+                pair = curses.color_pair(1)
+                if self.selected_column == 1:
+                    pair |= curses.A_BOLD
+            screen.addstr(3 + i, colw + 2, f.name, pair)
 
         # right shows control settings
         for i, c in enumerate(feature.visible_controls()):
-            s = f"{c.name}: {c.selected.name}"
-            mid = (colw // 2) + (2 * colw)
-            pair = 0
+            pair = curses.color_pair(0)
             if self.selected_row[2] == i:
-                pair = 2 if self.selected_column == 2 else 3
-            screen.addstr(
-                3 + i,
-                mid - (len(s) // 2),
-                s,
-                curses.color_pair(pair),
-            )
+                pair = curses.color_pair(1)
+                if self.selected_column == 2:
+                    pair |= curses.A_BOLD
+            screen.addstr(3 + i, (2*colw) + 2, f"{c.name}: {c.selected.name}", pair)
 
         screen.refresh()
 
@@ -166,9 +191,7 @@ class Menu:
         screen.nodelay(True)
         screen.keypad(True)
         curses.start_color()
-        curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_WHITE)
-        curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
+        curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
 
         while True:
             if self.animation.pattern != self.curr_pattern:

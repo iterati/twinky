@@ -327,11 +327,11 @@ class Blender:
     @property
     def time_str(self):
         if self.pause_change:
-            return f"{round(self._t - self._init_t, 2)}"
+            return f"{(self._t - self._init_t):.2f}"
         elif self.transitioning:
-            return f"{round(self.pattern_end - self._t, 2)}"
+            return f"{(self.pattern_end - self._t):.2f}"
         else:
-            return f"{round(self.pattern_end - self._t + self.transition_length, 2)}"
+            return f"{(self.pattern_end - self._t + self.transition_length):.2f}"
 
     def start_transition(self, next: int | None=None):
         self.pattern_hue = getv(self._blend_func, self._t)

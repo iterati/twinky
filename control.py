@@ -132,20 +132,20 @@ HALVES053 = [Option(str(v * 0.5), v * 0.5) for v in range(1, 7)]
 HALVES056 = HALVES053 + [Option(str(v), v) for v in range(4, 7)]
 DIRECTIONS = [Option("\u21ba ", 1), Option("\u21bb ", -1)]
 PERIODS = [Option(str(v), v) for v in [3, 5, 6, 10, 12, 15, 20, 30, 60]]
-CURVES = [Option(f.__name__, f) for f in [
-    linear,
-    easeInSine,
-    easeOutSine,
-    easeInOutSine,
-    easeInBounce,
-    easeOutBounce,
-    easeInOutBounce,
-    easeInQuad,
-    easeOutQuad,
-    easeInOutQuad,
-    easeInCirc,
-    easeOutCirc,
-    easeInOutCirc,
+CURVES = [Option(n, f) for n, f in [
+    ("linear", linear),
+    ("sineI", easeInSine),
+    ("sineO", easeOutSine),
+    ("sineIO", easeInOutSine),
+    ("bounceI", easeInBounce),
+    ("bounceO", easeOutBounce),
+    ("bounceIO", easeInOutBounce),
+    ("quadI", easeInQuad),
+    ("quadO", easeOutQuad),
+    ("quadIO", easeInOutQuad),
+    ("circI", easeInCirc),
+    ("circO", easeOutCirc),
+    ("circIO", easeInOutCirc),
 ]]
 
 
@@ -1129,14 +1129,13 @@ class GroovyFeature(Feature):
         else:
             rainbow = self._rainbow.value
         return {
-            "base_color": SplitColor(7, [
-                BaseColor(l=0.0, spread=False, suppress=["sparkles"]),
-                BaseColor(h=-rainbow),
-                BaseColor(h=rainbow, l=0.0, spread=False, suppress=["sparkles"]),
-                BaseColor(h=-rainbow),
+            "base_color": SplitColor(6, [
                 BaseColor(h=-rainbow, l=0.0, spread=False, suppress=["sparkles"]),
-                BaseColor(h=rainbow),
+                BaseColor(l=-1),
                 BaseColor(l=0.0, spread=False, suppress=["sparkles"]),
+                BaseColor(l=0.0, spread=False, suppress=["sparkles"]),
+                BaseColor(l=-1),
+                BaseColor(h=rainbow, l=0.0, spread=False, suppress=["sparkles"]),
             ]),
             "topologies": [
                 DistortTopology(
