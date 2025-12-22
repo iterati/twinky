@@ -892,92 +892,6 @@ class Confetti(WiredPattern):
             ),
         ]
 
-class RainbowStormFeature(Feature):
-    def __init__(self):
-        self._fade = Control("Fade", ZERO + [Option("linear", "linear")] + CURVES)
-        self._fade_direction = Control("Fade Direction", [Option(n, v) for n, v in [
-            ("\u2193 ", 1),
-            ("\u2191 ", -1),
-        ]])
-        self._period0 = Control("Period0", PERIODS)
-        self._period1 = Control("Period1", PERIODS)
-        self._period2 = Control("Period2", PERIODS)
-        self._period3 = Control("Period3", PERIODS)
-        self._rainbow = Control("Rainbow", FRACS)
-        self._rainbow_curved = ToggleControl("Rainbow Curved")
-        self._rainbow_curve = Control("Rainbow Curve", CURVES)
-        self._rainbow_period = Control("Rainbow Period", PERIODS)
-        super(RainbowStormFeature, self).__init__("Rainbow Storm", [
-            self._fade,
-            self._fade_direction,
-            self._period0,
-            self._period1,
-            self._period2,
-            self._rainbow,
-            self._rainbow_curved,
-            self._rainbow_curve,
-            self._rainbow_period,
-        ])
-
-    @property
-    def value(self):
-        if self._fade.value == 0:
-            fade = self._fade.value
-        elif self._fade.value == "linear":
-            if self._fade_direction.value == 1:
-                fade = Curve(linear, [(0, 0), (1, -1)])
-            else:
-                fade = Curve(linear, [(0, -1), (1, 0)])
-        else:
-            if self._fade_direction.value == 1:
-                fade = Curve(self._fade.value, mk_bump(1, 0, -1))
-            else:
-                fade = Curve(self._fade.value, mk_bump(1, -1, 0))
-            
-        if self._rainbow_curved.value:
-            rainbow = Curve(self._rainbow_curve.value, mk_bounce(
-                self._rainbow_period.value,
-                self._rainbow.value,
-                -self._rainbow.value
-            )) / 2
-        else:
-            rainbow = self._rainbow.value / 2
-        return {
-            "base_color": SplitColor(3, [
-                FallingColor(8, 3/8, period=self._period0.value, fade_func=fade),
-                FallingColor(12, 5/12, period=self._period1.value,
-                             hue_func=rainbow,
-                             fade_func=fade),
-                FallingColor(16, 7/16, period=self._period2.value,
-                             hue_func=-rainbow,
-                             fade_func=fade),
-            ])
-        }
-
-    def visible_controls(self) -> list[Control]:
-        if not self._rainbow_curved.value:
-            return self.controls[:-3]
-        else:
-            return self.controls
-    
-class RainbowStorm(WiredPattern):
-    def __init__(self):
-        self._base = RainbowStormFeature()
-        self._flux = FluxFeature()
-        super(RainbowStorm, self).__init__("Rainbow Storm")
-        self.features = [
-            self._base,
-            SpiralTopologyFeature(),
-            SpinFeature(),
-            FlickerFeature(),
-            FlitterFeature(),
-            self._flux,
-            SparklesFeature(
-                rainbow=self._base._rainbow,
-                flux=self._flux,
-            ),
-        ]
-
 class FallingSnowFeature(Feature):
     def __init__(self):
         self._colors = Control("Colors", [Option(str(v), v) for v in [
@@ -1233,6 +1147,92 @@ class Groovy(WiredPattern):
         super(Groovy, self).__init__("Groovy")
         self.features = [
             self._base,
+            FlickerFeature(),
+            FlitterFeature(),
+            self._flux,
+            SparklesFeature(
+                rainbow=self._base._rainbow,
+                flux=self._flux,
+            ),
+        ]
+
+class RainbowStormFeature(Feature):
+    def __init__(self):
+        self._fade = Control("Fade", ZERO + [Option("linear", "linear")] + CURVES)
+        self._fade_direction = Control("Fade Direction", [Option(n, v) for n, v in [
+            ("\u2193 ", 1),
+            ("\u2191 ", -1),
+        ]])
+        self._period0 = Control("Period0", PERIODS)
+        self._period1 = Control("Period1", PERIODS)
+        self._period2 = Control("Period2", PERIODS)
+        self._period3 = Control("Period3", PERIODS)
+        self._rainbow = Control("Rainbow", FRACS)
+        self._rainbow_curved = ToggleControl("Rainbow Curved")
+        self._rainbow_curve = Control("Rainbow Curve", CURVES)
+        self._rainbow_period = Control("Rainbow Period", PERIODS)
+        super(RainbowStormFeature, self).__init__("Rainbow Storm", [
+            self._fade,
+            self._fade_direction,
+            self._period0,
+            self._period1,
+            self._period2,
+            self._rainbow,
+            self._rainbow_curved,
+            self._rainbow_curve,
+            self._rainbow_period,
+        ])
+
+    @property
+    def value(self):
+        if self._fade.value == 0:
+            fade = self._fade.value
+        elif self._fade.value == "linear":
+            if self._fade_direction.value == 1:
+                fade = Curve(linear, [(0, 0), (1, -1)])
+            else:
+                fade = Curve(linear, [(0, -1), (1, 0)])
+        else:
+            if self._fade_direction.value == 1:
+                fade = Curve(self._fade.value, mk_bump(1, 0, -1))
+            else:
+                fade = Curve(self._fade.value, mk_bump(1, -1, 0))
+            
+        if self._rainbow_curved.value:
+            rainbow = Curve(self._rainbow_curve.value, mk_bounce(
+                self._rainbow_period.value,
+                self._rainbow.value,
+                -self._rainbow.value
+            )) / 2
+        else:
+            rainbow = self._rainbow.value / 2
+        return {
+            "base_color": SplitColor(3, [
+                FallingColor(8, 3/8, period=self._period0.value, fade_func=fade),
+                FallingColor(12, 5/12, period=self._period1.value,
+                             hue_func=rainbow,
+                             fade_func=fade),
+                FallingColor(16, 7/16, period=self._period2.value,
+                             hue_func=-rainbow,
+                             fade_func=fade),
+            ])
+        }
+
+    def visible_controls(self) -> list[Control]:
+        if not self._rainbow_curved.value:
+            return self.controls[:-3]
+        else:
+            return self.controls
+    
+class RainbowStorm(WiredPattern):
+    def __init__(self):
+        self._base = RainbowStormFeature()
+        self._flux = FluxFeature()
+        super(RainbowStorm, self).__init__("Rainbow Storm")
+        self.features = [
+            self._base,
+            SpiralTopologyFeature(),
+            SpinFeature(),
             FlickerFeature(),
             FlitterFeature(),
             self._flux,
