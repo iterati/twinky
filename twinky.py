@@ -51,6 +51,11 @@ def setoption(fidx, cidx, oidx):
 def randomize(a):
     a.pattern.randomize()
 
+def randomize_feature(fidx):
+    def func(a):
+        a.pattern.features[fidx].randomize()
+    return func
+
 def pauseplay(a):
     a.pause_change = not a.pause_change
 
@@ -158,7 +163,10 @@ class Menu:
             self.queue.put(_sentinel)
             return True
         elif key == ord('r'):
-            self.queue.put(randomize)
+            if self.selected_column == 0:
+                self.queue.put(randomize)
+            else:
+                self.queue.put(randomize_feature(self.selected_row[1]))
         elif key == curses.KEY_ENTER or key in [10, 13]:
             if self.selected_column == 0:
                 self.queue.put(switch_pattern(self.selected_row[0]))
