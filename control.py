@@ -798,7 +798,7 @@ class CoiledSpringFeature(Feature):
             angle=(i / self.topology._repeats.value) + self.spin.value_param,
             spin=self.topology.value_param,
             length=2.0,
-            width=self._split.value / self.topology._value.value,
+            width=split / self.topology._value.value,
             lifetime=self._delay.value,
             func=StreamerFunc(
                 h= (i + o) * (rainbow / self.topology._value.value),
