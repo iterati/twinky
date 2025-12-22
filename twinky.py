@@ -233,7 +233,7 @@ if __name__ == "__main__":
         SpiralTop(),
     ]
     queue = Queue()
-    animation = Blender(patterns, 9, True)
+    animation = Blender(patterns)
     animation.pattern.randomize()
     animation_thread = Thread(
         target=animation_thread_task,
