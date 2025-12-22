@@ -463,7 +463,6 @@ class SpiralTopologyFeature(Feature):
             controls = [self._repeats, self._mirrored, self._enabled]
             if self._enabled.value:
                 controls += curve
-                controls.extend(curve)
         else:
             controls = [self._repeats, self._mirrored] + curve
 
