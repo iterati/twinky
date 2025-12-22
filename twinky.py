@@ -1,4 +1,6 @@
 import curses
+import os
+import pickle
 from queue import Queue, Empty
 from threading import Thread
 import time
@@ -36,19 +38,24 @@ def switch_pattern(idx):
         a.start_transition(idx)
     return func
 
-def change(fidx, cidx, step):
+def change_option(fidx, cidx, step):
     def func(a):
         a.pattern.change(fidx, cidx, step)
 
     return func
 
-def setoption(fidx, cidx, oidx):
+def set_option(fidx, cidx, oidx):
     def func(a):
         a.pattern.set(fidx, cidx, oidx)
 
     return func
 
-def randomize(a):
+def random_pattern(a):
+    a.next_pattern = a._pick_next()
+    idx = a.patterns.index(a.next_pattern)
+    a.start_transition(idx)
+
+def randomize_pattern(a):
     a.pattern.randomize()
 
 def randomize_feature(fidx):
@@ -59,6 +66,22 @@ def randomize_feature(fidx):
 def pauseplay(a):
     a.pause_change = not a.pause_change
 
+def toggle_configured(a):
+    a.pattern.configured = not a.pattern.configured
+    with open(f"{a.pattern.name.replace(' ', '_').lower()}.pattern", 'wb') as file:
+        pickle.dump(a.pattern._to_dict(), file, pickle.HIGHEST_PROTOCOL)
+    print("Saved", a.pattern.name, flush=True)
+
+def load_pattern(pattern: WiredPattern):
+    fname = f"{pattern.name.replace(' ', '_').lower()}.pattern"
+    if not os.path.exists(fname):
+        print("No configuration found for", pattern.name, flush=True)
+    else:
+        with open(fname, 'rb') as file:
+            pattern._from_dict(pickle.load(file))
+            pattern.configured = True
+            print("Load saved config for", pattern.name, flush=True)
+    return pattern
 
 class Menu:
     def __init__(self, animation, queue):
@@ -162,9 +185,13 @@ class Menu:
         if key == ord('q'):
             self.queue.put(_sentinel)
             return True
+        elif key == ord('s'):
+            self.queue.put(toggle_configured)
+        elif key == ord('R'):
+            self.queue.put(random_pattern)
         elif key == ord('r'):
             if self.selected_column == 0:
-                self.queue.put(randomize)
+                self.queue.put(randomize_pattern)
             else:
                 self.queue.put(randomize_feature(self.selected_row[1]))
         elif key == curses.KEY_ENTER or key in [10, 13]:
@@ -186,16 +213,16 @@ class Menu:
             self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]
         elif key in [ord('-'), ord('_')] :
             if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
-                self.queue.put(setoption(self.selected_row[1], 0, 1))
+                self.queue.put(set_option(self.selected_row[1], 0, 1))
                 self.selected_row[2] = 0
             elif self.selected_column == 2:
-                self.queue.put(change(self.selected_row[1], self.selected_row[2], -1))
+                self.queue.put(change_option(self.selected_row[1], self.selected_row[2], -1))
         elif key in [ord('='), ord('+')] :
             if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
-                self.queue.put(setoption(self.selected_row[1], 0, 0))
+                self.queue.put(set_option(self.selected_row[1], 0, 0))
                 self.selected_row[2] = 0
             elif self.selected_column == 2:
-                self.queue.put(change(self.selected_row[1], self.selected_row[2], 1))
+                self.queue.put(change_option(self.selected_row[1], self.selected_row[2], 1))
         return False
 
     def __call__(self, screen):
@@ -229,19 +256,19 @@ class Menu:
 
 if __name__ == "__main__":
     patterns = [
-        BasicBitch(),
-        CircusTent(),
-        CoiledSpring(),
-        Confetti(),
-        FallingSnow(),
-        Galaxus(),
-        Groovy(),
-        RainbowStorm(),
-        SlidingDoor(),
-        SpiralTop(),
+        load_pattern(BasicBitch()),
+        load_pattern(CircusTent()),
+        load_pattern(CoiledSpring()),
+        load_pattern(Confetti()),
+        load_pattern(FallingSnow()),
+        load_pattern(Galaxus()),
+        load_pattern(Groovy()),
+        load_pattern(RainbowStorm()),
+        load_pattern(SlidingDoor()),
+        load_pattern(SpiralTop()),
     ]
     queue = Queue()
-    animation = Blender(patterns)
+    animation = Blender(patterns, 0, True)
     animation.pattern.randomize()
     animation_thread = Thread(
         target=animation_thread_task,

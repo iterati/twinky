@@ -1,3 +1,4 @@
+from copy import deepcopy
 from enum import Enum
 import random
 from typing import TypeAlias
@@ -28,24 +29,26 @@ class StreamerFunc:
         self.l = l
         self.make_white = make_white
         self.ignore_color = ignore_color
+        self._h = None
 
-    def __call__(self, color: Color, t: float) -> Color:
+    def __call__(self, color: Color, t: float, blend: float) -> Color:
         if color.l != -1.0 and self.make_white:
             return Color(
-                w=0.75,
+                w=1,
                 s=0.0,
                 l=-0.75,
             )
 
-        h = 0
-        if self.h is not None:
-            h = getv(h, t)
-
-        if isinstance(h, Curve):
-            print("Curved curve", h, flush=True)
-            h = getv(h, t)
-
+        h = blend
+        if self.h is not None and self._h is None:
+            self._h = getv(self.h, t)
+            print("H", self._h, flush=True)
+        h += self._h if self._h is not None else 0
         h += 0 if self.ignore_color else getv(color.h, t)
+
+        # if isinstance(h, Curve):
+        #     print("Curved curve", h, flush=True)
+        #     h = getv(h, t)
 
         return Color(
             w=getv(self.w, t) if self.w is not None else color.w,
@@ -70,7 +73,7 @@ class RandomColorStreamerFunc(StreamerFunc):
     def h(self, t: float) -> float:
         return rand(getv(self.minh, t), getv(self.maxh, t))(t)
 
-    def __call__(self, color: Color, t: float) -> Color:
+    def __call__(self, color: Color, t: float, blend: float) -> Color:
         return Color(
             w=getv(self.w, t) if self.w is not None else color.w,
             h=self.h(t),
@@ -101,7 +104,7 @@ class Streamer:
         lifetime = lifetime if lifetime is not None else 1.0
 
         self.reverse = move_dir != Direction.FROM_TOP
-        self.func = func if func is not None else StreamerFunc()
+        self.func = deepcopy(func) if func is not None else StreamerFunc()
         self.move_dir = move_dir
         self.spin_dir = 1 if spin_dir == Spin.CLOCKWISE else -1
         self.angle = angle
@@ -166,17 +169,21 @@ class StreamerChoices:
                  choices: list[StreamerValues],
                  choose: tuple[int, int] | None=None,
                  delay_offset: float=0):
-        self.delay = delay
         self.choices = choices
         self.choose = choose
+        self.delay = delay
         self.delay_offset = delay_offset
+        self.next_trigger = delay_offset
+        self.triggers = 0
 
     def __call__(self, t: float) -> StreamerValues:
-        s = int(t + self.delay_offset) % (len(self.choices) * self.delay)
-        if s % self.delay != 0:
+        if (t < self.next_trigger):
             return []
 
-        c = self.choices[int(s / self.delay) % len(self.choices)]
+        self.triggers += 1
+        self.next_trigger += self.delay
+        print("CHOICE", t, self.triggers % len(self.choices), flush=True)
+        c = self.choices[self.triggers % len(self.choices)]
         if self.choose:
             pick = (
                 self.choose[0]
@@ -184,7 +191,6 @@ class StreamerChoices:
                 random.randint(*self.choose)
             )
             return random.choices(c, k=pick)
-            
         return c
 
 class CombinedChoices(StreamerChoices):

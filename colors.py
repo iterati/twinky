@@ -147,22 +147,18 @@ class SplitColor(BaseColor):
                  suppress: list[str] | None=None):
         super(SplitColor, self).__init__(suppress=suppress)
         self.count = count
-        self.funcs = funcs
+        self.funcs: BaseColorFuncsParam = (
+            funcs
+            if funcs is not None else
+            [BaseColor(l=0), BaseColor()]
+        )
 
     def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
         count = getv(self.count, t)
         side = int((pixel_t % 1) * count)
-        if self.funcs is not None:
-            funcs = getv_funcs(self.funcs, t)
-        else:
-            funcs = [None] * int(count)
-
+        funcs = getv_funcs(self.funcs, t)
         func = funcs[side]
-        if func is not None:
-            return func(t, blend, spread, pixel_t, pixel_y)
-        else:
-            color = Color(0, blend + (side * spread), 1, 0)
-            return color, self.suppress
+        return func(t, blend, spread, pixel_t, pixel_y)
 
     def __repr__(self):
         return f"Split({self.count}, {self.funcs})"
@@ -216,7 +212,7 @@ def setcolor(w: float | None=None,
     def func(color: Color) -> Color:
         if color.l != -1.0 and make_white:
             return Color(
-                w=0.75,
+                w=1,
                 s=0.0,
                 l=-0.75,
             )
@@ -235,7 +231,7 @@ class ColorFuncs(Enum):
     BLANK = setcolor(w=0, l=-1)
     INVERT = setcolor(h=0.5, l=0.0)
     INVERT_WHITEN = setcolor(h=0.5, l=0.0, make_white=True)
-    WHITEN = setcolor(w=0.75, s=0.0, l=-0.75)
+    WHITEN = setcolor(w=1, s=0.0, l=-0.75)
     RANDOM = lambda _: Color(h=rand()(0), l=0)
 
 def getv_funcs(v: BaseColorFuncsParam, t: float) -> BaseColorFuncs:

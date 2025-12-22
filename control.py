@@ -95,6 +95,9 @@ class Control:
         self.selected_idx = 0
         self.selected = options[0]
 
+    def _to_dict(self):
+        return self.selected_idx
+
     def set(self, idx: int):
         self.selected_idx = idx % len(self.options)
         self.selected = self.options[self.selected_idx]
@@ -122,6 +125,9 @@ class Feature:
         self.name = name
         self.controls = controls
 
+    def _to_dict(self):
+        return [c._to_dict() for c in self.controls]
+
     @property
     def value(self) -> dict:
         return {}
@@ -140,6 +146,9 @@ class Feature:
             print(idx, len(self.visible_controls()), True)
             raise ex
 
+    def fset(self, cidx: int, oidx: int):
+        self.controls[cidx].set(oidx)
+
     def set(self, cidx: int, oidx: int):
         try:
             self.visible_controls()[cidx].set(oidx)
@@ -149,11 +158,14 @@ class Feature:
 class BumpFeature(Feature):
     def __init__(self,
                  name: str,
-                 attr_name: str):
+                 attr_name: str,
+                 min_v: float=0,
+                 max_v: float=1):
+        vals = [o for o in ZERO + FRACS if min_v <= o.value <= max_v]
         self.attr_name = attr_name
         self._enabled = ToggleControl("Enabled")
-        self._start = Control("Start", ZERO + FRACS)
-        self._end = Control("End", ZERO + FRACS)
+        self._start = Control("Start", vals)
+        self._end = Control("End", vals)
         self._curved = ToggleControl("Curved")
         self._curve = Control("Curve", CURVES)
         self._period = Control("Period", PERIODS)
@@ -192,13 +204,15 @@ class BumpFeature(Feature):
 class BounceFeature(Feature):
     def __init__(self,
                  name: str,
-                 attr_name: str):
+                 attr_name: str,
+                 max_v: float=1):
+        vals = [o for o in FRACS if o.value <= max_v]
         self.attr_name = attr_name
         self._enabled = ToggleControl("Enabled")
         self._curved = ToggleControl("Curved")
         self._curve = Control("Curve", CURVES)
         self._period = Control("Period", PERIODS)
-        self._value = Control("Value", FRACS)
+        self._value = Control("Value", vals)
 
         super(BounceFeature, self).__init__(name, [
             self._enabled,
@@ -230,20 +244,20 @@ class BounceFeature(Feature):
             return self.controls
 
 class FlashFeature(BumpFeature):
-    def __init__(self):
-        super(FlashFeature, self).__init__("Flash", "flash")
+    def __init__(self, min_v: float=0, max_v: float=1):
+        super(FlashFeature, self).__init__("Flash", "flash", min_v, max_v)
 
 class FlickerFeature(BumpFeature):
-    def __init__(self):
-        super(FlickerFeature, self).__init__("Flicker", "flicker")
+    def __init__(self, min_v: float=0, max_v: float=1):
+        super(FlickerFeature, self).__init__("Flicker", "flicker", min_v, max_v)
 
 class FlitterFeature(BumpFeature):
-    def __init__(self):
-        super(FlitterFeature, self).__init__("Flitter", "flitter")
+    def __init__(self, min_v: float=0, max_v: float=1):
+        super(FlitterFeature, self).__init__("Flitter", "flitter", min_v, max_v)
 
 class FluxFeature(BounceFeature):
-    def __init__(self):
-        super(FluxFeature, self).__init__("Flux", "flux")
+    def __init__(self, max_v: float=1):
+        super(FluxFeature, self).__init__("Flux", "flux", max_v)
 
 class SparklesFeature(Feature):
     def _mk_sparkle(self,
@@ -254,7 +268,7 @@ class SparklesFeature(Feature):
                     make_white: bool=False):
         def func(color: Color) -> Color:
             if color.l != -1.0 and make_white:
-                return Color(w=0.75, s=0.0, l=-0.75)
+                return Color(w=1, s=0.0, l=-0.75)
             return Color(
                 w=w if w is not None else color.w,
                 h=h if h is not None else color.h,
@@ -300,7 +314,7 @@ class SparklesFeature(Feature):
             ("blank", self._mk_sparkle(l=-1)),
             ("invert", self._mk_sparkle(h=0.5, l=0)),
             ("invert_whiten", self._mk_sparkle(h=0.5, l=0, make_white=True)),
-            ("whiten", self._mk_sparkle(w=0.75, s=0, l=-0.75)),
+            ("whiten", self._mk_sparkle(w=1, s=0, l=-0.75)),
             ("random", self.random_sparkle),
         ]
         if self.rainbow is not None:
@@ -448,7 +462,7 @@ class SpiralTopologyFeature(Feature):
         Topology = MirrorTopology if self._mirrored.value else RepeatTopology
         return {"topologies": [
             Topology(self._repeats.value),
-            SpiralTopology(self.value_param, self._mid.value)
+            SpiralTopology(self.value_param * 3, self._mid.value)
         ]}
 
     def visible_controls(self) -> list[Control]:
@@ -471,8 +485,8 @@ class SpiralTopologyFeature(Feature):
 class SpinFeature(Feature):
     def __init__(self):
         self._enabled = ToggleControl("Enabled")
-        self._spin = Control("Spin", ZERO + FRACS)
-        self._direction = Control("Direction", DIRECTIONS)
+        self._spin = Control("Spin", FRACS)
+        self._direction = Control("Direction", DIRECTIONS + [Option("both", "both")])
         self._curve = Control("Curve", CURVES)
         self._period = Control("Period", PERIODS)
         
@@ -488,6 +502,12 @@ class SpinFeature(Feature):
     def value_param(self):
         if not self._enabled.value:
             return 0
+        if self._direction.value == "both":
+            return Curve(self._curve.value, mk_bounce(
+                self._period.value,
+                self._spin.value,
+                -self._spin.value,
+            ))
         return Curve(self._curve.value, mk_bounce(
             self._period.value,
             self._spin.value * self._direction.value,
@@ -536,7 +556,17 @@ class WiredPattern(Pattern):
     def __init__(self, name, **kwargs):
         super(WiredPattern, self).__init__(name, **kwargs)
         self.features: list[Feature] = []
+        self.configured = False
 
+    def _to_dict(self):
+        return [[c.selected_idx for c in f.controls] for f in self.features]
+
+    def _from_dict(self, features):
+        for fidx, f in enumerate(features):
+            for cidx, oidx in enumerate(f):
+                self.features[fidx].fset(cidx, oidx)
+        self.update()
+                
     def update(self):
         for feature in self.features:
             for attr, val in feature.value.items():
@@ -554,6 +584,8 @@ class WiredPattern(Pattern):
         self.update()
 
     def randomize(self):
+        if self.configured:
+            return
         for c in self.features:
             c.randomize()
         self.update()
@@ -577,13 +609,13 @@ class BasicBitchFeature(Feature):
         self._enabled = ToggleControl("Enabled")
         self._curve = Control("Curve", CURVES)
         self._period = Control("Period", PERIODS)
-        self._intensity = Control("Intentsity", ZERO + HALVES056)
+        self._intensity = Control("Intentsity", FRACS)
 
         super(BasicBitchFeature, self).__init__("Pulse", [
             self._enabled,
+            self._intensity,
             self._curve,
             self._period,
-            self._intensity,
         ])
 
     @property
@@ -597,13 +629,17 @@ class BasicBitchFeature(Feature):
             )))
         return {"base_color": val}
 
+    def visible_controls(self) -> list[Control]:
+        if not self._enabled.value:
+            return [self._enabled]
+        return self.controls
+
 class BasicBitch(WiredPattern):
     def __init__(self):
         self._flux = FluxFeature()
         super(BasicBitch, self).__init__("Basic Bitch")
         self.features = [
             BasicBitchFeature(),
-            FlashFeature(),
             FlickerFeature(),
             FlitterFeature(),
             self._flux,
@@ -706,17 +742,24 @@ class CircusTentFeature(Feature):
                 periodic_choices(self._delay.value, fns),
             )}
 
+    def visible_controls(self) -> list[Control]:
+        r = [self._delay, self._splits, self._rainbow, self._curved]
+        if self._curved.value:
+            r += [self._curve, self._period]
+        return r
+
+
 class CircusTent(WiredPattern):
     def __init__(self):
         self._base = CircusTentFeature()
-        self._flux = FluxFeature()
+        self._flux = FluxFeature(max_v=1/2)
         super(CircusTent, self).__init__("Circus Tent")
         self.features = [
             self._base,
             SpiralTopologyFeature(),
             SpinFeature(),
-            FlickerFeature(),
-            FlitterFeature(),
+            FlickerFeature(max_v=1/2),
+            FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(rainbow=self._base._rainbow, flux=self._flux),
         ]
@@ -750,6 +793,7 @@ class CoiledSpringFeature(Feature):
             self._rainbow_curve,
             self._rainbow_period,
         ])
+        self._streamers = StreamerChoices(self._delay.value, [])
 
     @property
     def value(self):
@@ -767,11 +811,12 @@ class CoiledSpringFeature(Feature):
             rainbow = self._rainbow.value
 
         base_color = WindowColor(1 - split, [
-            BaseColor(w=0.75, s=0, l=-0.75, suppress=["sparkles", "streamers"]),
+            BaseColor(w=1, s=0, l=-0.75, suppress=["sparkles", "streamers"]),
             BaseColor(),
         ])
 
-        streamers = StreamerChoices(self._delay.value, [[StreamerValue(
+        self._streamers.delay = self._delay.value
+        self._streamers.choices = [[StreamerValue(
             move_dir=Direction.FROM_BOT,
             spin_dir=Spin.CLOCKWISE,
             angle=(i / self.topology._repeats.value) + self.spin.value_param,
@@ -785,23 +830,22 @@ class CoiledSpringFeature(Feature):
                 s=1,
                 l=0.0,
             ),
-        ) for i in range(int(self.topology._value.value))] for o in range(4)])
+        ) for i in range(int(self.topology._value.value))] for o in range(4)]
 
         return {
             "base_color": base_color,
-            "streamers": streamers,
+            "streamers": self._streamers,
         }
 
     def visible_controls(self) -> list[Control]:
+        r = [self._delay]
+        r += [self._split, self._split_curved]
         if self._split_curved.value:
-            split = [self._split, self._split_curved, self._split_curve, self._split_period]
-        else:
-            split = [self._split, self._split_curved]
+            r += [self._split_curve, self._split_period]
+        r += [self._rainbow, self._rainbow_curved]
         if self._rainbow_curved.value:
-            rainbow = [self._rainbow, self._rainbow_curved, self._rainbow_curve, self._rainbow_period]
-        else:
-            rainbow = [self._rainbow, self._rainbow_curved]
-        return [self._delay] + split + rainbow
+            r += [self._rainbow_curve, self._rainbow_period]
+        return r
 
 class CoiledSpring(WiredPattern):
     def __init__(self):
@@ -812,9 +856,9 @@ class CoiledSpring(WiredPattern):
             CoiledSpringFeature(self._topology, self._spin),
             self._topology,
             self._spin,
-            FlickerFeature(),
-            FlitterFeature(),
-            FluxFeature(),
+            FlickerFeature(max_v=1/2),
+            FlitterFeature(max_v=1/2),
+            FluxFeature(max_v=1/2),
         ]
 
 class ConfettiFeature(Feature):
@@ -883,7 +927,6 @@ class Confetti(WiredPattern):
         self.features = [
             self._base,
             FlickerFeature(),
-            FlitterFeature(),
             self._flux,
             SparklesFeature(
                 rainbow=self._base._rainbow,
@@ -945,24 +988,25 @@ class FallingSnowFeature(Feature):
 
 class FallingSnow(WiredPattern):
     def __init__(self):
-        self._flux = FluxFeature()
+        self._flux = FluxFeature(max_v=1/2)
         super(FallingSnow, self).__init__("Falling Snow")
         self.features = [
             FallingSnowFeature(),
             FlickerFeature(),
-            FlitterFeature(),
+            FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(flux=self._flux),
         ]
 
 class GalaxusFeature(Feature):
-    def __init__(self):
-        self._spirals = Control("Spirals", INTS28)
+    def __init__(self, spin: SpinFeature):
+        self.spin = spin
+        self._spirals = Control("Spirals", INTS26)
         self._delay = Control("Delay", HALVES056)
         self._width = Control("Width", FRACS)
         self._width_curved = ToggleControl("Width Curved")
         self._width_curve = Control("Width Curve", CURVES)
-        self._width_period = Control("Width Period", PERIODS)
+        self._width_period = Control("Width Period", PERIODS[1:-3])
         self._rainbow = Control("Rainbow", FRACS)
         self._rainbow_curved = ToggleControl("Rainbow Curved")
         self._rainbow_curve = Control("Rainbow Curve", CURVES)
@@ -978,6 +1022,10 @@ class GalaxusFeature(Feature):
             self._rainbow_curved,
             self._rainbow_curve,
             self._rainbow_period,
+        ])
+        self._streamers = CombinedChoices([
+            StreamerChoices(self._delay.value, []),
+            StreamerChoices(self._delay.value, []),
         ])
 
     @property
@@ -997,37 +1045,42 @@ class GalaxusFeature(Feature):
         else:
             rainbow = self._rainbow.value
 
-        funcs = [StreamerFunc(l=0, ignore_color=True, h=Curve(
-            self._rainbow_curve.value,
-            mk_bounce(self._rainbow_period.value, 0, i * rainbow)
-        )) for i in [1, -1]]
         streamers = [
             [
                 [
                     StreamerValue(
-                        move_dir=move_dir,
-                        spin_dir=spin_dir,
-                        angle=offset + (i / self._spirals.value) + (o / (self._spirals.value ** 2)),
-                        spin=0.5,
-                        length=1.5,
+                        func=StreamerFunc(
+                            w=0,
+                            h=x * rainbow * ((i + 1) / (self._spirals.value + 1)),
+                            s=1,
+                            l=0,
+                            make_white=True,
+                            ignore_color=True,
+                        ),
+                        move_dir=m,
+                        spin_dir=Spin.CLOCKWISE,
+                        angle=(i / self._spirals.value) + self.spin.value_param + (y / self._spirals.value),
+                        spin=spin,
                         width=width / self._spirals.value,
-                        lifetime=1.5 * self._delay.value,
-                        func=func,
+                        length=1.0,
+                        lifetime=self._delay.value,
                     ) for i in range(self._spirals.value)
-                ]
-                for spin_dir in [Spin.CLOCKWISE, Spin.COUNTERCLOCKWISE]
-                for o in range(self._spirals.value)
-            ] for move_dir, offset, func in zip(
+                ] for spin in [0.5, -0.5]
+            ] for x, y, m in zip(
+                [0.5, -0.5],
+                [0, 0.5],
                 [Direction.FROM_BOT, Direction.FROM_TOP],
-                [0, 0.5 / self._spirals.value],
-                funcs,
             )
         ]
-        return {"streamers": CombinedChoices([
-            StreamerChoices(self._delay.value, streamers[0]),
-            StreamerChoices(self._delay.value, streamers[1],
-                             delay_offset=self._delay.value / 2),
-        ])}
+        self._streamers.streamer_choices[0].choices = streamers[0]
+        self._streamers.streamer_choices[0].delay = self._delay.value
+        self._streamers.streamer_choices[1].choices = streamers[1]
+        self._streamers.streamer_choices[1].delay = self._delay.value
+        self._streamers.streamer_choices[1].delay_offset = self._delay.value / 2
+        self._streamers.streamer_choices[1].next_trigger = self._streamers.streamer_choices[0].next_trigger + (self._delay.value / 2) 
+
+
+        return {"streamers": self._streamers}
 
     def visible_controls(self) -> list[Control]:
         if not self._width_curved.value:
@@ -1043,13 +1096,14 @@ class GalaxusFeature(Feature):
 
 class Galaxus(WiredPattern):
     def __init__(self):
-        self._base = GalaxusFeature()
-        self._flux = FluxFeature()
+        self._spin = SpinFeature()
+        self._base = GalaxusFeature(self._spin)
+        self._flux = FluxFeature(max_v=1/2)
         super(Galaxus, self).__init__("Galaxus")
         self.features = [
-            GalaxusFeature(),
-            FlickerFeature(),
-            FlitterFeature(),
+            self._base,
+            self._spin,
+            FlickerFeature(max_v=1/2),
             self._flux,
             SparklesFeature(
                 rainbow=self._base._rainbow,
@@ -1062,11 +1116,11 @@ class GroovyFeature(Feature):
         self._distort = Control("Distort", FRACS[:-3])
         self._distort_curved = ToggleControl("Distort Curved")
         self._distort_curve = Control("Distort Curve", CURVES)
-        self._distort_period = Control("Distort Period", PERIODS[2:])
+        self._distort_period = Control("Distort Period", PERIODS[3:])
         self._distort_mid = Control("Distort Mid", FRACS[:-3])
         self._distort_mid_curved = ToggleControl("Distort Mid Curved")
         self._distort_mid_curve = Control("Distort Mid Curve", CURVES)
-        self._distort_mid_period = Control("Distort Mid Period", PERIODS[2:])
+        self._distort_mid_period = Control("Distort Mid Period", PERIODS[3:])
         self._rainbow = Control("Rainbow", FRACS)
         self._rainbow_curved = ToggleControl("Rainbow Curved")
         self._rainbow_curve = Control("Rainbow Curve", CURVES)
@@ -1142,12 +1196,12 @@ class GroovyFeature(Feature):
 class Groovy(WiredPattern):
     def __init__(self):
         self._base = GroovyFeature() 
-        self._flux = FluxFeature()
+        self._flux = FluxFeature(max_v=1/2)
         super(Groovy, self).__init__("Groovy")
         self.features = [
             self._base,
             FlickerFeature(),
-            FlitterFeature(),
+            FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(
                 rainbow=self._base._rainbow,
@@ -1226,14 +1280,14 @@ class RainbowStormFeature(Feature):
 class RainbowStorm(WiredPattern):
     def __init__(self):
         self._base = RainbowStormFeature()
-        self._flux = FluxFeature()
+        self._flux = FluxFeature(max_v=1/2)
         super(RainbowStorm, self).__init__("Rainbow Storm")
         self.features = [
             self._base,
             SpiralTopologyFeature(),
             SpinFeature(),
-            FlickerFeature(),
-            FlitterFeature(),
+            FlickerFeature(max_v=1/2),
+            FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(
                 rainbow=self._base._rainbow,
@@ -1348,8 +1402,8 @@ class SlidingDoor(WiredPattern):
             self._base,
             SpiralTopologyFeature(),
             SpinFeature(),
-            FlickerFeature(),
-            FlitterFeature(),
+            FlickerFeature(max_v=1/2),
+            FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(
                 rainbow=self._base._rainbow,
@@ -1381,14 +1435,14 @@ class SpiralTopFeature(Feature):
 class SpiralTop(WiredPattern):
     def __init__(self):
         self._base = SpiralTopFeature() 
-        self._flux = FluxFeature()
+        self._flux = FluxFeature(max_v=1/2)
         super(SpiralTop, self).__init__("Spiral Top")
         self.features = [
             self._base,
             SpiralTopologyFeature(toggleable=False, force_curve=True),
             SpinFeature(),
-            FlickerFeature(),
-            FlitterFeature(),
+            FlickerFeature(max_v=1/2),
+            FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(
                 rainbow=self._base._spread,

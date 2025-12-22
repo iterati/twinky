@@ -81,7 +81,7 @@ class Lights:
 
 class Blender:
     sparkle_delay = 0.25
-    streamer_delay = 1.0
+    streamer_delay = 0.25
     pattern_length = 60.0
     transition_length = 6.0
     transition_offset = pattern_length - transition_length
@@ -192,7 +192,7 @@ class Blender:
             if "streamers" not in suppress:
                 for streamer in self.streamers:
                     if streamer.contains(self._t, pixel):
-                        color = streamer.func(color, t)
+                        color = streamer.func(color, t, blend_h)
 
             colors.append(color)
 
@@ -217,7 +217,7 @@ class Blender:
         if self.transitioning:
             return f"{self.pattern.name}->{self.next_pattern.name}"
         else:
-            return self.pattern.name
+            return f"{self.pattern.name}{'!' if self.pattern.configured else '?'}"
 
     @property
     def time_str(self) -> str:
@@ -233,6 +233,7 @@ class Blender:
         self.pattern_end = self._t + self.transition_length
         if next is not None:
             self.next_pattern = self.patterns[next]
+        self.next_pattern.randomize()
 
     def render(self, t: float) -> list[Color]:
         self._t = t
@@ -246,7 +247,7 @@ class Blender:
                 self.pattern_end = self._t + self.pattern_length
                 self.pattern = self.next_pattern
                 self.next_pattern = self._pick_next()
-                self.pattern.randomize()
+                self.next_pattern.randomize()
             
         if t >= self.next_sparkle:
             self.next_sparkle += self.sparkle_delay
