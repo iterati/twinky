@@ -53,12 +53,15 @@ class Color:
         self.w, self.h, self.s, self.l = 0, 0, 1.0, -1.0
 
     def as_byte(self, t=0):
-        w = getv(self.w, t)
-        h = getv(self.h, t)
-        s = getv(self.s, t)
-        l = getv(self.l, t)
-        rgb = hsl_color(h, s, l)
-        return struct.pack('>BBBB', int(w * 255), *rgb)
+        try:
+            w = getv(self.w, t)
+            h = getv(self.h, t)
+            s = getv(self.s, t)
+            l = getv(self.l, t)
+            rgb = hsl_color(h, s, l)
+            return struct.pack('>BBBB', int(w * 255), *rgb)
+        except Exception:
+            raise ValueError("OOPS", self)
 
     def __repr__(self):
         return f"{self.w} {self.h} {self.s} {self.l}"

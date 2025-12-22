@@ -29,7 +29,7 @@ class StreamerFunc:
         self.make_white = make_white
         self.ignore_color = ignore_color
 
-    def __call__(self, color: Color, t: float, pixel_x: float, pixel_y: float) -> Color:
+    def __call__(self, color: Color, t: float) -> Color:
         if color.l != -1.0 and self.make_white:
             return Color(
                 w=0.75,
@@ -37,12 +37,19 @@ class StreamerFunc:
                 l=-0.75,
             )
 
+        h = 0
+        if self.h is not None:
+            h = getv(h, t)
+
+        if isinstance(h, Curve):
+            print("Curved curve", h, flush=True)
+            h = getv(h, t)
+
+        h += 0 if self.ignore_color else getv(color.h, t)
+
         return Color(
             w=getv(self.w, t) if self.w is not None else color.w,
-            h=(
-                (0 if self.ignore_color else color.h)
-                + (0 if self.h is None else getv(self.h, t))
-            ),
+            h=h,
             s=getv(self.s, t) if self.s is not None else color.s,
             l=getv(self.l, t) if self.l is not None else color.l,
         )
@@ -67,7 +74,7 @@ class RandomColorStreamerFunc(StreamerFunc):
             
         return self._h
 
-    def __call__(self, color: Color, t: float, pixel_x: float, pixel_y: float) -> Color:
+    def __call__(self, color: Color, t: float) -> Color:
         return Color(
             w=getv(self.w, t) if self.w is not None else color.w,
             h=self.h(t),
@@ -77,7 +84,8 @@ class RandomColorStreamerFunc(StreamerFunc):
 
 class Streamer:
     def __init__(self,
-                 initial_t,
+                 initial_t: float,
+                 norm_t: float,
                  func: StreamerFunc,
                  move_dir: Direction=Direction.FROM_BOT,
                  spin_dir: Spin=Spin.CLOCKWISE,
@@ -87,13 +95,14 @@ class Streamer:
                  width: Param=0.1,
                  lifetime: Param=6.0):
         self.initial_t = initial_t
+        self.norm_t = norm_t
         self.reverse = move_dir != Direction.FROM_TOP
         self.angle = random.random() if angle is None else angle
         self.spin_dir = 1 if spin_dir == Spin.CLOCKWISE else -1
-        self.spin = getv(spin, initial_t)
-        self.length = getv(length, initial_t)
-        self.width = getv(width, initial_t)
-        self.lifetime = getv(lifetime, initial_t)
+        self.spin = getv(spin, norm_t)
+        self.length = getv(length, norm_t)
+        self.width = getv(width, norm_t)
+        self.lifetime = getv(lifetime, norm_t)
         self.func = func
 
         if self.reverse:

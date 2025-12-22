@@ -78,17 +78,19 @@ class Menu:
         screen.addstr(0, 0, line)
         
         # top shows animation name and time if not paused
-        title = self.animation.pattern.name
-        title += f"->{self.animation.next_pattern.name}" if self.animation.transitioning else ""
-        title += ": "
-        title += "PAUSED" if self.animation.pause_change else self.animation.time_str
-        spaces = (w - (len(title) + 1)) // 2
-        line = '\u2551 \u2985\u2986'
-        line += ' ' * (spaces - 3)
-        line += title
-        line += ' ' * (spaces - 3)
-        line += '\u2985\u2986 \u2551'
-        screen.addstr(1, 0, line)
+        title = self.animation.pattern_name
+        screen.addstr(1, 0, '\u2551')
+        screen.addstr(
+            1,
+            (w // 2) - (len(self.animation.pattern_name) // 2),
+            self.animation.pattern_name,
+        )
+        screen.addstr(
+            1,
+            w - (len(self.animation.time_str) + 2),
+            self.animation.time_str,
+        )
+        screen.addstr(1, w-1, '\u2551')
 
         line = '\u2560'
         line += '\u2550' * (colw - len(line))
@@ -175,12 +177,12 @@ class Menu:
             self.selected_row[self.selected_column] %= maxrow[self.selected_column]
         elif key in [ord('-'), ord('_')] :
             if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
-                self.queue.put(setoption(self.selected_row[1], self.selected_row[2], 1))
+                self.queue.put(setoption(self.selected_row[1], 0, 1))
             elif self.selected_column == 2:
                 self.queue.put(change(self.selected_row[1], self.selected_row[2], -1))
         elif key in [ord('='), ord('+')] :
             if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
-                self.queue.put(setoption(self.selected_row[1], self.selected_row[2], 0))
+                self.queue.put(setoption(self.selected_row[1], 0, 0))
             elif self.selected_column == 2:
                 self.queue.put(change(self.selected_row[1], self.selected_row[2], 1))
         return False
@@ -193,6 +195,8 @@ class Menu:
         curses.start_color()
         curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
 
+        start_time = time.time()
+        next_frame = start_time + (1/16)
         while True:
             if self.animation.pattern != self.curr_pattern:
                 self.selected_row[1] = 0
@@ -202,6 +206,9 @@ class Menu:
             self.print_menu(screen)
             if self.handle_input(screen):
                 break
+            while time.time() < next_frame:
+                pass
+            next_frame += 1/16
 
         curses.nocbreak()
         screen.keypad(False)
@@ -221,10 +228,10 @@ if __name__ == "__main__":
         Groovy(),
         SlidingDoor(),
         SpiralTop(),
-        TurningWindows(),
+        Twirl(),
     ]
     queue = Queue()
-    animation = Blender(patterns, -1, False)
+    animation = Blender(patterns, 2, False)
     animation.pattern.randomize()
     animation_thread = Thread(
         target=animation_thread_task,

@@ -192,7 +192,7 @@ class Blender:
             if "streamers" not in suppress:
                 for streamer in self.streamers:
                     if streamer.contains(self._t, pixel):
-                        color = streamer.func(color, t, pixel.t, pixel.y)
+                        color = streamer.func(color, t)
 
             colors.append(color)
 
@@ -222,8 +222,11 @@ class Blender:
     @property
     def time_str(self) -> str:
         if self.pause_change:
-            return f"{(self._t - self._init_t):.2f}"
-        return f"{(self.pattern_end - self._t):.2f}"
+            if self.transitioning:
+                return f"(PAUSED) -{(self.pattern_end - self._t):.2f}"
+            else:
+                return f"(PAUSED) {(self._t - self._init_t):.2f}"
+        return f"-{(self.pattern_end - self._t):.2f}"
 
     def start_transition(self, next: int | None=None):
         self.transitioning = True
@@ -263,7 +266,7 @@ class Blender:
             self.next_streamer += self.streamer_delay
             streamer_defs = getv_streamers(self.pattern.streamers, t - self.pattern_start)
             self.streamers.extend([
-                Streamer(t, **streamer_def)
+                Streamer(t, t - self.pattern_start, **streamer_def)
                 for streamer_def in streamer_defs
             ])
 
