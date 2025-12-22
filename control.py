@@ -43,13 +43,11 @@ from streamer import (
     CombinedChoices,
 )
 from topologies import (
-    # SpinTopology,
     SpiralTopology,
     Topology,
     DistortTopology,
     MirrorTopology,
     RepeatTopology,
-    TwistTopology,
 )
 from utils import (mk_bounce, mk_bump)
 
@@ -402,10 +400,8 @@ class SpiralFeature(Feature):
 
 class SpiralTopologyFeature(Feature):
     def __init__(self,
-                 Topology=None,
                  toggleable=True,
                  force_curve=False):
-        self.Topology = Topology if Topology is not None else SpiralTopology
         self._repeats = Control("Repeats", INTS26)
         self._mirrored = ToggleControl("Mirrored")
         self._enabled = ToggleControl("Enabled")
@@ -413,6 +409,7 @@ class SpiralTopologyFeature(Feature):
             1, 1.5, 2, 3
         ]])
         self._direction = Control("Direction", DIRECTIONS + [Option("both", "both")])
+        self._mid = Control("Mid", ZERO + FRACS)
         self._curved = ToggleControl("Curved")
         self._curve = Control("Curve", CURVES)
         self._period = Control("Period", PERIODS)
@@ -424,6 +421,7 @@ class SpiralTopologyFeature(Feature):
             self._enabled,
             self._value,
             self._direction,
+            self._mid,
             self._curved,
             self._curve,
             self._period,
@@ -433,8 +431,7 @@ class SpiralTopologyFeature(Feature):
         if not force_curve:
             features.remove(self._curved)
         
-        name = "Spiral" if self.Topology == SpiralTopology else "Twist"
-        super(SpiralTopologyFeature, self).__init__(name, features)
+        super(SpiralTopologyFeature, self).__init__("Spiral", features)
 
     @property
     def value_param(self):
@@ -458,37 +455,26 @@ class SpiralTopologyFeature(Feature):
         Topology = MirrorTopology if self._mirrored.value else RepeatTopology
         return {"topologies": [
             Topology(self._repeats.value),
-            self.Topology(self.value_param)
+            SpiralTopology(self.value_param, self._mid.value)
         ]}
 
     def visible_controls(self) -> list[Control]:
-        if self.toggleable and not self._enabled.value:
-            return [
-                self._repeats,
-                self._mirrored,
-                self._enabled,
-            ]
         if self.force_curve:
-            return [
-                self._repeats,
-                self._mirrored,
-                self._enabled,
-                self._value,
-                self._direction,
-                self._curve,
-                self._period,
-            ]
-        if self._curved.value:
-            return self.controls
+            curve = [self._value, self._direction, self._mid, self._curve, self._period]
+        else:
+            curve = [self._value, self._direction, self._mid, self._curved]
+            if self._curved.value:
+                curve += [self._curve, self._period]
 
-        return [
-            self._repeats,
-            self._mirrored,
-            self._enabled,
-            self._value,
-            self._direction,
-            self._curved,
-        ]
+        if self.toggleable:
+            controls = [self._repeats, self._mirrored, self._enabled]
+            if self._enabled.value:
+                controls += curve
+                controls.extend(curve)
+        else:
+            controls = [self._repeats, self._mirrored] + curve
+
+        return controls
 
 class SpinFeature(Feature):
     def __init__(self):
@@ -825,8 +811,7 @@ class CoiledSpringFeature(Feature):
 
 class CoiledSpring(WiredPattern):
     def __init__(self):
-        self._topology = SpiralTopologyFeature(
-            SpiralTopology, toggleable=False, force_curve=True)
+        self._topology = SpiralTopologyFeature(toggleable=False, force_curve=True)
         self._spin = SpinFeature()
         super(CoiledSpring, self).__init__("Coiled Spring")
         self.features = [
@@ -1384,29 +1369,20 @@ class SpiralTopFeature(Feature):
     def __init__(self):
         self._window_period = Control("Window Period", PERIODS[:6])
         self._window_curve = Control("Window Curve", CURVES)
-        self._reverse = ToggleControl("Reverse Window")
         self._spread = Control("Spread", FRACS[1:-1])
         super(SpiralTopFeature, self).__init__("Spiral Top", [
             self._window_period,
             self._window_curve,
-            self._reverse,
             self._spread,
         ])
 
     @property
     def value(self):
-        if self._reverse.value:
-            window = Curve(self._window_curve.value, [
-                (0, 1),
-                (self._window_period.value, 0),
-            ])
-        else:
-            window = Curve(self._window_curve.value, [
+        return {
+            "base_color": WindowColor(Curve(self._window_curve.value, [
                 (0, 0),
                 (self._window_period.value, 1),
-            ])
-        return {
-            "base_color": WindowColor(window),
+            ])),
             "spread": self._spread.value,
         }
 
@@ -1417,74 +1393,13 @@ class SpiralTop(WiredPattern):
         super(SpiralTop, self).__init__("Spiral Top")
         self.features = [
             self._base,
-            RepeatTopologyFeature(),
+            SpiralTopologyFeature(toggleable=False, force_curve=True),
             SpinFeature(),
-            SpiralFeature(),
             FlickerFeature(),
             FlitterFeature(),
             self._flux,
             SparklesFeature(
                 rainbow=self._base._spread,
-                flux=self._flux,
-            ),
-        ]
-
-class TwirlFeature(Feature):
-    def __init__(self):
-        self._splits = Control("Splits", INTS26)
-        self._delay = Control("Delay", HALVES053)
-        self._rainbow = Control("Rainbow", FRACS)
-        self._rainbow_curved = ToggleControl("Rainbow Curved")
-        self._rainbow_curve = Control("Rainbow Curve", CURVES)
-        self._rainbow_period = Control("Rainbow Period", PERIODS)
-
-        super(TwirlFeature, self).__init__("Turning Windows", [
-            self._splits,
-            self._delay,
-            self._rainbow,
-            self._rainbow_curved,
-            self._rainbow_curve,
-            self._rainbow_period,
-        ])
-
-    @property
-    def value(self):
-        base_windows = [None] * self._splits.value
-        windows = []
-        for i in range(self._splits.value):
-            windows.append(base_windows[:i] + [BaseColor()] + base_windows[(i+1):])
-
-        if self._rainbow_curved.value:
-            spread = Curve(self._rainbow_curve.value, mk_bounce(
-                self._rainbow_period.value,
-                0,
-                self._rainbow.value,
-            ))
-        else:
-            spread = self._rainbow.value
-        return {
-            "base_color": SplitColor(
-                self._splits.value,
-                periodic_choices(self._delay.value, windows),
-                suppress=["sparkles"],
-            ),
-            "spread": spread,
-        }
-    
-class Twirl(WiredPattern):
-    def __init__(self):
-        self._base = TwirlFeature()
-        self._flux = FluxFeature()
-        super(Twirl, self).__init__("Twirl")
-        self.features = [
-            self._base,
-            SpiralTopologyFeature(TwistTopology),
-            SpinFeature(),
-            FlickerFeature(),
-            FlitterFeature(),
-            self._flux,
-            SparklesFeature(
-                rainbow=self._base._rainbow,
                 flux=self._flux,
             ),
         ]

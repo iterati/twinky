@@ -13,31 +13,14 @@ class SpinTopology(Topology):
         return (pixel_t + angle) % 1
 
 class SpiralTopology(Topology):
-    def __init__(self, turn: Param):
+    def __init__(self, turn: Param, mid: Param=0):
         self.turn = turn
+        self.mid = mid
 
     def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
         turn = getv(self.turn, t)
-        return (pixel_t + ((pixel_y - 0.5) * turn)) % 1
-
-class TwistTopology(Topology):
-    def __init__(self, turn: Param):
-        self.turn = turn
-
-    def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
-        turn = getv(self.turn, t)
-        return (pixel_t + (pixel_y * turn)) % 1
-
-class TurntTopology(Topology):
-    def __init__(self, count: Param, turn: Param):
-        self.count = count
-        self.turn = turn
-
-    def __call__(self, t: float, pixel_t: float, pixel_y: float) -> float:
-        count = getv(self.count, t)
-        turn = getv(self.turn, t) / count
-        y_bin = int(pixel_y * count)
-        return (pixel_t + (y_bin * turn)) % 1
+        mid = getv(self.mid, t)
+        return (pixel_t + ((pixel_y - mid) * turn)) % 1
 
 class DistortTopology(Topology):
     def __init__(self,

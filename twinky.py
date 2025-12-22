@@ -145,6 +145,7 @@ class Menu:
 
     @property
     def maxrow(self):
+        self.selected_row[1] %= len(self.animation.pattern.features)
         return [
             len(self.animation.patterns),
             len(self.animation.pattern.features),
@@ -230,10 +231,9 @@ if __name__ == "__main__":
         RainbowStorm(),
         SlidingDoor(),
         SpiralTop(),
-        Twirl(),
     ]
     queue = Queue()
-    animation = Blender(patterns, 7, False)
+    animation = Blender(patterns, 9, True)
     animation.pattern.randomize()
     animation_thread = Thread(
         target=animation_thread_task,
