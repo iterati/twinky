@@ -1,5 +1,4 @@
 from pytweening import (
-    easeInOutElastic,
     linear,
     easeInSine,
     easeOutSine,
@@ -10,9 +9,6 @@ from pytweening import (
     easeInQuad,
     easeOutQuad,
     easeInOutQuad,
-    easeInCirc,
-    easeOutCirc,
-    easeInOutCirc,
 )
 import random
 from typing import Callable
@@ -84,15 +80,12 @@ CURVES = [Option(n, f) for n, f in [
     ("sineI", easeInSine),
     ("sineO", easeOutSine),
     ("sineIO", easeInOutSine),
-    ("bounceI", easeInBounce),
-    ("bounceO", easeOutBounce),
-    ("bounceIO", easeInOutBounce),
     ("quadI", easeInQuad),
     ("quadO", easeOutQuad),
     ("quadIO", easeInOutQuad),
-    ("circI", easeInCirc),
-    ("circO", easeOutCirc),
-    ("circIO", easeInOutCirc),
+    ("bounceI", easeInBounce),
+    ("bounceO", easeOutBounce),
+    ("bounceIO", easeInOutBounce),
 ]]
 
 class Control:
@@ -607,14 +600,15 @@ class BasicBitchFeature(Feature):
 
 class BasicBitch(WiredPattern):
     def __init__(self):
+        self._flux = FluxFeature()
         super(BasicBitch, self).__init__("Basic Bitch")
         self.features = [
             BasicBitchFeature(),
             FlashFeature(),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
-            SparklesFeature(),
+            self._flux,
+            SparklesFeature(flux=self._flux),
         ]
 
 class CircusTentFeature(Feature):
@@ -716,15 +710,16 @@ class CircusTentFeature(Feature):
 class CircusTent(WiredPattern):
     def __init__(self):
         self._base = CircusTentFeature()
+        self._flux = FluxFeature()
         super(CircusTent, self).__init__("Circus Tent")
         self.features = [
             self._base,
             SpiralTopologyFeature(),
             SpinFeature(),
-            SparklesFeature(rainbow=self._base._rainbow),
             FlickerFeature(),
             FlitterFeature(),
-            FluxFeature(),
+            self._flux,
+            SparklesFeature(rainbow=self._base._rainbow, flux=self._flux),
         ]
 
 class CoiledSpringFeature(Feature):
@@ -972,9 +967,8 @@ class RainbowStorm(WiredPattern):
         super(RainbowStorm, self).__init__("Rainbow Storm")
         self.features = [
             self._base,
-            RepeatTopologyFeature(),
+            SpiralTopologyFeature(),
             SpinFeature(),
-            SpiralFeature(),
             FlickerFeature(),
             FlitterFeature(),
             self._flux,
@@ -1353,9 +1347,8 @@ class SlidingDoor(WiredPattern):
         super(SlidingDoor, self).__init__("Sliding Door")
         self.features = [
             self._base,
-            RepeatTopologyFeature(),
+            SpiralTopologyFeature(),
             SpinFeature(),
-            SpiralFeature(),
             FlickerFeature(),
             FlitterFeature(),
             self._flux,
