@@ -42,13 +42,8 @@ class StreamerFunc:
         h = blend
         if self.h is not None and self._h is None:
             self._h = getv(self.h, t)
-            print("H", self._h, flush=True)
         h += self._h if self._h is not None else 0
         h += 0 if self.ignore_color else getv(color.h, t)
-
-        # if isinstance(h, Curve):
-        #     print("Curved curve", h, flush=True)
-        #     h = getv(h, t)
 
         return Color(
             w=getv(self.w, t) if self.w is not None else color.w,
@@ -182,7 +177,6 @@ class StreamerChoices:
 
         self.triggers += 1
         self.next_trigger += self.delay
-        print("CHOICE", t, self.triggers % len(self.choices), flush=True)
         c = self.choices[self.triggers % len(self.choices)]
         if self.choose:
             pick = (

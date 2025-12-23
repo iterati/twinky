@@ -814,9 +814,7 @@ class CoiledSpringFeature(Feature):
             BaseColor(w=1, s=0, l=-0.75, suppress=["sparkles", "streamers"]),
             BaseColor(),
         ])
-
-        self._streamers.delay = self._delay.value
-        self._streamers.choices = [[StreamerValue(
+        self._streamers = StreamerChoices(self._delay.value, [[StreamerValue(
             move_dir=Direction.FROM_BOT,
             spin_dir=Spin.CLOCKWISE,
             angle=(i / self.topology._repeats.value) + self.spin.value_param,
@@ -830,7 +828,7 @@ class CoiledSpringFeature(Feature):
                 s=1,
                 l=0.0,
             ),
-        ) for i in range(int(self.topology._value.value))] for o in range(4)]
+        ) for i in range(int(self.topology._value.value))] for o in range(4)])
 
         return {
             "base_color": base_color,
@@ -1023,10 +1021,6 @@ class GalaxusFeature(Feature):
             self._rainbow_curve,
             self._rainbow_period,
         ])
-        self._streamers = CombinedChoices([
-            StreamerChoices(self._delay.value, []),
-            StreamerChoices(self._delay.value, []),
-        ])
 
     @property
     def value(self):
@@ -1072,13 +1066,10 @@ class GalaxusFeature(Feature):
                 [Direction.FROM_BOT, Direction.FROM_TOP],
             )
         ]
-        self._streamers.streamer_choices[0].choices = streamers[0]
-        self._streamers.streamer_choices[0].delay = self._delay.value
-        self._streamers.streamer_choices[1].choices = streamers[1]
-        self._streamers.streamer_choices[1].delay = self._delay.value
-        self._streamers.streamer_choices[1].delay_offset = self._delay.value / 2
-        self._streamers.streamer_choices[1].next_trigger = self._streamers.streamer_choices[0].next_trigger + (self._delay.value / 2) 
-
+        self._streamers = CombinedChoices([
+            StreamerChoices(self._delay.value, streamers[0]),
+            StreamerChoices(self._delay.value, streamers[1], delay_offset=self._delay.value/2),
+        ])
 
         return {"streamers": self._streamers}
 
