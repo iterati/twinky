@@ -3,6 +3,7 @@ import math
 from pytweening import linear, easeInOutCubic, easeInOutSine
 import random
 import time
+from typing import Callable
 
 from control import WiredPattern
 from layout import normalize
@@ -106,6 +107,8 @@ class Blender:
         self.glide_start = 0.0
         self._init_t = 0.0
         self._t = 0.0
+        # called with each frame's bytes as write sends them, every strand's in turn
+        self.on_frame: Callable[[bytes], None] | None = None
 
     @property
     def pattern(self) -> WiredPattern:
@@ -342,11 +345,15 @@ class Blender:
 
     def write(self, frame: list[WRGB]):
         start = 0
+        sent = []
         for interface in self.lights.interfaces:
             end = start + len(interface.layout)
             data = bytes(int(c + 0.5) for light in frame[start:end] for c in light)
             interface.set_rt_frame_socket(io.BytesIO(data), 3)
+            sent.append(data)
             start = end
+        if self.on_frame is not None:
+            self.on_frame(b"".join(sent))
 
     def animate(self):
         start_time = time.time()

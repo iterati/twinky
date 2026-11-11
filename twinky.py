@@ -1,3 +1,4 @@
+import argparse
 import curses
 import json
 import logging
@@ -8,6 +9,9 @@ from threading import Thread
 import time
 from core import Blender, FRAME, wait_for
 from device import Lights
+import layout
+from server import Server
+from sim import SimLights
 from control import (
     WiredPattern,
     BasicBitch,
@@ -109,6 +113,18 @@ def load_pattern(pattern: WiredPattern):
             pattern.configured = True
             log.info("Loaded saved config for %s", pattern.name)
     return pattern
+
+def open_lights(argv: list[str] | None=None):
+    parser = argparse.ArgumentParser(description="Animates the Twinkly tree, and plays it at http://localhost:8016/")
+    parser.add_argument(
+        "--sim",
+        nargs="?",
+        const=os.path.join(layout.LAYOUTS, "cone.json"),
+        metavar="LAYOUT",
+        help="play a simulated tree instead of finding the real one: the cone, or a layout file such as layouts/tree.json",
+    )
+    args = parser.parse_args(argv)
+    return SimLights(args.sim) if args.sim else Lights()
 
 class Menu:
     def __init__(self, animation, queue):
@@ -322,9 +338,13 @@ if __name__ == "__main__":
         load_pattern(SlidingDoor()),
         load_pattern(SpiralTop()),
     ]
+    lights = open_lights()
     queue = Queue()
-    animation = Blender(patterns, Lights(), 0, True)
+    animation = Blender(patterns, lights, 0, True)
     animation.pattern.randomize()
+    server = Server(animation)
+    animation.on_frame = server.send
+    server.start()
     animation_thread = Thread(
         target=animation_thread_task,
         args=(animation, queue)
@@ -333,3 +353,4 @@ if __name__ == "__main__":
     animation_thread.start()
     curses.wrapper(menu)
     animation_thread.join()
+    server.stop()
