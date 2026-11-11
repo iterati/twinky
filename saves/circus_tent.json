@@ -1,0 +1,63 @@
+{
+  "Circus Tent": {
+    "Delay": "3.0",
+    "splits": "4",
+    "Rainbow": "1/3",
+    "Rainbow Curved": "On",
+    "Rainbow Curve": "bounceIO",
+    "Rainbow Period": "15"
+  },
+  "Spiral": {
+    "Repeats": "2",
+    "Mirrored": "On",
+    "Enabled": "On",
+    "Twists": "2",
+    "Direction": "both",
+    "Mid": "1",
+    "Curve": "sineIO",
+    "Period": "30"
+  },
+  "Spin": {
+    "Enabled": "On",
+    "Spin": "1",
+    "Direction": "↺ ",
+    "Curve": "bounceIO",
+    "Period": "30"
+  },
+  "Flicker": {
+    "Enabled": "On",
+    "Start": "1/5",
+    "End": "1/2",
+    "Curved": "Off",
+    "Curve": "sineIO",
+    "Period": "6"
+  },
+  "Flitter": {
+    "Enabled": "Off",
+    "Start": "1/2",
+    "End": "1/5",
+    "Curved": "Off",
+    "Curve": "quadI",
+    "Period": "60"
+  },
+  "Flux": {
+    "Enabled": "Off",
+    "Value": "1/2",
+    "Curved": "Off",
+    "Curve": "sineO",
+    "Period": "15"
+  },
+  "Sparkles": {
+    "Enabled": "Off",
+    "Start": "1/4",
+    "End": "1/3",
+    "Curved": "Off",
+    "Curve": "sineIO",
+    "Period": "12",
+    "Effect": "base"
+  },
+  "Blend": {
+    "Transition": "crossfade",
+    "Grain": "smooth"
+  }
+}

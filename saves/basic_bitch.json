@@ -1,0 +1,44 @@
+{
+  "Pulse": {
+    "Enabled": "On",
+    "Intentsity": "1",
+    "Curve": "quadO",
+    "Period": "20"
+  },
+  "Flicker": {
+    "Enabled": "On",
+    "Start": "1/8",
+    "End": "1/4",
+    "Curved": "On",
+    "Curve": "sineO",
+    "Period": "12"
+  },
+  "Flitter": {
+    "Enabled": "On",
+    "Start": "1/3",
+    "End": "1",
+    "Curved": "On",
+    "Curve": "sineI",
+    "Period": "15"
+  },
+  "Flux": {
+    "Enabled": "On",
+    "Value": "1/2",
+    "Curved": "On",
+    "Curve": "sineIO",
+    "Period": "5"
+  },
+  "Sparkles": {
+    "Enabled": "On",
+    "Start": "0",
+    "End": "1/2",
+    "Curved": "On",
+    "Curve": "sineO",
+    "Period": "6",
+    "Effect": "blank"
+  },
+  "Blend": {
+    "Transition": "crossfade",
+    "Grain": "smooth"
+  }
+}
