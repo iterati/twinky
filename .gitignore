@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+log.txt
+error.txt
+twinky.log
+node_modules/
+dist/
