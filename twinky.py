@@ -127,17 +127,30 @@ class Menu:
         line += '\u2563'
         screen.addstr(2, 0, line)
 
-        for i in range(3, h-2):
+        for i in range(3, h-4):
             screen.addstr(i, 0, '\u2551')
             screen.addstr(i, colw, '\u2502')
             screen.addstr(i, colw*2, '\u2502')
             screen.addstr(i, w-1, '\u2551')
 
-        line = '\u255a'
+        line = '\u2560'
         line += '\u2550' * (colw - len(line))
         line += '\u2567'
         line += '\u2550' * ((2*colw) - len(line))
         line += '\u2567'
+        line += '\u2550' * ((w - 1) - len(line))
+        line += '\u2563'
+        screen.addstr(h-4, 0, line)
+
+        screen.addstr(h-3, 0, '\u2551')
+        screen.addstr(h-3, 2, "q - quit, R - random mode, r - randomize mode/feature, spc - pause mode change")
+        screen.addstr(h-3, w-1, '\u2551')
+
+        line = '\u255a'
+        line += '\u2550' * (colw - len(line))
+        line += '\u2550'
+        line += '\u2550' * ((2*colw) - len(line))
+        line += '\u2550'
         line += '\u2550' * ((w - 1) - len(line))
         line += '\u255d'
         screen.addstr(h-2, 0, line)
@@ -212,13 +225,21 @@ class Menu:
             self.selected_row[self.selected_column] += 1
             self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]
         elif key in [ord('-'), ord('_')] :
-            if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
-                self.queue.put(set_option(self.selected_row[1], 0, 1))
-                self.selected_row[2] = 0
+            if self.selected_column == 1:
+                controls = self.animation.pattern.features[self.selected_row[1]].controls
+                idxs = [i for i, c in enumerate(controls)]
+                if len(idxs) > 0:
+                    self.queue.put(set_option(self.selected_row[1], idxs[0], 1))
+                    self.selected_row[2] = 0
             elif self.selected_column == 2:
                 self.queue.put(change_option(self.selected_row[1], self.selected_row[2], -1))
         elif key in [ord('='), ord('+')] :
-            if self.selected_column == 1 and self.animation.pattern.features[self.selected_row[1]].controls[0].name == "Enabled":
+            if self.selected_column == 1:
+                controls = self.animation.pattern.features[self.selected_row[1]].controls
+                idxs = [i for i, c in enumerate(controls)]
+                if len(idxs) > 0:
+                    self.queue.put(set_option(self.selected_row[1], idxs[0], 0))
+                    self.selected_row[2] = 0
                 self.queue.put(set_option(self.selected_row[1], 0, 0))
                 self.selected_row[2] = 0
             elif self.selected_column == 2:

@@ -125,9 +125,6 @@ class Feature:
         self.name = name
         self.controls = controls
 
-    def _to_dict(self):
-        return [c._to_dict() for c in self.controls]
-
     @property
     def value(self) -> dict:
         return {}
@@ -557,6 +554,7 @@ class WiredPattern(Pattern):
         super(WiredPattern, self).__init__(name, **kwargs)
         self.features: list[Feature] = []
         self.configured = False
+        self.dirty = False
 
     def _to_dict(self):
         return [[c.selected_idx for c in f.controls] for f in self.features]
@@ -565,12 +563,15 @@ class WiredPattern(Pattern):
         for fidx, f in enumerate(features):
             for cidx, oidx in enumerate(f):
                 self.features[fidx].fset(cidx, oidx)
-        self.update()
+        self.update(set_dirty=False)
                 
-    def update(self):
+    def update(self, set_dirty=True):
         for feature in self.features:
             for attr, val in feature.value.items():
                 setattr(self, attr, val)
+        if set_dirty:
+            self.configured = False
+            self.dirty = True
 
     def change(self, fidx: int, cidx: int, step: int=1):
         self.features[fidx].change(cidx, step)

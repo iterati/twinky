@@ -217,7 +217,12 @@ class Blender:
         if self.transitioning:
             return f"{self.pattern.name}->{self.next_pattern.name}"
         else:
-            return f"{self.pattern.name}{'!' if self.pattern.configured else '?'}"
+            pattern_state = "?"
+            if self.pattern.configured:
+                pattern_state = "!"
+            if self.pattern.dirty:
+                pattern_state = "*"
+            return f"{self.pattern.name}{pattern_state}"
 
     @property
     def time_str(self) -> str:
