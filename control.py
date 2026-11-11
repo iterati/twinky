@@ -10,6 +10,7 @@ from pytweening import (
     easeOutQuad,
     easeInOutQuad,
 )
+import logging
 import random
 from typing import Callable
 from colors import (
@@ -46,6 +47,8 @@ from topologies import (
     RepeatTopology,
 )
 from utils import (mk_bounce, mk_bump)
+
+log = logging.getLogger(__name__)
 
 class Option:
     def __init__(self, name: str, value):
@@ -140,7 +143,7 @@ class Feature:
         try:
             self.visible_controls()[idx].change(step)
         except Exception as ex:
-            print(idx, len(self.visible_controls()), True)
+            log.error("No control %d of %d visible in %s", idx, len(self.visible_controls()), self.name)
             raise ex
 
     def fset(self, cidx: int, oidx: int):
@@ -534,7 +537,9 @@ class Pattern:
                  spin: Param=0,
                  sparkles: Param=0,
                  sparkle_func: Callable[[Color], Color] | None=None,
-                 streamers: StreamerParam | None=None):
+                 streamers: StreamerParam | None=None,
+                 transition: str="crossfade",
+                 grain: str="smooth"):
         self.name = name
         self.base_color = base_color if base_color is not None else BaseColor()
         self.topologies = topologies if topologies is not None else []
@@ -548,6 +553,8 @@ class Pattern:
         self.sparkles = sparkles
         self.sparkle_func = sparkle_func if sparkle_func is not None else ColorFuncs.WHITEN
         self.streamers = streamers if streamers is not None else []
+        self.transition = transition
+        self.grain = grain
 
 class WiredPattern(Pattern):
     def __init__(self, name, **kwargs):
@@ -557,12 +564,24 @@ class WiredPattern(Pattern):
         self.dirty = False
 
     def _to_dict(self):
-        return [[c.selected_idx for c in f.controls] for f in self.features]
+        return {f.name: {c.name: c.selected.name for c in f.controls} for f in self.features}
 
-    def _from_dict(self, features):
-        for fidx, f in enumerate(features):
-            for cidx, oidx in enumerate(f):
-                self.features[fidx].fset(cidx, oidx)
+    def _from_dict(self, saved):
+        if isinstance(saved, list):
+            # an old save: option numbers by feature and control position
+            for fidx, f in enumerate(saved):
+                for cidx, oidx in enumerate(f):
+                    self.features[fidx].fset(cidx, oidx)
+        else:
+            for f in self.features:
+                for c in f.controls:
+                    name = saved.get(f.name, {}).get(c.name)
+                    names = [o.name for o in c.options]
+                    if name in names:
+                        c.set(names.index(name))
+                    elif name is not None:
+                        log.warning("%s: no option %r for %s %s, kept %s",
+                                    self.name, name, f.name, c.name, c.selected.name)
         self.update(set_dirty=False)
                 
     def update(self, set_dirty=True):
@@ -591,6 +610,29 @@ class WiredPattern(Pattern):
             c.randomize()
         self.update()
     
+class BlendFeature(Feature):
+    """How the pattern comes in at a change, and the grain of its flicker, flitter, flux, flash and sparkles."""
+    def __init__(self):
+        self._transition = Control("Transition", [Option(n, v) for n, v in [
+            ("crossfade", "crossfade"),
+            ("sweep round", "sweep"),
+            ("rise", "rise"),
+            ("spiral in", "spiral"),
+        ]])
+        self._grain = Control("Grain", [Option(n, n) for n in ["smooth", "raw"]])
+        super(BlendFeature, self).__init__("Blend", [
+            self._transition,
+            self._grain,
+        ])
+
+    @property
+    def value(self):
+        return {"transition": self._transition.value, "grain": self._grain.value}
+
+    def randomize(self):
+        # the grain stays as set: smooth unless raw is picked
+        self._transition.randomize()
+
 class RepeatTopologyFeature(Feature):
     def __init__(self):
         self._count = Control("Repeats", INTS16)
@@ -645,6 +687,7 @@ class BasicBitch(WiredPattern):
             FlitterFeature(),
             self._flux,
             SparklesFeature(flux=self._flux),
+            BlendFeature(),
         ]
 
 class CircusTentFeature(Feature):
@@ -763,6 +806,7 @@ class CircusTent(WiredPattern):
             FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(rainbow=self._base._rainbow, flux=self._flux),
+            BlendFeature(),
         ]
 
 class CoiledSpringFeature(Feature):
@@ -858,6 +902,7 @@ class CoiledSpring(WiredPattern):
             FlickerFeature(max_v=1/2),
             FlitterFeature(max_v=1/2),
             FluxFeature(max_v=1/2),
+            BlendFeature(),
         ]
 
 class ConfettiFeature(Feature):
@@ -874,7 +919,7 @@ class ConfettiFeature(Feature):
         self._max = Control("Max Streamers", [Option(str(v), v) for v in range(1, 5)])
         self._rainbow = Control("Rainbow", ZERO + FRACS)
         self._rainbow_curved = ToggleControl("Rainbow Curved")
-        self._rainbow_curve = Control("Rainbow Curved", CURVES)
+        self._rainbow_curve = Control("Rainbow Curve", CURVES)
         self._rainbow_period = Control("Rainbow Period", PERIODS)
         super(ConfettiFeature, self).__init__("Confetti", [
             self._direction,
@@ -931,6 +976,7 @@ class Confetti(WiredPattern):
                 rainbow=self._base._rainbow,
                 flux=self._flux,
             ),
+            BlendFeature(),
         ]
 
 class FallingSnowFeature(Feature):
@@ -951,7 +997,7 @@ class FallingSnowFeature(Feature):
             ("5/6", 5/6),
             ("7/8", 7/8),
         ]])
-        self._fade = Control("Fade", ZERO + [Option("linear", "linear")] + CURVES)
+        self._fade = Control("Fade", ZERO + [Option("ramp", "linear")] + CURVES)
         self._fade_direction = Control("Fade Direction", [Option(n, v) for n, v in [
             ("\u2193 ", 1),
             ("\u2191 ", -1),
@@ -995,6 +1041,7 @@ class FallingSnow(WiredPattern):
             FlitterFeature(max_v=1/2),
             self._flux,
             SparklesFeature(flux=self._flux),
+            BlendFeature(),
         ]
 
 class GalaxusFeature(Feature):
@@ -1101,6 +1148,7 @@ class Galaxus(WiredPattern):
                 rainbow=self._base._rainbow,
                 flux=self._flux,
             ),
+            BlendFeature(),
         ]
 
 class GroovyFeature(Feature):
@@ -1199,11 +1247,12 @@ class Groovy(WiredPattern):
                 rainbow=self._base._rainbow,
                 flux=self._flux,
             ),
+            BlendFeature(),
         ]
 
 class RainbowStormFeature(Feature):
     def __init__(self):
-        self._fade = Control("Fade", ZERO + [Option("linear", "linear")] + CURVES)
+        self._fade = Control("Fade", ZERO + [Option("ramp", "linear")] + CURVES)
         self._fade_direction = Control("Fade Direction", [Option(n, v) for n, v in [
             ("\u2193 ", 1),
             ("\u2191 ", -1),
@@ -1285,6 +1334,7 @@ class RainbowStorm(WiredPattern):
                 rainbow=self._base._rainbow,
                 flux=self._flux,
             ),
+            BlendFeature(),
         ]
 
 class SlidingDoorFeature(Feature):
@@ -1401,6 +1451,7 @@ class SlidingDoor(WiredPattern):
                 rainbow=self._base._rainbow,
                 flux=self._flux,
             ),
+            BlendFeature(),
         ]
 
 class SpiralTopFeature(Feature):
@@ -1440,4 +1491,5 @@ class SpiralTop(WiredPattern):
                 rainbow=self._base._spread,
                 flux=self._flux,
             ),
+            BlendFeature(),
         ]

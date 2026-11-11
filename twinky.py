@@ -1,24 +1,43 @@
 import curses
+import json
+import logging
 import os
-import pickle
 from queue import Queue, Empty
+import threading
 from threading import Thread
 import time
-from core import Blender
-from control import *
+from core import Blender, FRAME, wait_for
+from device import Lights
+from control import (
+    WiredPattern,
+    BasicBitch,
+    CircusTent,
+    CoiledSpring,
+    Confetti,
+    FallingSnow,
+    Galaxus,
+    Groovy,
+    RainbowStorm,
+    SlidingDoor,
+    SpiralTop,
+)
+
+log = logging.getLogger("twinky")
 
 _sentinel = object()
+
+SAVES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 
 def animation_thread_task(animation, command_queue):
     start_time = time.time()
     animation.init(start_time)
-    next_frame = start_time + (1/16)
+    next_frame = start_time + FRAME
     while True:
         try:
             command = command_queue.get(False)
             if command is not None:
                 if command is _sentinel:
-                    print("Stopping animation")
+                    log.info("Stopping animation")
                     command_queue.put(_sentinel)
                     break
                 else:
@@ -26,12 +45,10 @@ def animation_thread_task(animation, command_queue):
                 command_queue.task_done()
         except Empty:
             pass
-        
+
         colors = animation.render(time.time())
         animation.write(colors)
-        while time.time() < next_frame:
-            pass
-        next_frame += 1/16
+        next_frame = wait_for(next_frame)
 
 def switch_pattern(idx):
     def func(a):
@@ -41,12 +58,14 @@ def switch_pattern(idx):
 def change_option(fidx, cidx, step):
     def func(a):
         a.pattern.change(fidx, cidx, step)
+        a.glide()
 
     return func
 
 def set_option(fidx, cidx, oidx):
     def func(a):
         a.pattern.set(fidx, cidx, oidx)
+        a.glide()
 
     return func
 
@@ -57,30 +76,38 @@ def random_pattern(a):
 
 def randomize_pattern(a):
     a.pattern.randomize()
+    a.glide()
 
 def randomize_feature(fidx):
     def func(a):
         a.pattern.features[fidx].randomize()
+        a.pattern.update()
+        a.glide()
     return func
 
 def pauseplay(a):
     a.pause_change = not a.pause_change
 
+def save_path(pattern: WiredPattern) -> str:
+    return os.path.join(SAVES, f"{pattern.name.replace(' ', '_').lower()}.json")
+
 def toggle_configured(a):
     a.pattern.configured = not a.pattern.configured
-    with open(f"{a.pattern.name.replace(' ', '_').lower()}.pattern", 'wb') as file:
-        pickle.dump(a.pattern._to_dict(), file, pickle.HIGHEST_PROTOCOL)
-    print("Saved", a.pattern.name, flush=True)
+    os.makedirs(SAVES, exist_ok=True)
+    with open(save_path(a.pattern), 'w', encoding='utf-8') as file:
+        json.dump(a.pattern._to_dict(), file, indent=2, ensure_ascii=False)
+        file.write("\n")
+    log.info("Saved %s", a.pattern.name)
 
 def load_pattern(pattern: WiredPattern):
-    fname = f"{pattern.name.replace(' ', '_').lower()}.pattern"
+    fname = save_path(pattern)
     if not os.path.exists(fname):
-        print("No configuration found for", pattern.name, flush=True)
+        log.info("No configuration found for %s", pattern.name)
     else:
-        with open(fname, 'rb') as file:
-            pattern._from_dict(pickle.load(file))
+        with open(fname, encoding='utf-8') as file:
+            pattern._from_dict(json.load(file))
             pattern.configured = True
-            print("Load saved config for", pattern.name, flush=True)
+            log.info("Loaded saved config for %s", pattern.name)
     return pattern
 
 class Menu:
@@ -255,7 +282,7 @@ class Menu:
         curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
 
         start_time = time.time()
-        next_frame = start_time + (1/16)
+        next_frame = start_time + FRAME
         while True:
             if self.animation.pattern != self.curr_pattern:
                 self.selected_row[1] = 0
@@ -265,9 +292,7 @@ class Menu:
             self.print_menu(screen)
             if self.handle_input(screen):
                 break
-            while time.time() < next_frame:
-                pass
-            next_frame += 1/16
+            next_frame = wait_for(next_frame)
 
         curses.nocbreak()
         screen.keypad(False)
@@ -276,6 +301,15 @@ class Menu:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        filename="twinky.log",
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    threading.excepthook = lambda args: log.error(
+        "Crash in %s", args.thread.name if args.thread else "a thread",
+        exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+    )
     patterns = [
         load_pattern(BasicBitch()),
         load_pattern(CircusTent()),
@@ -289,7 +323,7 @@ if __name__ == "__main__":
         load_pattern(SpiralTop()),
     ]
     queue = Queue()
-    animation = Blender(patterns, 0, True)
+    animation = Blender(patterns, Lights(), 0, True)
     animation.pattern.randomize()
     animation_thread = Thread(
         target=animation_thread_task,

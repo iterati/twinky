@@ -35,3 +35,12 @@ def mk_bounce(period, s, e=None):
         (period * 0.75, -e),
         (period,        s),
     ]
+
+def coverage(x, start, end, edge, wrap=True):
+    """How much of a light at x, seen as a box `edge` wide, the span from start to end covers.
+    With wrap, the span is an angle round the trunk."""
+    lo, hi = x - edge / 2, x + edge / 2
+    covered = 0.0
+    for shift in (-1, 0, 1) if wrap else (0,):
+        covered += max(0.0, min(hi, end + shift) - max(lo, start + shift))
+    return min(1.0, covered / edge)

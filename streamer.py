@@ -1,11 +1,16 @@
 from copy import deepcopy
 from enum import Enum
+import math
 import random
 from typing import TypeAlias
-from pytweening import linear
 
-from core import Color
-from param import Curve, Param, getv, rand
+from colors import Color
+from param import Param, getv, rand
+from utils import coverage
+
+# The soft edges of a streamer: across its width, as a fraction of a turn, and along its length
+EDGE_T = 0.03
+EDGE_Y = 0.05
 
 class Direction(Enum):
     FROM_BOT = 0
@@ -108,31 +113,24 @@ class Streamer:
         self.width = getv(width, norm_t)
         self.lifetime = getv(lifetime, norm_t)
 
-    @property
-    def y_func(self):
-        if self.reverse:
-            return Curve(linear, [(0, -self.length), (self.lifetime, 1)])
-        return Curve(linear, [(0, 1), (self.lifetime, -self.length)])
-
     def alive(self, t):
         return t < self.initial_t + self.lifetime
 
-    def contains(self, t, pixel):
-        if not self.alive(t):
-            return False
-        
-        miny = self.y_func(t - self.initial_t)
-        if pixel.y < miny or pixel.y > miny + self.length:
-            return False
-        
-        mino = (
-            (pixel.y * self.spin * self.spin_dir)
-            + getv(self.angle, t)
-        ) % 1
-        if mino + self.width > 1.0:
-            return mino < pixel.t or pixel.t < (mino + self.width) - 1
+    def place(self, t) -> tuple[float, float]:
+        # once a frame: the bottom of its length, and its angle
+        s = (t - self.initial_t) / self.lifetime
+        if self.reverse:
+            miny = -self.length + (s * (1 + self.length))
         else:
-            return mino < pixel.t < mino + self.width
+            miny = 1 - (s * (1 + self.length))
+        return miny, getv(self.angle, t)
+
+    def coverage(self, pixel, miny, angle) -> float:
+        if not miny - EDGE_Y < pixel.y < miny + self.length + EDGE_Y:
+            return 0.0
+        along = coverage(pixel.y, miny, miny + self.length, EDGE_Y, wrap=False)
+        mino = ((pixel.y * self.spin * self.spin_dir) + angle) % 1
+        return along * coverage(pixel.t, mino, mino + self.width, EDGE_T)
 
     def __repr__(self):
         return f"Streamer({self.angle},{self.spin},{self.length},{self.width},{self.lifetime})"
@@ -168,16 +166,17 @@ class StreamerChoices:
         self.choose = choose
         self.delay = delay
         self.delay_offset = delay_offset
-        self.next_trigger = delay_offset
-        self.triggers = 0
 
-    def __call__(self, t: float) -> StreamerValues:
-        if (t < self.next_trigger):
+    def __call__(self, t: float, last_t: float | None) -> StreamerValues:
+        # t and last_t (None at first) are the turn's clock, so a pattern starts each turn afresh
+        trigger = math.floor((t - self.delay_offset) / self.delay)
+        if trigger < 0 or (
+            last_t is not None
+            and trigger == math.floor((last_t - self.delay_offset) / self.delay)
+        ):
             return []
 
-        self.triggers += 1
-        self.next_trigger += self.delay
-        c = self.choices[self.triggers % len(self.choices)]
+        c = self.choices[(trigger + 1) % len(self.choices)]
         if self.choose:
             pick = (
                 self.choose[0]
@@ -191,13 +190,13 @@ class CombinedChoices(StreamerChoices):
     def __init__(self, streamer_choices: list[StreamerChoices]):
         self.streamer_choices = streamer_choices
 
-    def __call__(self, t: float) -> StreamerValues:
+    def __call__(self, t: float, last_t: float | None) -> StreamerValues:
         r = []
         for sc in self.streamer_choices:
-            r.extend(sc(t))
+            r.extend(sc(t, last_t))
         return r
 
 StreamerParam: TypeAlias = StreamerChoices | StreamerValues
 
-def getv_streamers(v: StreamerParam, t: float) -> StreamerValues:
-    return v(t) if isinstance(v, StreamerChoices) else v
+def getv_streamers(v: StreamerParam, t: float, last_t: float | None) -> StreamerValues:
+    return v(t, last_t) if isinstance(v, StreamerChoices) else v
