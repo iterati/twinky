@@ -8,8 +8,8 @@ export type Control = {
 
 export type Feature = {
   name: string
-  on: boolean | null // its On switch, null with none
-  controls: Control[] // the visible ones, the switch first when it has one
+  switch: number | null // its On switch's index in controls, null with none
+  controls: Control[] // the visible ones
 }
 
 export type State = {
@@ -25,7 +25,7 @@ export type State = {
 /** A card's stepper rows: its visible controls but the switch on its header, each with its index among
  * the visible ones, as twinky's commands count them. */
 export function cardControls(feature: Feature): { control: Control; index: number }[] {
-  return feature.controls.map((control, index) => ({ control, index })).slice(feature.on === null ? 0 : 1)
+  return feature.controls.map((control, index) => ({ control, index })).filter(({ index }) => index !== feature.switch)
 }
 
 /** The pick a minus (-1) or plus (+1) gives, wrapping round its options as twinky's do. */

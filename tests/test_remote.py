@@ -84,9 +84,8 @@ def test_the_state_holds_the_pattern_its_features_and_music(running):
             assert c["options"] == [o.name for o in control.options]
             assert c["pick"] == control.selected_idx
     # Pulse, Flicker and the rest open on their Enabled switch, Music on its On; Blend has none
-    on = {f["name"]: f["on"] for f in state["features"]}
-    assert on["Pulse"] == b.pattern.features[0].controls[0].value
-    assert on["Music"] is True and on["Blend"] is None
+    switches = {f["name"]: f["switch"] for f in state["features"]}
+    assert switches["Pulse"] == 0 and switches["Music"] == 0 and switches["Blend"] is None
 
 def test_the_mark_for_a_pattern_unsaved_saved_and_changed(running):
     b, server, queue = running
@@ -95,7 +94,8 @@ def test_the_mark_for_a_pattern_unsaved_saved_and_changed(running):
         ws.send(json.dumps({"command": "save"}))
         run(b, queue)
         assert next_state(ws)["mark"] == "!"
-        ws.send(json.dumps({"command": "change", "pattern": "Basic Bitch", "feature": 5, "control": 0, "step": 1}))
+        ws.send(json.dumps({"command": "change", "pattern": "Basic Bitch", "feature": 5, "control": 0,
+                            "name": "Transition", "step": 1}))
         run(b, queue)
         assert next_state(ws)["mark"] == "*"
 
@@ -155,9 +155,9 @@ def check_set(b, state):
     ({"command": "randomize"}, twinky.randomize_pattern, check_randomize_pattern),
     ({"command": "randomize", "pattern": "Basic Bitch", "feature": 1},
      "randomize_feature.<locals>.func", check_randomize_feature),
-    ({"command": "change", "pattern": "Basic Bitch", "feature": 5, "control": 0, "step": 1},
+    ({"command": "change", "pattern": "Basic Bitch", "feature": 5, "control": 0, "name": "Transition", "step": 1},
      "change_option.<locals>.func", check_change),
-    ({"command": "set", "pattern": "Basic Bitch", "feature": 6, "control": 2, "option": 2},
+    ({"command": "set", "pattern": "Basic Bitch", "feature": 6, "control": 2, "name": "Flash", "option": 2},
      "set_option.<locals>.func", check_set),
 ], ids=["switch", "random", "pause", "save", "save music", "spin", "randomize", "randomize feature",
         "change", "set"])
@@ -182,18 +182,26 @@ def test_each_command_puts_the_tuis_own_closure_on_the_queue(running, message, c
 def test_a_command_for_a_pattern_or_control_no_longer_shown_is_dropped(running):
     b, server, queue = running
     picks = b.pattern._to_dict()
+
+    def music(control: int, name: str, option: int):
+        ws.send(json.dumps({"command": "set", "pattern": "Basic Bitch", "feature": 6, "control": control,
+                            "name": name, "option": option}))
+        run(b, queue)
+
     with remote(server) as ws:
         next_state(ws)
-        # meant for Circus Tent, or for Music's Streamers once Music is switched off
-        ws.send(json.dumps({"command": "change", "pattern": "Circus Tent", "feature": 5, "control": 0, "step": 1}))
+        # meant for Circus Tent
+        ws.send(json.dumps({"command": "change", "pattern": "Circus Tent", "feature": 5, "control": 0,
+                            "name": "Transition", "step": 1}))
         run(b, queue)
-        ws.send(json.dumps({"command": "set", "pattern": "Basic Bitch", "feature": 6, "control": 0, "option": 1}))
-        run(b, queue)
-        assert next_state(ws)["features"][6]["on"] is False
-        ws.send(json.dumps({"command": "set", "pattern": "Basic Bitch", "feature": 6, "control": 1, "option": 0}))
-        run(b, queue)
+        # Music's Streamers, gone once Music is off, then the control after On once it is back
+        music(0, "On", 1)
+        assert next_state(ws)["features"][6]["controls"][0]["pick"] == 1
+        music(1, "Streamers", 0)
+        music(0, "On", 0)
+        music(1, "Flash", 0)
     assert b.pattern._to_dict() == picks and not b.pattern.dirty
-    assert b.music.value["streamers"] == 1
+    assert b.music.value["streamers"] == 1 and b.music.value["flash"] == "tree"
 
 def test_a_command_queued_by_the_tui_sends_the_same_state(running):
     b, server, queue = running

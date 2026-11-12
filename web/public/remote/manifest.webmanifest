@@ -1,11 +1,9 @@
 {
   "name": "Twinky",
   "short_name": "Twinky",
-  "description": "The tree's remote",
   "start_url": "/remote",
   "scope": "/remote",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0b1a12",
   "theme_color": "#0b1a12",
   "icons": [

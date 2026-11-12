@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { cardControls, knob, ringTurn, stepped, type Feature } from './remote'
 
-function feature(on: boolean | null, names: string[]): Feature {
-  return { name: 'Flicker', on, controls: names.map((name) => ({ name, options: ['a', 'b'], pick: 0 })) }
+function feature(on: number | null, names: string[]): Feature {
+  return { name: 'Flicker', switch: on, controls: names.map((name) => ({ name, options: ['a', 'b'], pick: 0 })) }
 }
 
 describe('cardControls', () => {
   it('leaves the On switch to the header, keeping each control its visible index', () => {
-    const rows = cardControls(feature(true, ['Enabled', 'Start', 'Curved']))
+    const rows = cardControls(feature(0, ['Enabled', 'Start', 'Curved']))
     expect(rows.map(({ control, index }) => [control.name, index])).toEqual([
       ['Start', 1],
       ['Curved', 2],
@@ -15,7 +15,13 @@ describe('cardControls', () => {
   })
 
   it('shows no rows for a feature switched off', () => {
-    expect(cardControls(feature(false, ['Enabled']))).toEqual([])
+    expect(cardControls(feature(0, ['Enabled']))).toEqual([])
+  })
+
+  it('takes a switch from among the rows', () => {
+    // Spiral's Enabled, after Repeats and Mirrored
+    const rows = cardControls(feature(2, ['Repeats', 'Mirrored', 'Enabled', 'Twists']))
+    expect(rows.map(({ index }) => index)).toEqual([0, 1, 3])
   })
 
   it('shows every control of a feature with no switch', () => {

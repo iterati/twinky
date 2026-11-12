@@ -5,8 +5,8 @@ import Ring from './Ring'
 const MARKS = { '?': 'not saved', '!': 'saved', '*': 'changed' }
 
 type Command = { command: string } & Record<string, string | number>
-// the option list open: a feature's control, by its visible index
-type Picking = { feature: number; control: number }
+// the option list open: a feature's control, by its visible index, on the pattern it was opened on
+type Picking = { pattern: string; feature: number; control: number }
 
 /** The remote, the Stack: the patterns along the top, the pattern's features as cards and the spin ring
  * in one scroll, and the thumb bar along the bottom. Every change is one of the TUI's commands, sent to
@@ -104,9 +104,9 @@ export default function Remote() {
     const key = `${feature}:${control}`
     const c = state.features[feature].controls[control]
     setStepping((s) => ({ ...s, [key]: stepped(s[key] ?? c.pick, by, c.options.length) }))
-    send({ command: 'change', pattern, feature, control, step: by })
+    send({ command: 'change', pattern, feature, control, name: c.name, step: by })
   }
-  const pickingControl = picking && state.features[picking.feature].controls[picking.control]
+  const pickingControl = picking?.pattern === pattern ? state.features[picking.feature].controls[picking.control] : null
 
   return (
     <main className="remote">
@@ -138,6 +138,7 @@ export default function Remote() {
 
       {state.features.map((feature, f) => {
         const isOpen = f === openFeature
+        const toggle = feature.switch === null ? null : feature.controls[feature.switch]
         return (
           <section key={feature.name} className={`card${isOpen ? ' open' : ''}`}>
             <div className="card-header">
@@ -148,13 +149,23 @@ export default function Remote() {
               >
                 {feature.name}
               </button>
-              {feature.on !== null && (
+              {toggle && (
                 <button
                   className="switch"
                   role="switch"
-                  aria-checked={feature.on}
-                  aria-label={`${feature.name} on`}
-                  onClick={() => send({ command: 'set', pattern, feature: f, control: 0, option: feature.on ? 1 : 0 })}
+                  // its options are On, then Off
+                  aria-checked={toggle.pick === 0}
+                  aria-label={`${feature.name} ${toggle.name}`}
+                  onClick={() =>
+                    send({
+                      command: 'set',
+                      pattern,
+                      feature: f,
+                      control: feature.switch!,
+                      name: toggle.name,
+                      option: 1 - toggle.pick,
+                    })
+                  }
                 >
                   <span />
                 </button>
@@ -168,7 +179,7 @@ export default function Remote() {
                     <button aria-label={`${control.name} down`} onClick={() => step(f, index, -1)}>
                       −
                     </button>
-                    <button className="value" onClick={() => setPicking({ feature: f, control: index })}>
+                    <button className="value" onClick={() => setPicking({ pattern, feature: f, control: index })}>
                       <span className="control">{control.name}:</span> {control.options[pick]}
                     </button>
                     <button aria-label={`${control.name} up`} onClick={() => step(f, index, 1)}>
@@ -215,7 +226,14 @@ export default function Remote() {
                   <button
                     aria-pressed={o === pickingControl.pick}
                     onClick={() => {
-                      send({ command: 'set', pattern, feature: picking.feature, control: picking.control, option: o })
+                      send({
+                        command: 'set',
+                        pattern,
+                        feature: picking.feature,
+                        control: picking.control,
+                        name: pickingControl.name,
+                        option: o,
+                      })
                       setPicking(null)
                     }}
                   >

@@ -170,23 +170,32 @@ def remote_command(message: dict):
         return spin_ring(message["angle"])
     if command == "randomize" and "feature" not in message:
         return randomize_pattern
+    pattern = message["pattern"]
     fidx = message["feature"]
-    cidx = message.get("control", 0)
+    control = None  # change's and set's: the control's place and name
     if command == "randomize":
         func = randomize_feature(fidx)
     elif command == "change":
-        func = change_option(fidx, cidx, message["step"])
+        control = (message["control"], message["name"])
+        func = change_option(fidx, message["control"], message["step"])
     elif command == "set":
-        func = set_option(fidx, cidx, message["option"])
+        control = (message["control"], message["name"])
+        func = set_option(fidx, message["control"], message["option"])
     else:
         raise ValueError(f"No command {command!r}")
 
     def shown(a):
+        # the control by name too, as a switch flipped on or off moves the ones after it
         features = a.pattern.features + [a.music]
-        if a.pattern.name == message["pattern"] and fidx < len(features) and cidx < len(features[fidx].visible_controls()):
+        on_show = a.pattern.name == pattern and fidx < len(features)
+        if on_show and control is not None:
+            cidx, name = control
+            controls = [c.name for c in features[fidx].visible_controls()]
+            on_show = cidx < len(controls) and controls[cidx] == name
+        if on_show:
             func(a)
         else:
-            log.info("Dropped the remote's %s, for %s as it was", command, message["pattern"])
+            log.info("Dropped the remote's %s, for %s as it was", command, pattern)
     return shown
 
 def parse_args(argv: list[str] | None=None) -> argparse.Namespace:

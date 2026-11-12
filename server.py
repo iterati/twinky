@@ -22,16 +22,15 @@ PORT = 8016
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "dist")
 REMOTE = "/ws?remote"
 TIME_EVERY = 0.25
-# a feature's first control by one of these names is its On switch, on the remote's card header
+# a feature's toggle by one of these names is its On switch, on the remote's card header
 SWITCHES = ["Enabled", "On"]
 
 def feature_state(feature: Feature) -> dict:
     controls = feature.visible_controls()
-    first = controls[0]
-    switch = isinstance(first, ToggleControl) and first.name in SWITCHES
+    switches = [i for i, c in enumerate(controls) if isinstance(c, ToggleControl) and c.name in SWITCHES]
     return {
         "name": feature.name,
-        "on": first.value if switch else None,
+        "switch": switches[0] if switches else None,  # its index in controls
         "controls": [
             {"name": c.name, "options": [o.name for o in c.options], "pick": c.selected_idx}
             for c in controls
