@@ -15,37 +15,37 @@ from websockets.http11 import Request, Response
 PORT = 8016
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "dist")
 
-def layout_message(blender) -> str:
-    """Every light where Pixel has it, after normalizing: x, y (its height, 0 to 1) and z, its
-    strand and index on the strand, and its angle round the trunk (0 to 1)."""
-    places = [(strand, index)
-              for strand, interface in enumerate(blender.lights.interfaces)
-              for index in range(len(interface.layout))]
-    lights = [
-        {"x": pixel.x, "y": pixel.y, "z": pixel.z, "strand": strand, "index": index, "angle": pixel.t}
-        for pixel, (strand, index) in zip(blender.pixels, places)
-    ]
-    return json.dumps({"layout": lights})
-
 class Server:
     """Runs on its own event loop in its own thread. A page gets the layout as it connects, then one
     binary message a frame: the frame number (4 bytes, little-endian) and W, R, G, B a light."""
     def __init__(self, blender, port: int=PORT, dist: str=DIST):
-        self.layout = layout_message(blender)
+        # every light where Pixel has it, after normalizing: x, y (its height, 0 to 1) and z, its
+        # strand and index on the strand, and its angle round the trunk (0 to 1)
+        places = [(strand, index)
+                  for strand, interface in enumerate(blender.lights.interfaces)
+                  for index in range(len(interface.layout))]
+        self.layout = json.dumps({"layout": [
+            {"x": pixel.x, "y": pixel.y, "z": pixel.z, "strand": strand, "index": index, "angle": pixel.t}
+            for pixel, (strand, index) in zip(blender.pixels, places)
+        ]})
         self.port = port
         self.dist = dist
         self.clients: set[ServerConnection] = set()
         self.number = 0
-        self.ready = threading.Event()
-        self.thread = threading.Thread(target=asyncio.run, args=(self._serve(),), name="server")
+        self.loop = asyncio.new_event_loop()
 
     def start(self):
+        # opened on the caller's thread, so a port in use stops twinky as it starts
+        self.server = self.loop.run_until_complete(self._open())
+        self.thread = threading.Thread(target=self.loop.run_forever, name="server")
         self.thread.start()
-        self.ready.wait()
 
     def stop(self):
-        self.loop.call_soon_threadsafe(self.done.set_result, None)
+        self.loop.call_soon_threadsafe(self.loop.stop)
         self.thread.join()
+        self.server.close()
+        self.loop.run_until_complete(self.server.wait_closed())
+        self.loop.close()
 
     def send(self, frame: bytes):
         """Takes a frame from the animation thread."""
@@ -53,12 +53,9 @@ class Server:
         self.number += 1
         self.loop.call_soon_threadsafe(broadcast, self.clients, message)
 
-    async def _serve(self):
-        self.loop = asyncio.get_running_loop()
-        self.done = self.loop.create_future()
-        async with serve(self._connect, "localhost", self.port, process_request=self._page):
-            self.ready.set()
-            await self.done
+    async def _open(self):
+        # serve wants the loop running as it's made
+        return await serve(self._connect, "localhost", self.port, process_request=self._page)
 
     async def _connect(self, connection: ServerConnection):
         await connection.send(self.layout)
@@ -81,6 +78,6 @@ class Server:
             ("Date", email.utils.formatdate(usegmt=True)),
             ("Connection", "close"),
             ("Content-Length", str(len(body))),
-            ("Content-Type", mimetypes.guess_type(file)[0] or "application/octet-stream"),
+            ("Content-Type", mimetypes.guess_type(file)[0]),
         ])
         return Response(200, "OK", headers, body)

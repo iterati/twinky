@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { decodeFrame, parseLayout, type Layout } from './frame'
+import { decodeFrame, type Layout } from './frame'
 import Tree, { type View } from './Tree'
 
 export default function App() {
@@ -8,18 +8,17 @@ export default function App() {
   const [closed, setClosed] = useState(false)
   // R, G, B a light, written as each frame comes and drawn on the next animation frame
   const colors = useRef(new Float32Array(0))
-  const number = useRef(0)
 
   useEffect(() => {
-    const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
+    const ws = new WebSocket(`ws://${location.host}/ws`)
     ws.binaryType = 'arraybuffer'
     ws.onmessage = (event: MessageEvent<string | ArrayBuffer>) => {
       if (typeof event.data === 'string') {
-        const lights = parseLayout(event.data)
+        const lights = (JSON.parse(event.data) as { layout: Layout }).layout
         colors.current = new Float32Array(lights.length * 3)
         setLayout(lights)
       } else {
-        number.current = decodeFrame(event.data, colors.current)
+        decodeFrame(event.data, colors.current)
       }
     }
     ws.onclose = () => setClosed(true)

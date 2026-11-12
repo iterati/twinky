@@ -14,10 +14,6 @@ export type Layout = Light[]
 // What the W LEDs add, for each 1 of W: a warm white, in linear light as the R, G and B are
 export const WARM_WHITE = [1, 0.6, 0.3] as const
 
-export function parseLayout(message: string): Layout {
-  return (JSON.parse(message) as { layout: Layout }).layout
-}
-
 /** Reads a frame (a 4-byte frame number, little-endian, then W, R, G, B a light) into colors, R, G
  * and B a light from 0 to 1 with W added as warm white, and gives its number. */
 export function decodeFrame(data: ArrayBuffer, colors: Float32Array): number {

@@ -99,3 +99,11 @@ def test_sim_plays_the_cone_or_a_layout(tmp_path, monkeypatch):
     tree = twinky.open_lights(["--sim", path])
     assert isinstance(tree, SimLights)
     assert [i.layout for i in tree.interfaces] == layout.cone(strands=3, per_strand=50, seed=7)
+
+def test_a_port_in_use_stops_twinky_as_it_starts():
+    with socket.socket() as taken:
+        taken.bind(("127.0.0.1", 0))
+        taken.listen()
+        server = Server(blender([quiet(BasicBitch()), quiet(CircusTent())]), taken.getsockname()[1])
+        with pytest.raises(OSError):
+            server.start()
