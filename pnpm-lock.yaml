@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      pyodide:
+        specifier: ^0.28.0
+        version: 0.28.3
       react:
         specifier: ^19.2.0
         version: 19.3.1
@@ -1259,6 +1262,10 @@ packages:
   puppeteer-core@24.43.1:
     resolution: {integrity: sha512-T5ScUMAsmhdNbgDR41AGESYeS6V9MSgetkSnVhhW+gXvzC42VesKCn5ld87gAZDJ6vLHL9GkRvY9WtQWSnwFbw==}
     engines: {node: '>=18'}
+
+  pyodide@0.28.3:
+    resolution: {integrity: sha512-rtCsyTU55oNGpLzSVuAd55ZvruJDEX8o6keSdWKN9jPeBVSNlynaKFG7eRqkiIgU7i2M6HEgYtm0atCEQX3u4A==}
+    engines: {node: '>=18.0.0'}
 
   react-dom@19.3.1:
     resolution: {integrity: sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==}
@@ -2714,6 +2721,13 @@ snapshots:
       - bufferutil
       - react-native-b4a
       - supports-color
+      - utf-8-validate
+
+  pyodide@0.28.3:
+    dependencies:
+      ws: 8.22.2
+    transitivePeerDependencies:
+      - bufferutil
       - utf-8-validate
 
   react-dom@19.3.1(react@19.3.1):
