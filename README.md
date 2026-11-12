@@ -107,6 +107,28 @@ The flag names the address, so keep the Mac's the same: reserve it for the Mac o
 first time twinky runs with `--remote`, the Mac's firewall asks once to let Python take incoming
 connections: allow it.
 
+## Hints, and looks from Bermuda
+
+Six patterns in the rotation are hints of Bermuda's looks rather than its pictures, which 800
+lights can't show: slow, soft-edged shapes in Bermuda's palettes, moved by its modulators, most of
+them round the trunk. Wash (the palette running up the tree, a wave of brightness round it),
+Sectors (soft sectors spinning or swaying round the trunk), Bands (rings climbing, falling, or rising
+and falling at the contour's drift), Spiral (soft arms winding up and turning), Hidden Field (sparse
+sparkles tracing a lattice of stars seen from above the treetop) and Palette Drift (the palette
+drifting round the trunk). Each picks one of Bermuda's six cosine palettes, and their periods count
+beats of the beat clock while music plays, seconds otherwise. `palette.py` and `motion.py` are
+Python ports of Bermuda's `src/colour.ts` and `src/motion.ts`, its names in snake_case, to read side
+by side with them; the hints are in `hints.py`.
+
+Bermuda's Bank exports a look as JSON (export). To play it on the tree:
+
+    .venv/bin/python twinky.py --import-look Disco-Ball.json
+
+writes `looks/Disco-Ball.json`, the look's palette, its star's points as sectors round the trunk,
+its contour's rings and drift as bands, and its modulators' timing (`look.py`), and twinky plays a
+pattern of that name from its next start, one for each file in `looks/`. A look missing a field
+this reads is refused, naming the field.
+
 ## Without the tree
 
 `sim.SimLights` is a tree with no network, on the generic cone in `layouts/cone.json`
@@ -121,6 +143,7 @@ lights recentred on the trunk, strays pulled in.
     .venv/bin/pytest tests/test_server.py
     .venv/bin/pytest tests/test_music.py
     .venv/bin/pytest tests/test_remote.py
+    .venv/bin/pytest tests/test_palette.py tests/test_motion.py tests/test_hints.py tests/test_look.py
     .venv/bin/ruff check <files>
     pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts web/src/music.test.ts web/src/remote/remote.test.ts
     pnpm typecheck
