@@ -129,6 +129,31 @@ its contour's rings and drift as bands, and its modulators' timing (`look.py`), 
 pattern of that name from its next start, one for each file in `looks/`. A look missing a field
 this reads is refused, naming the field.
 
+## Effects
+
+Ten patterns in the rotation are effects in the tree's 3D space, each light lit from its x, y and z
+rather than its angle and height: Aurora (curtains of green and violet folding up the tree), Fireflies
+(soft warm lights wandering in clusters), Fireworks (a spark climbs and bursts on the surface, its
+sparks falling in fading trails), Ripples (rings spreading from drops), Lava lamp (blobs rising,
+merging and splitting), Comets (two or three orbiting with tails), Hearth (fire at the bottom cooling
+up the tree, with embers), Lightning (one branching bolt, then an afterglow), Drips (paint running
+down into a pool) and Heartbeat (a double pulse from the core). Each has one feature of its own knobs
+and Blend: Grain raw hardens an effect's soft edges, a light in or out. Only the rainbow palettes
+turn with the base hue every 66 s; the named ones stay as named.
+
+With Music on and the page listening, the beat and the bands drive them: a rocket, drop or drip
+waits for a beat, Fireworks' Rate and Lightning's Interval the least time between, Lightning on a
+bar line; a firefly lights on each beat; the beat swells Aurora and the blobs, pushes the comets and
+flares the fire; Heartbeat pulses on the beat. A band moves a knob from half as set (quiet) to half
+as much again (loud): the low band Aurora's and the Lava lamp's Speed, Fireworks' Size, Hearth's
+Height, Heartbeat's Reach and Lightning's clouds; the high band Aurora's violet, the fireflies' Count
+and Hearth's Embers; the bands together Ripples' Width, the comets' Tail and Drips' Speed.
+
+They are in `effects.py`. Once a frame, before the lights, the Blender calls a pattern's `step` with
+the run's clock, every light, the sound, the beat and the base hue, and an effect works out each
+light's layers there; every base color is then called with the light's `Pixel` too, which only an
+effect reads. An effect starts again whenever its run does.
+
 ## Without the tree
 
 `sim.SimLights` is a tree with no network, on the generic cone in `layouts/cone.json`
@@ -144,6 +169,7 @@ lights recentred on the trunk, strays pulled in.
     .venv/bin/pytest tests/test_music.py
     .venv/bin/pytest tests/test_remote.py
     .venv/bin/pytest tests/test_palette.py tests/test_motion.py tests/test_hints.py tests/test_look.py
+    .venv/bin/pytest tests/test_effects.py -k Aurora
     .venv/bin/ruff check <files>
     pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts web/src/music.test.ts web/src/remote/remote.test.ts
     pnpm typecheck
