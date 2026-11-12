@@ -71,19 +71,20 @@ On `/ws?remote` twinky sends the state as JSON as the remote connects and whenev
 from the phone, the TUI or an automatic change, and the TUI's time text 4 times a second:
 
     {"state": {"patterns": ["Basic Bitch", ...], "pattern": "Galaxus", "mark": "!", "to": null,
-               "features": [{"name": "Spin", "on": true,
+               "features": [{"name": "Spin", "switch": 0,
                              "controls": [{"name": "Enabled", "options": ["On", "Off"], "pick": 0}, ...]},
                             ..., {"name": "Music", ...}],
                "paused": false, "ring": 0.0}}
     {"time": "-42.13"}
 
 `mark` is the TUI's `?` (not saved), `!` (saved) or `*` (changed since), `to` the pattern a change is
-running to, `ring` the spin ring's turn. The remote sends
+running to, a feature's `switch` its On toggle's place in `controls` (null with none), `ring` the
+spin ring's turn. The remote sends
 `{"command": "switch", "to": 3}`, `"random"`, `"pause"`, `"save"`, `"save music"`,
 `{"command": "spin", "angle": 0.25}`, `"randomize"` (the pattern), and for a feature, by its place
 in `features` and a control's in its visible `controls`, `"randomize"`, `"change"` (with `step`) and
-`"set"` (with `option`), each naming the pattern it was meant for, as one it no longer shows is
-dropped.
+`"set"` (with `option`), each naming the pattern it was meant for, and change and set the control's
+`name`, as a command for a pattern or control no longer on show is dropped.
 
 ### On the Android phone
 
