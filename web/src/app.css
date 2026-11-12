@@ -165,7 +165,82 @@ header {
   font-size: 13px;
 }
 
+.simulated {
+  position: fixed;
+  top: 60px;
+  right: 16px;
+  bottom: 16px;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+.simulated select {
+  font: inherit;
+  color: #bbb;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 5px 6px;
+  min-width: 0;
+}
+
+.simulated > select {
+  font-size: 15px;
+  padding: 7px 8px;
+}
+
+.simulated .to {
+  color: #999;
+}
+
+.simulated fieldset {
+  margin: 0;
+  padding: 6px 0 0;
+  border: none;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.simulated legend {
+  padding: 0 6px 0 0;
+  color: #ffd9a0;
+}
+
+.simulated label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.simulated label span {
+  flex: 1;
+  color: #999;
+}
+
+.simulated label select {
+  width: 120px;
+}
+
 @media (max-width: 500px) {
+  .simulated {
+    left: 8px;
+    right: 8px;
+    top: auto;
+    width: auto;
+    max-height: 40%;
+  }
+
   .listen {
     left: 8px;
     right: 8px;

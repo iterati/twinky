@@ -30,6 +30,27 @@ and passes `/ws` through to a running twinky.
     .venv/bin/python twinky.py --sim                     # the generic cone, no tree
     .venv/bin/python twinky.py --sim layouts/tree.json   # the real tree's layout, offline
 
+### The simulated tree
+
+When no twinky.py answers the page's `/ws` as it loads, or twinky drops and is not back within 3
+seconds, the page runs twinky's own engine itself, under Pyodide in a Web Worker, on the generic cone,
+and says "Simulated tree: no twinky.py answered. Run twinky.py to play your tree live." It is twinky
+--sim in the page: the same rotation from Basic Bitch with the changes paused and the saves in
+`saves/`, stepped on the clock and at the frame rate `--sim` plays on, each frame sent to the page as
+the server sends it and drawn by the same code. A panel on the right picks the pattern and sets the
+one on show's knobs, each change one of the remote's commands (`switch`, `set`). Music is off: the
+Listen panel says it needs twinky.py. While simulating, the page looks for twinky every 5 seconds
+(not on an HTTPS page, which twinky never serves) and goes live once it answers. Served from a
+folder (`base: './'`), `dist/` works from any path, such as the site's `/twinky/`.
+
+`browser.py` is the engine's face to the page. The build packs, as the files are when it runs, every
+`.py` in the repo but `device.py`, `server.py` and `twinky.py` (the device, the server's sockets and
+threads, and the TUI), with `layouts/`, `looks/` and `saves/`, and from `.venv` pytweening and
+xled_plus's `ledcolor.py`, which are pure Python (`vite.config.ts`); so the build needs the venv.
+What both twinky and the page run moved out of those three: the rotation and the commands to
+`commands.py`, the layout, frame and state messages to `wire.py`. Pyodide's own files are copied from
+`node_modules/pyodide` into `dist/pyodide/`, never fetched from a CDN.
+
 ## Music
 
 The page's Listen panel hears the Mac's mic or a line-in (pick it by device; the browser's echo
@@ -170,6 +191,9 @@ lights recentred on the trunk, strays pulled in.
     .venv/bin/pytest tests/test_remote.py
     .venv/bin/pytest tests/test_palette.py tests/test_motion.py tests/test_hints.py tests/test_look.py
     .venv/bin/pytest tests/test_effects.py -k Aurora
+    .venv/bin/pytest tests/test_browser.py
     .venv/bin/ruff check <files>
     pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts web/src/music.test.ts web/src/remote/remote.test.ts
+    pnpm exec vitest run web/src/engine.test.ts   # the page's engine against twinky --sim, in Node
+    pnpm exec vitest run web/src/App.test.ts      # the built page with no twinky, in headless Chromium
     pnpm typecheck
