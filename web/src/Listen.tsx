@@ -4,11 +4,15 @@ import { MusicAnalyser, type MusicFeatures } from './music'
 
 // About 30 music messages a second to twinky
 const SEND_EVERY = 1 / 30
+// the input that is a browser tab's sound, shared to the page, beside the mic's devices
+const TAB = 'tab'
+const NO_TAB_AUDIO = 'No tab audio: pick a tab and tick Share tab audio'
+const SHARE_ENDED = 'The tab stopped sharing its audio'
 
-/** The Mac's ears: a mic or line-in, analysed here and sent to twinky, whose Music feature links it to
- * the tree. Its meters show what twinky is told. */
+/** The Mac's ears: a mic, a line-in or a tab's sound, analysed here and sent to twinky, whose Music
+ * feature links it to the tree. Its meters show what twinky is told. */
 export default function Listen({ send }: { send: (message: string) => void }) {
-  // the input listened to, '' the default one, null not listening
+  // the input listened to, '' the default one, TAB a tab's sound, null not listening
   const [input, setInput] = useState<string | null>(null)
   const [inputs, setInputs] = useState<MediaDeviceInfo[]>([])
   const [features, setFeatures] = useState<MusicFeatures | null>(null)
@@ -24,26 +28,46 @@ export default function Listen({ send }: { send: (message: string) => void }) {
     // the inputs' names only come once the browser may listen
     const listInputs = async () =>
       setInputs((await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput'))
-    const start = async () => {
-      // the browser's voice processing wrecks music, so all of it is off
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: input ? { exact: input } : undefined,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      })
-      if (stopped) return stream.getTracks().forEach((track) => track.stop())
-      await listInputs()
+    // a tab's share ending stops the listening, and the panel says so
+    const shareEnded = () => {
       if (stopped) return
-      navigator.mediaDevices.addEventListener('devicechange', listInputs)
+      stopped = true
+      void context.suspend()
+      listening.current = null
+      setFeatures(null)
+      setError(SHARE_ENDED)
+    }
+    const start = async () => {
+      if (input === TAB) {
+        // Chrome only offers a tab's audio with its video asked for, so the video is stopped at once
+        stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
+        stream.getVideoTracks().forEach((track) => track.stop())
+        if (stopped) return stream.getTracks().forEach((track) => track.stop())
+        const audio = stream.getAudioTracks()
+        if (!audio.length) return setError(NO_TAB_AUDIO)
+        audio.forEach((track) => track.addEventListener('ended', shareEnded))
+      } else {
+        // the browser's voice processing wrecks music, so all of it is off
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            deviceId: input ? { exact: input } : undefined,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        })
+        if (stopped) return stream.getTracks().forEach((track) => track.stop())
+        await listInputs()
+        if (stopped) return
+        navigator.mediaDevices.addEventListener('devicechange', listInputs)
+      }
       await context.audioWorklet.addModule(captureUrl)
       if (stopped) return
       const node = new AudioWorkletNode(context, 'capture')
       const analyser = new MusicAnalyser(context.sampleRate)
       let next = 0
       node.port.onmessage = (event: MessageEvent<Float32Array>) => {
+        if (stopped) return
         const f = analyser.analyse(event.data)
         const at = Date.now() / 1000
         listening.current = { analyser, features: f, at }
@@ -54,6 +78,7 @@ export default function Listen({ send }: { send: (message: string) => void }) {
         send(JSON.stringify({ music: { time: at, bpm, beat, bar, confidence, low, mid, high, tone, drive } }))
         setFeatures(f)
       }
+      // to the node alone, never the speakers: a tab already plays its own sound
       context.createMediaStreamSource(stream).connect(node)
       // the node writes silence, but only a node the speakers pull from runs
       node.connect(context.destination)
@@ -79,7 +104,7 @@ export default function Listen({ send }: { send: (message: string) => void }) {
 
   if (input === null) {
     return (
-      <section className="listen">
+      <section className="listen idle">
         <button
           onClick={() => {
             setError(null)
@@ -87,6 +112,14 @@ export default function Listen({ send }: { send: (message: string) => void }) {
           }}
         >
           Listen
+        </button>
+        <button
+          onClick={() => {
+            setError(null)
+            setInput(TAB)
+          }}
+        >
+          Listen to a tab
         </button>
       </section>
     )
@@ -110,6 +143,7 @@ export default function Listen({ send }: { send: (message: string) => void }) {
               {d.label || 'Input'}
             </option>
           ))}
+          <option value={TAB}>Listen to a tab</option>
         </select>
         <button onClick={() => setInput(null)}>Stop</button>
       </div>

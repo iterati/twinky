@@ -60,11 +60,15 @@ after the page opened, in headless Chromium on a local server, and then 16 frame
 ## Music
 
 The page's Listen panel hears the Mac's mic or a line-in (pick it by device; the browser's echo
-cancellation, noise suppression and auto gain are off, as they wreck music) and shows the three
-bands, the bpm with a Tap button to tap the tempo in, and a beat light. `web/src/music.ts` does the
-analysis, about 60 times a second: onsets, the tempo (70 to 180 bpm), the beat and its bar, the low
-(40-150 Hz), mid (150 Hz-2 kHz) and high (2-12 kHz) bands, the tone (dark to light) and the drive
-(groove to drive). About 30 times a second the page sends twinky a text message on `/ws`:
+cancellation, noise suppression and auto gain are off, as they wreck music), or what a browser tab
+plays, such as a music video: "Listen to a tab", beside Listen and in the Input picker, asks the
+browser to share a screen; pick the tab and tick Share tab audio. Chrome only offers a tab's audio
+with its video, which the page stops at once, keeping the audio, and never plays it back out, as the
+tab already does. A share with no audio says so, and when the tab closes or its sharing stops the
+panel says so and stops listening. The panel shows the three bands, the bpm with a Tap button to
+tap the tempo in, and a beat light. `web/src/music.ts` does the analysis, about 60 times a second:
+onsets, the tempo (70 to 180 bpm), the beat and its bar, the low (40-150 Hz), mid (150 Hz-2 kHz)
+and high (2-12 kHz) bands, the tone (dark to light) and the drive (groove to drive). About 30 times a second the page sends twinky a text message on `/ws`:
 
     {"music": {"time": 1794443000.123, "bpm": 128.0, "beat": 351.27, "bar": 87, "confidence": 0.82,
                "low": 0.71, "mid": 0.4, "high": 0.22, "tone": 0.61, "drive": 0.45}}
@@ -202,4 +206,5 @@ lights recentred on the trunk, strays pulled in.
     pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts web/src/music.test.ts web/src/remote/remote.test.ts
     pnpm exec vitest run web/src/engine.test.ts   # the page's engine against twinky --sim, in Node
     pnpm exec vitest run web/src/App.test.ts      # the built page with no twinky, in headless Chromium
+    pnpm exec vitest run web/src/Listen.test.ts   # the Listen panel's tab, shared by a stub, in headless Chromium
     pnpm typecheck

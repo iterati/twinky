@@ -85,7 +85,8 @@ header {
   width: 260px;
 }
 
-.listen:has(> button:only-child) {
+.listen.idle {
+  flex-direction: row;
   right: auto;
   width: auto;
   padding: 0;
