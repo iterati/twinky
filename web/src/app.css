@@ -70,3 +70,106 @@ header {
   background: #ffd9a0;
   border-color: #ffd9a0;
 }
+
+.listen {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid #333;
+  border-radius: 8px;
+  width: 260px;
+}
+
+.listen:has(> button:only-child) {
+  right: auto;
+  width: auto;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.listen button,
+.listen select {
+  font: inherit;
+  color: #bbb;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.listen select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+}
+
+.listen .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.listen .beat {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffd9a0;
+  box-shadow: 0 0 12px #ffb050;
+}
+
+.listen .bpm {
+  flex: 1;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.listen .bpm small {
+  font-size: 13px;
+  color: #999;
+}
+
+.listen .meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #999;
+}
+
+.listen .meter span {
+  width: 34px;
+}
+
+.listen .meter > div {
+  flex: 1;
+  height: 8px;
+  background: #222;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.listen .meter > div > div {
+  height: 100%;
+  background: #ffd9a0;
+}
+
+.listen .error {
+  color: #f88;
+  font-size: 13px;
+}
+
+@media (max-width: 500px) {
+  .listen {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+  }
+}
