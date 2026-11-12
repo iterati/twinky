@@ -56,6 +56,56 @@ Latency (the lights later, +, or earlier, -, by up to 150 ms, to line them up wi
 second after the last message the links let go, the hue and the spin gliding home. `s` on Music
 saves its picks to `saves/music.json`.
 
+## The remote
+
+A page for the phone, at `/remote` on the same port: the patterns as a row of chips along the top, the
+pattern's features as cards, Music last, the open card's controls as minus and plus steppers (tap a
+value for its whole option list) and its On switch on the header, then the spin ring; along the
+bottom, Random (the TUI's `R`), Shuffle (`r`: the open card's feature, or with every card closed the
+whole pattern), Pause (space) and Save (`s`: the pattern, or Music with its card open). It keeps the
+screen on, ticks on each minus and plus, and drags the tree round live with the spin ring, the tree
+staying where it's let go (its bottom is the side nearest you). Every tap is one of the TUI's own
+commands on the same queue, so the phone and the TUI can drive at once and stay in step.
+
+On `/ws?remote` twinky sends the state as JSON as the remote connects and whenever anything changes,
+from the phone, the TUI or an automatic change, and the TUI's time text 4 times a second:
+
+    {"state": {"patterns": ["Basic Bitch", ...], "pattern": "Galaxus", "mark": "!", "to": null,
+               "features": [{"name": "Spin", "on": true,
+                             "controls": [{"name": "Enabled", "options": ["On", "Off"], "pick": 0}, ...]},
+                            ..., {"name": "Music", ...}],
+               "paused": false, "ring": 0.0}}
+    {"time": "-42.13"}
+
+`mark` is the TUI's `?` (not saved), `!` (saved) or `*` (changed since), `to` the pattern a change is
+running to, `ring` the spin ring's turn. The remote sends
+`{"command": "switch", "to": 3}`, `"random"`, `"pause"`, `"save"`, `"save music"`,
+`{"command": "spin", "angle": 0.25}`, `"randomize"` (the pattern), and for a feature, by its place
+in `features` and a control's in its visible `controls`, `"randomize"`, `"change"` (with `step`) and
+`"set"` (with `option`), each naming the pattern it was meant for, as one it no longer shows is
+dropped.
+
+### On the Android phone
+
+Twinky listens beyond this Mac only with `--remote`, and then the TUI's footer shows the remote's
+address:
+
+    .venv/bin/python twinky.py --remote
+
+Chrome installs a page as an app, and keeps the screen on, only from a secure origin (HTTPS or
+localhost), and `http://192.168.x.x` is not one, so tell Chrome on the phone to treat twinky's
+address as secure:
+
+1. Open `chrome://flags`, find "Insecure origins treated as secure"
+   (`#unsafely-treat-insecure-origin-as-secure`), enter `http://<the Mac's address>:8016`, enable it
+   and relaunch Chrome.
+2. Open `http://<the Mac's address>:8016/remote` and install it from Chrome's menu (Add to home
+   screen, then Install).
+
+The flag names the address, so keep the Mac's the same: reserve it for the Mac on the router. The
+first time twinky runs with `--remote`, the Mac's firewall asks once to let Python take incoming
+connections: allow it.
+
 ## Without the tree
 
 `sim.SimLights` is a tree with no network, on the generic cone in `layouts/cone.json`
@@ -69,6 +119,7 @@ lights recentred on the trunk, strays pulled in.
     .venv/bin/pytest tests/test_blend.py
     .venv/bin/pytest tests/test_server.py
     .venv/bin/pytest tests/test_music.py
+    .venv/bin/pytest tests/test_remote.py
     .venv/bin/ruff check <files>
-    pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts web/src/music.test.ts
+    pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts web/src/music.test.ts web/src/remote/remote.test.ts
     pnpm typecheck
