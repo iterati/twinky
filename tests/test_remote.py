@@ -11,6 +11,7 @@ from queue import Queue
 import pytest
 from websockets.sync.client import connect
 
+import commands
 import twinky
 from control import BasicBitch, CircusTent
 from server import Server, remote_state
@@ -25,7 +26,7 @@ def free_port() -> int:
 
 @pytest.fixture
 def running(tmp_path, monkeypatch):
-    monkeypatch.setattr(twinky, "SAVES", str(tmp_path / "saves"))
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path / "saves"))
     dist = tmp_path / "dist"
     (dist / "remote").mkdir(parents=True)
     (dist / "remote" / "index.html").write_text("<!doctype html><title>Twinky</title>")
@@ -34,7 +35,7 @@ def running(tmp_path, monkeypatch):
     b = blender([BasicBitch(), CircusTent()])
     b.pattern.dirty = False
     queue = Queue()
-    server = Server(b, free_port(), str(dist), on_command=lambda message: queue.put(twinky.remote_command(message)))
+    server = Server(b, free_port(), str(dist), on_command=lambda message: queue.put(commands.remote_command(message)))
     b.on_frame = server.send
     server.start()
     step(b)
@@ -123,10 +124,10 @@ def check_pause(b, state):
     assert state["paused"] is True
 
 def check_save(b, state):
-    assert state["mark"] == "!" and os.path.exists(twinky.save_path(b.pattern))
+    assert state["mark"] == "!" and os.path.exists(commands.save_path(b.pattern))
 
 def check_save_music(b, state):
-    assert os.path.exists(twinky.music_path())
+    assert os.path.exists(commands.music_path())
 
 def check_spin(b, state):
     assert state["ring"] == 0.25 and b.ring_angle == 0.25
@@ -147,12 +148,12 @@ def check_set(b, state):
 
 @pytest.mark.parametrize("message, closure, check", [
     ({"command": "switch", "to": 1}, "switch_pattern.<locals>.func", check_switch),
-    ({"command": "random"}, twinky.random_pattern, check_random),
-    ({"command": "pause"}, twinky.pauseplay, check_pause),
-    ({"command": "save"}, twinky.toggle_configured, check_save),
-    ({"command": "save music"}, twinky.save_music, check_save_music),
+    ({"command": "random"}, commands.random_pattern, check_random),
+    ({"command": "pause"}, commands.pauseplay, check_pause),
+    ({"command": "save"}, commands.toggle_configured, check_save),
+    ({"command": "save music"}, commands.save_music, check_save_music),
     ({"command": "spin", "angle": 0.25}, "spin_ring.<locals>.func", check_spin),
-    ({"command": "randomize"}, twinky.randomize_pattern, check_randomize_pattern),
+    ({"command": "randomize"}, commands.randomize_pattern, check_randomize_pattern),
     ({"command": "randomize", "pattern": "Basic Bitch", "feature": 1},
      "randomize_feature.<locals>.func", check_randomize_feature),
     ({"command": "change", "pattern": "Basic Bitch", "feature": 5, "control": 0, "name": "Transition", "step": 1},
@@ -213,11 +214,11 @@ def test_a_command_queued_by_the_tui_sends_the_same_state(running):
         paused = next_state(phone)
         assert next_state(other) == paused
         # the TUI's space, twice
-        queue.put(twinky.pauseplay)
+        queue.put(commands.pauseplay)
         run(b, queue)
         assert next_state(phone)["paused"] is False
         next_state(other)
-        queue.put(twinky.pauseplay)
+        queue.put(commands.pauseplay)
         run(b, queue)
         assert next_state(phone) == paused == remote_state(b)
         assert next_state(other) == paused
@@ -252,17 +253,17 @@ def test_the_spin_ring_turns_every_light_and_stays():
     b.pattern.spin = 0
     t = 1.0
     plain = b.render(t)
-    twinky.spin_ring(0.3)(b)
+    commands.spin_ring(0.3)(b)
     ringed = b.render(t)
     # as far round as the pattern's own spin would turn it
-    twinky.spin_ring(0.0)(b)
+    commands.spin_ring(0.0)(b)
     b.pattern.spin = 0.3
     spun = b.render(t)
     flat = lambda frame: [c for light in frame for c in light]
     assert flat(ringed) == pytest.approx(flat(spun))
     assert flat(ringed) != pytest.approx(flat(plain))
     b.pattern.spin = 0
-    twinky.spin_ring(0.3)(b)
+    commands.spin_ring(0.3)(b)
     for _ in frames(b, t + FRAME, t + 5):
         pass
     assert b.ring_angle == 0.3

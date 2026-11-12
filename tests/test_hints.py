@@ -6,8 +6,8 @@ import random
 
 import pytest
 
+import commands
 import look
-import twinky
 from core import Pixel
 from hints import HINTS, PaletteColor, Sectors, Wash
 from palette import oklch_to_linear
@@ -165,19 +165,19 @@ def test_the_spin_lock_turns_a_hint():
 @pytest.mark.parametrize("cls", HINTS, ids=name)
 def test_a_hints_save_round_trips_by_name(cls, tmp_path, monkeypatch):
     random.seed(11)
-    monkeypatch.setattr(twinky, "SAVES", str(tmp_path))
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     pattern = cls()
     assert len({c.name for f in pattern.features for c in f.controls}) == sum(len(f.controls) for f in pattern.features)
     pattern.randomize()
-    twinky.toggle_configured(type("Animation", (), {"pattern": pattern})())
-    with open(tmp_path / os.path.basename(twinky.save_path(pattern))) as file:
+    commands.toggle_configured(type("Animation", (), {"pattern": pattern})())
+    with open(tmp_path / os.path.basename(commands.save_path(pattern))) as file:
         assert json.load(file) == pattern._to_dict()
-    loaded = twinky.load_pattern(cls())
+    loaded = commands.load_pattern(cls())
     assert loaded.configured and loaded._to_dict() == pattern._to_dict()
 
 def test_the_hints_join_the_rotation(tmp_path, monkeypatch):
-    monkeypatch.setattr(twinky, "SAVES", str(tmp_path))
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     monkeypatch.setattr(look, "LOOKS", str(tmp_path / "looks"))
-    names = [p.name for p in twinky.start_patterns()]
+    names = [p.name for p in commands.start_patterns()]
     assert names[10:16] == ["Wash", "Sectors", "Bands", "Spiral", "Hidden Field", "Palette Drift"]
     assert len(set(names)) == 26

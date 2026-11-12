@@ -6,6 +6,7 @@ import random
 
 import pytest
 
+import commands
 import look
 import twinky
 from hints import Wash
@@ -104,7 +105,7 @@ def test_a_look_missing_a_field_raises_an_error_naming_it(path, field):
 
 def test_import_look_writes_the_values_by_name_and_twinky_plays_them(tmp_path, monkeypatch):
     monkeypatch.setattr(look, "LOOKS", str(tmp_path / "looks"))
-    monkeypatch.setattr(twinky, "SAVES", str(tmp_path / "saves"))
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path / "saves"))
     exported = tmp_path / "Disco-Ball.json"
     exported.write_text(json.dumps(LOOK, indent=2))
     assert twinky.parse_args(["--import-look", str(exported)]).import_look == str(exported)
@@ -113,7 +114,7 @@ def test_import_look_writes_the_values_by_name_and_twinky_plays_them(tmp_path, m
     with open(out) as file:
         assert json.load(file) == look.mapped(LOOK)
     (tmp_path / "looks" / ".DS_Store").write_bytes(b"\0\1")
-    names = [p.name for p in twinky.start_patterns()]
+    names = [p.name for p in commands.start_patterns()]
     assert names[-1] == "Disco Ball" and len(names) == 27
 
 def test_the_imported_pattern_renders_finite_and_moves_its_parts():

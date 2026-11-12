@@ -7,7 +7,6 @@ import email.utils
 import json
 import mimetypes
 import os
-import struct
 import threading
 from typing import Callable
 
@@ -16,40 +15,12 @@ from websockets.datastructures import Headers
 from websockets.exceptions import ConnectionClosedError
 from websockets.http11 import Request, Response
 
-from control import Feature, ToggleControl
+from wire import frame_message, layout_message, remote_state
 
 PORT = 8016
 DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "dist")
 REMOTE = "/ws?remote"
 TIME_EVERY = 0.25
-# a feature's toggle by one of these names is its On switch, on the remote's card header
-SWITCHES = ["Enabled", "On"]
-
-def feature_state(feature: Feature) -> dict:
-    controls = feature.visible_controls()
-    switches = [i for i, c in enumerate(controls) if isinstance(c, ToggleControl) and c.name in SWITCHES]
-    return {
-        "name": feature.name,
-        "switch": switches[0] if switches else None,  # its index in controls
-        "controls": [
-            {"name": c.name, "options": [o.name for o in c.options], "pick": c.selected_idx}
-            for c in controls
-        ],
-    }
-
-def remote_state(blender) -> dict:
-    """What the remote shows: the patterns, the current one with its mark and the change running, its
-    features with their visible controls and the Music feature after them, as the TUI lists them, the
-    pause and the spin ring's angle."""
-    return {
-        "patterns": [p.name for p in blender.patterns],
-        "pattern": blender.pattern.name,
-        "mark": blender.mark,
-        "to": blender.change.run.pattern.name if blender.change is not None else None,
-        "features": [feature_state(f) for f in blender.pattern.features + [blender.music]],
-        "paused": blender.pause_change,
-        "ring": blender.ring_angle,
-    }
 
 class Server:
     """Runs on its own event loop in its own thread. A page gets the layout as it connects, then one
@@ -63,15 +34,7 @@ class Server:
                  dist: str=DIST,
                  host: str="localhost",
                  on_command: Callable[[dict], None] | None=None):
-        # every light where Pixel has it, after normalizing: x, y (its height, 0 to 1) and z, its
-        # strand and index on the strand, and its angle round the trunk (0 to 1)
-        places = [(strand, index)
-                  for strand, interface in enumerate(blender.lights.interfaces)
-                  for index in range(len(interface.layout))]
-        self.layout = json.dumps({"layout": [
-            {"x": pixel.x, "y": pixel.y, "z": pixel.z, "strand": strand, "index": index, "angle": pixel.t}
-            for pixel, (strand, index) in zip(blender.pixels, places)
-        ]})
+        self.layout = layout_message(blender)
         self.blender = blender
         self.beat = blender.beat
         self.port = port
@@ -100,7 +63,7 @@ class Server:
 
     def send(self, frame: bytes):
         """Takes a frame from the animation thread, and with it, reads the state there."""
-        message = struct.pack("<I", self.number) + frame
+        message = frame_message(self.number, frame)
         self.number += 1
         self.loop.call_soon_threadsafe(broadcast, self.clients, message)
         state = json.dumps({"state": remote_state(self.blender)})

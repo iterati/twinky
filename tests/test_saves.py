@@ -6,7 +6,7 @@ import random
 
 import pytest
 
-import twinky
+import commands
 from support import PATTERNS
 
 # Basic Bitch as the old pickle held it, option numbers by position
@@ -24,14 +24,14 @@ def test_names_are_unique_so_a_save_can_use_them(cls):
 @pytest.mark.parametrize("cls", PATTERNS, ids=lambda cls: cls.__name__)
 def test_a_save_round_trips_by_name(cls, tmp_path, monkeypatch):
     random.seed(1)
-    monkeypatch.setattr(twinky, "SAVES", str(tmp_path))
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     pattern = cls()
     pattern.randomize()
-    twinky.toggle_configured(type("Animation", (), {"pattern": pattern})())
-    with open(tmp_path / os.path.basename(twinky.save_path(pattern))) as file:
+    commands.toggle_configured(type("Animation", (), {"pattern": pattern})())
+    with open(tmp_path / os.path.basename(commands.save_path(pattern))) as file:
         saved = json.load(file)
     assert saved == pattern._to_dict()
-    loaded = twinky.load_pattern(cls())
+    loaded = commands.load_pattern(cls())
     assert loaded.configured
     assert loaded._to_dict() == saved
 
@@ -42,10 +42,10 @@ def test_an_old_save_loads_by_position():
     assert pattern._to_dict()["Blend"] == {"Transition": "crossfade", "Grain": "smooth"}
 
 def test_the_saves_in_the_repo_load_by_name(caplog):
-    files = sorted(os.listdir(twinky.SAVES))
+    files = sorted(os.listdir(commands.SAVES))
     assert files == ["basic_bitch.json", "circus_tent.json"]
     with caplog.at_level(logging.WARNING):
-        patterns = [twinky.load_pattern(cls()) for cls in PATTERNS]
+        patterns = [commands.load_pattern(cls()) for cls in PATTERNS]
     assert caplog.text == ""
     basic = next(p for p in patterns if p.name == "Basic Bitch")
     assert [[c.selected_idx for c in f.controls] for f in basic.features[:5]] == OLD_BASIC_BITCH

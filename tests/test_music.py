@@ -5,7 +5,7 @@ import random
 
 import pytest
 
-import twinky
+import commands
 from colors import BaseColor
 from core import wrap
 from control import BasicBitch, Confetti, SlidingDoor, WiredPattern
@@ -317,15 +317,15 @@ def test_the_menus_commands_reach_music_after_the_patterns_features():
     b.pattern.dirty = False
     fidx = len(b.pattern.features)
     before = b.pattern._to_dict()
-    twinky.set_option(fidx, 1, 2)(b)  # Streamers: every 2 beats
-    twinky.change_option(fidx, 2, 1)(b)  # Flash: on to chasing sectors
+    commands.set_option(fidx, 1, 2)(b)  # Streamers: every 2 beats
+    commands.change_option(fidx, 2, 1)(b)  # Flash: on to chasing sectors
     assert b.music._to_dict()["Streamers"] == "every 2 beats"
     assert b.music._to_dict()["Flash"] == "chasing sectors"
-    twinky.set_option(fidx, 0, 1)(b)  # the - key: Off
+    commands.set_option(fidx, 0, 1)(b)  # the - key: Off
     assert b.music.visible_controls() == [b.music._on]
-    twinky.set_option(fidx, 0, 0)(b)  # the + key: On
+    commands.set_option(fidx, 0, 0)(b)  # the + key: On
     picks = b.music._to_dict()
-    twinky.randomize_feature(fidx)(b)
+    commands.randomize_feature(fidx)(b)
     assert b.music._to_dict()["On"] == "On" and b.music._to_dict()["Latency"] == picks["Latency"]
     assert b.pattern._to_dict() == before and not b.pattern.dirty
     # an automatic change randomizes the next pattern, and leaves the music alone
@@ -335,16 +335,16 @@ def test_the_menus_commands_reach_music_after_the_patterns_features():
     assert b.transitioning and b.music._to_dict() == picks
 
 def test_the_music_save_round_trips_by_name(tmp_path, monkeypatch):
-    monkeypatch.setattr(twinky, "SAVES", str(tmp_path))
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     b = blender([BasicBitch(), SlidingDoor()])
-    twinky.load_music(b.music)  # none yet: the picks stay
+    commands.load_music(b.music)  # none yet: the picks stay
     music(b, streamers="every bar", flash="off", feel="Off", latency="-75 ms")
-    twinky.save_music(b)
+    commands.save_music(b)
     with open(tmp_path / "music.json") as file:
         saved = json.load(file)
     assert saved == {"Music": b.music._to_dict()}
     assert saved["Music"]["Latency"] == "-75 ms"
     other = blender([BasicBitch(), SlidingDoor()])
-    twinky.load_music(other.music)
+    commands.load_music(other.music)
     assert other.music._to_dict() == b.music._to_dict()
     assert other.music.value["latency"] == -0.075

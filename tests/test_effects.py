@@ -166,10 +166,10 @@ def test_an_effect_starts_again_with_its_run():
 
 def test_the_effects_join_the_rotation(tmp_path, monkeypatch):
     import look
-    import twinky
-    monkeypatch.setattr(twinky, "SAVES", str(tmp_path))
+    import commands
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     monkeypatch.setattr(look, "LOOKS", str(tmp_path / "looks"))
-    names = [p.name for p in twinky.start_patterns()]
+    names = [p.name for p in commands.start_patterns()]
     assert names[16:26] == [cls.name for cls in EFFECTS]
 
 def beat_frames(cls, first: float, seconds: float=4.0):
