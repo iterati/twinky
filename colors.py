@@ -68,6 +68,9 @@ EDGE = 0.05
 # The suppression strings could move to an enum for better type safety
 BaseColorValue: TypeAlias = list[tuple[float, Color, list[str]]]
 
+# A base color is called for each light with its angle round the trunk (pixel_t, as spin and the
+# topologies move it), its height, and its core.Pixel, which only an effect reads (effects.py)
+
 class BaseColor:
     def __init__(self,
                  w: Param=0,
@@ -85,7 +88,7 @@ class BaseColor:
         self.blend = blend
         self.spread = spread
 
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
         color = Color(
             w=getv(self.color_w, t),
             h=(
@@ -117,7 +120,7 @@ class WindowColor(BaseColor):
         self.ratio = ratio
         self.funcs = funcs
         
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
         ratio = getv(self.ratio, t)
         iteration = 0
         if isinstance(self.ratio, Curve):
@@ -140,7 +143,7 @@ class WindowColor(BaseColor):
                 color = Color(0, blend + ((side + iteration) * spread), 1, 0)
                 layers.append((share, color, self.suppress))
             else:
-                layers += [(share * w, c, s) for w, c, s in func(t, blend, spread, pixel_t, pixel_y)]
+                layers += [(share * w, c, s) for w, c, s in func(t, blend, spread, pixel_t, pixel_y, pixel)]
         return layers
 
     def __repr__(self):
@@ -159,7 +162,7 @@ class SplitColor(BaseColor):
             [BaseColor(l=0), BaseColor()]
         )
 
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
         count = int(getv(self.count, t))
         x = pixel_t % 1
         side = int(x * count)
@@ -170,7 +173,7 @@ class SplitColor(BaseColor):
             share = coverage(x, s / count, (s + 1) / count, EDGE)
             if share > 0:
                 func = funcs[s]
-                layers += [(share * w, c, sup) for w, c, sup in func(t, blend, spread, pixel_t, pixel_y)]
+                layers += [(share * w, c, sup) for w, c, sup in func(t, blend, spread, pixel_t, pixel_y, pixel)]
         return layers
 
     def __repr__(self):
@@ -197,7 +200,7 @@ class FallingColor(BaseColor):
         )
         self._hue_func = 0 if hue_func is None else hue_func
 
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
         # the colors fall num_colors bands a period, with no wrap, so the pattern's clock can run on
         pixel_y += (t + self._offset) * self._num_colors / self._period
         l = getv(self._fade_func, pixel_y)

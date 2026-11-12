@@ -342,6 +342,9 @@ class Blender:
 
         # the frame's beats while the music's tempo is sure, else one a second
         pattern.base_color.frame(self.dt * (self.sound.bpm / 60 if self.beating else 1), self.dt)
+        # an effect works out every light's layers once a frame, before the lights ask for them
+        beat = self.on_beat[0] if self.on_beat is not None else None
+        pattern.step(t, self.pixels, self.sound, self.beating, beat, blend_h)
 
         beat_flash = self._flash_at(now)
         chase = self.links["flash"] == "chase" and self._flash is not None
@@ -367,7 +370,7 @@ class Blender:
                     covering.append((streamer, c))
 
             w = r = g = b = 0.0
-            for weight, color, suppress in pattern.base_color(t, blend_h, spread_h, pixel_t, pixel.y):
+            for weight, color, suppress in pattern.base_color(t, blend_h, spread_h, pixel_t, pixel.y, pixel):
                 if effects["flash"] and "flash" not in suppress and color.l != -1.0:
                     color.l -= grain("flash", pixel.idx)
                 if flash and "flash" not in suppress and color.l != -1.0:

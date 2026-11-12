@@ -73,7 +73,7 @@ class Hint(BaseColor):
     def frame(self, beats: float, dt: float):
         self.feature.frame(beats, dt)
 
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float):
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None):
         cover, lch = self.feature.light(pixel_t % 1, pixel_y)
         return [(cover, PaletteColor(lch), []), (1 - cover, Color(), [])]
 

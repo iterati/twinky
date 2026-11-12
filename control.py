@@ -22,6 +22,7 @@ from colors import (
     FallingColor,
     periodic_choices,
 )
+from music import Sound
 from param import (
     Curve,
     Param,
@@ -635,6 +636,12 @@ class Pattern:
         self.streamers = streamers if streamers is not None else []
         self.transition = transition
         self.grain = grain
+
+    def step(self, t: float, pixels: list, sound: Sound | None, beating: bool, beat: int | None, hue: float):
+        """Called once a frame, before the lights, with the run's clock, every light (core.Pixel),
+        what the page hears (None with Music off), whether its tempo is sure, the beat this frame
+        takes (None between beats) and the base hue: an effect works out its lights here
+        (effects.py). The other patterns need none of it."""
 
 class WiredPattern(Pattern):
     def __init__(self, name, **kwargs):
