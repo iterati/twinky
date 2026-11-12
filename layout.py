@@ -50,10 +50,19 @@ def _line(points: list[tuple[float, float]]):
 
 def normalize(lights: list[dict], slices: int=10, stray: float=1.5) -> list[dict]:
     """Puts a layout the Twinkly app estimated where Pixel expects it, so angles round the trunk are
-    true. A good layout comes through all but unchanged."""
-    # the height rescaled so its 1st to 99th percentile runs from 0 to 1
+    true. A good layout comes through all but unchanged.
+
+    The height is rescaled so the tree's lowest light is at 0 and its highest at 1. The tree runs
+    out from its 1st and 99th percentile lights to the last light before a gap in height wider than
+    a tenth of the span between them; a light past that gap is a stray, clamped to its end."""
     ys = sorted(light["y"] for light in lights)
-    lo, hi = ys[int(len(ys) * 0.01)], ys[int(len(ys) * 0.99)]
+    bottom, top = int(len(ys) * 0.01), int(len(ys) * 0.99)
+    gap = 0.1 * (ys[top] - ys[bottom])
+    while bottom > 0 and ys[bottom] - ys[bottom - 1] <= gap:
+        bottom -= 1
+    while top < len(ys) - 1 and ys[top + 1] - ys[top] <= gap:
+        top += 1
+    lo, hi = ys[bottom], ys[top]
     heights = [min(1.0, max(0.0, (light["y"] - lo) / (hi - lo))) for light in lights]
 
     # the trunk: a straight line through the median x and z of each height slice, which catches a lean

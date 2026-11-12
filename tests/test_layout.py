@@ -36,6 +36,30 @@ def test_normalizing_the_cone_changes_nothing():
     assert median(errors) < 0.002
     assert max(errors) < 0.02
 
+def test_normalizing_keeps_the_cone_s_top_and_bottom_apart():
+    # the lights past the 1st and 99th percentiles keep their order and spacing, never stacking
+    # onto one height at the tip or the foot
+    lights = [light for strand in layout.load(os.path.join(layout.LAYOUTS, "cone.json"))
+              for light in strand]
+    out = layout.normalize(lights)
+    order = sorted(range(len(lights)), key=lambda i: lights[i]["y"])
+    ends = int(len(lights) * 0.01) + 1
+    for end in [order[:ends], order[-ends:]]:
+        for a, b in zip(end, end[1:]):
+            assert out[b]["y"] - out[a]["y"] >= 0.5 * (lights[b]["y"] - lights[a]["y"]) > 0
+
+def test_normalizing_puts_strays_far_off_the_tree_at_its_ends():
+    # the Twinkly app's estimate can put a light or two far above or below the tree: they land at
+    # the ends and the tree still runs over nearly all of 0 to 1
+    true = [light for strand in layout.cone() for light in strand]
+    lights = true + [{"x": 0.0, "y": 3.0, "z": 0.0}, {"x": 0.1, "y": 2.5, "z": 0.0},
+                     {"x": 0.0, "y": -2.0, "z": 0.1}]
+    out = layout.normalize(lights)
+    assert [light["y"] for light in out[len(true):]] == [1.0, 1.0, 0.0]
+    tree = [light["y"] for light in out[:len(true)]]
+    assert min(tree) < 0.002 and max(tree) > 0.998
+    assert max(abs(a["y"] - b["y"]) for a, b in zip(true, out)) < 0.002
+
 def test_normalizing_puts_a_shifted_trunk_back(caplog):
     # as the app might estimate the cone: the trunk off by (0.10, -0.07), a lean of 0.08, the height
     # squashed to 0.08-0.88 and 1.5% of the lights flung out
