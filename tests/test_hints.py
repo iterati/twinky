@@ -179,5 +179,5 @@ def test_the_hints_join_the_rotation(tmp_path, monkeypatch):
     monkeypatch.setattr(twinky, "SAVES", str(tmp_path))
     monkeypatch.setattr(look, "LOOKS", str(tmp_path / "looks"))
     names = [p.name for p in twinky.start_patterns()]
-    assert names[10:] == ["Wash", "Sectors", "Bands", "Spiral", "Hidden Field", "Palette Drift"]
-    assert len(set(names)) == 16
+    assert names[10:16] == ["Wash", "Sectors", "Bands", "Spiral", "Hidden Field", "Palette Drift"]
+    assert len(set(names)) == 26

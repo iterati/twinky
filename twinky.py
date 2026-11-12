@@ -10,6 +10,7 @@ from threading import Thread
 import time
 from core import Blender, FRAME, wait_for
 from device import Lights
+from effects import EFFECTS, EffectPattern
 from hints import HINTS
 import layout
 import look
@@ -154,8 +155,8 @@ def load_pattern(pattern: WiredPattern):
     return pattern
 
 def start_patterns() -> list[WiredPattern]:
-    """The rotation: the ten patterns, the six hints and a pattern for each look in looks/, each with
-    its save."""
+    """The rotation: the ten patterns, the six hints, the ten effects and a pattern for each look in
+    looks/, each with its save."""
     return [load_pattern(pattern) for pattern in [
         BasicBitch(),
         CircusTent(),
@@ -168,6 +169,7 @@ def start_patterns() -> list[WiredPattern]:
         SlidingDoor(),
         SpiralTop(),
         *(cls() for cls in HINTS),
+        *(EffectPattern(cls()) for cls in EFFECTS),
         *look.load_looks(),
     ]]
 

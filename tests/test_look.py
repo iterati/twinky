@@ -114,7 +114,7 @@ def test_import_look_writes_the_values_by_name_and_twinky_plays_them(tmp_path, m
         assert json.load(file) == look.mapped(LOOK)
     (tmp_path / "looks" / ".DS_Store").write_bytes(b"\0\1")
     names = [p.name for p in twinky.start_patterns()]
-    assert names[-1] == "Disco Ball" and len(names) == 17
+    assert names[-1] == "Disco Ball" and len(names) == 27
 
 def test_the_imported_pattern_renders_finite_and_moves_its_parts():
     random.seed(12)
