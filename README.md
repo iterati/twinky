@@ -30,6 +30,31 @@ and passes `/ws` through to a running twinky.
     .venv/bin/python twinky.py --sim                     # the generic cone, no tree
     .venv/bin/python twinky.py --sim layouts/tree.json   # the real tree's layout, offline
 
+## Music
+
+The page's Listen panel hears the Mac's mic or a line-in (pick it by device; the browser's echo
+cancellation, noise suppression and auto gain are off, as they wreck music) and shows the three
+bands, the bpm with a Tap button to tap the tempo in, and a beat light. `web/src/music.ts` does the
+analysis, about 60 times a second: onsets, the tempo (70 to 180 bpm), the beat and its bar, the low
+(40-150 Hz), mid (150 Hz-2 kHz) and high (2-12 kHz) bands, the tone (dark to light) and the drive
+(groove to drive). About 30 times a second the page sends twinky a text message on `/ws`:
+
+    {"music": {"time": 1794443000.123, "bpm": 128.0, "beat": 351.27, "bar": 87, "confidence": 0.82,
+               "low": 0.71, "mid": 0.4, "high": 0.22, "tone": 0.61, "drive": 0.45}}
+
+`time` is the Mac's clock, which the page and twinky share, and `beat` the beats counted at that
+time, its fraction the phase. twinky's beat clock (`music.py`) runs on from each message at its bpm.
+
+In the TUI, Music is listed after the current pattern's features, for every pattern alike: On;
+Streamers (the pattern's own streamers launched on the beat, every 2 beats or every bar, each launch
+a quarter turn round the trunk on from the last); Flash (on each beat, the whole tree or a quarter
+of it chasing round the trunk); Sparkle rate (the highs quicken the sparkles and add more, the bass
+ones low on the tree and the treble ones at the top); Palette (the base hue glides toward orange for
+light music and blue for dark); Feel (with drive, snappy sparkles and glides and changes from bar
+line to bar line; with groove, long glides); Spin lock (the tree turns once every 4 or 8 bars); and
+Latency (the lights later, +, or earlier, -, by up to 150 ms, to line them up with the sound). A
+second after the last message the links let go. `s` on Music saves its picks to `saves/music.json`.
+
 ## Without the tree
 
 `sim.SimLights` is a tree with no network, on the generic cone in `layouts/cone.json`
@@ -42,6 +67,7 @@ lights recentred on the trunk, strays pulled in.
     .venv/bin/pytest tests/test_patterns.py -k Galaxus
     .venv/bin/pytest tests/test_blend.py
     .venv/bin/pytest tests/test_server.py
+    .venv/bin/pytest tests/test_music.py
     .venv/bin/ruff check <files>
-    pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts
+    pnpm exec vitest run web/src/frame.test.ts web/src/unrolled.test.ts web/src/music.test.ts
     pnpm typecheck
