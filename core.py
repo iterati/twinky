@@ -5,15 +5,38 @@ import random
 import time
 from typing import Callable
 
-from control import WiredPattern
+from control import MusicFeature, WiredPattern
 from layout import normalize
+from music import BeatClock, Sound
 from param import getv, Curve
-from streamer import Streamer, getv_streamers
+from streamer import Streamer, StreamerValue, getv_streamers
+from utils import coverage
 
 # A light's color as it goes to the tree: W, R, G and B, each 0 to 255. Frames are mixed in these.
 WRGB = tuple[float, float, float, float]
 
 FRAME = 1/16
+
+# The music links. A beat counts once the page is this sure of it
+BEAT_CONFIDENCE = 0.3
+# The base hue's anchors on xled_plus's 8col wheel, gliding from blue for dark music through
+# violet and pink to orange for bright
+COOL_HUE = 1.0
+WARM_HUE = 0.5
+PALETTE_GLIDE = 8.0
+# A flash's decay, in seconds, from groove to drive, and the sectors that chase round the trunk
+FLASH_DECAY = (0.4, 0.12)
+SECTORS = 4
+SECTOR_EDGE = 0.05
+# With Feel: a control's glide from groove to drive, a change's length in groove, and in drive
+# the bars a change lasts, from one bar line to another
+FEEL_GLIDE = (2.0, 0.25)
+GROOVE_CHANGE = 12.0
+DRIVE_BARS = 2
+
+def wrap(x: float) -> float:
+    """x round a turn, the short way: from -0.5 to 0.5."""
+    return ((x + 0.5) % 1) - 0.5
 
 def wait_for(next_frame: float) -> float:
     """Sleeps until next_frame and gives the frame after it. Once more than a frame late, it
@@ -110,6 +133,20 @@ class Blender:
         # called with each frame's bytes as write sends them, every strand's in turn
         self.on_frame: Callable[[bytes], None] | None = None
 
+        # the music: its feature and beat clock, and what they give the frame on show
+        self.music = MusicFeature()
+        self.beat = BeatClock()
+        self.links = self.music.value
+        self.sound: Sound | None = None  # None with Music off or no page listening
+        self.beating = False  # a tempo the page is sure of
+        self.on_beat: tuple[int, float] | None = None  # the beat this frame is nearest, its number and time
+        self._last_beat: int | None = None
+        self._last_position: float | None = None
+        self._flash: tuple[int, float] | None = None  # the last flash's beat and time
+        self.sparkle_roll = self.sparkle_delay
+        self.spin_angle = 0.0
+        self.hue_shift = 0.0
+
     @property
     def pattern(self) -> WiredPattern:
         return self.run.pattern
@@ -133,38 +170,129 @@ class Blender:
         self.change = None
         self.running = True
 
+    def _listen(self, t: float):
+        """Reads the beat clock for the frame at t: the sound, the beat the frame is nearest, and the
+        sparkles' roll, spin and base hue the music sets."""
+        dt = min(max(t - self._t, 0.0), 0.25)
+        links = self.music.value
+        sound = self.beat.at(t, links["latency"]) if links["on"] else None
+        self.links = links
+        self.sound = sound
+        self.beating = sound is not None and sound.bpm > 0 and sound.confidence >= BEAT_CONFIDENCE
+        self.on_beat = None
+        if self.beating:
+            # the frame nearest each beat takes it
+            per_frame = FRAME * sound.bpm / 60
+            n = math.floor(sound.beat + (per_frame / 2))
+            if self._last_beat is not None and n > self._last_beat:
+                self.on_beat = (n, t + ((n - sound.beat) * 60 / sound.bpm))
+                if links["flash"]:
+                    self._flash = self.on_beat
+            if links["spin"] and self._last_position is not None:
+                # one turn every so many bars, at the beat's pace; a jump in the beat moves nothing
+                step = sound.beat - self._last_position
+                if abs(step) < 4 * per_frame:
+                    self.spin_angle = (self.spin_angle + (step / (4 * links["spin"]))) % 1
+            self._last_beat = n
+            self._last_position = sound.beat
+        else:
+            self._last_beat = None
+            self._last_position = None
+
+        self.sparkle_roll = self.sparkle_delay
+        if sound is not None and links["sparkles"]:
+            self.sparkle_roll += (FRAME - self.sparkle_delay) * sound.high
+
+        # while the music pulls it, the base hue leaves its clock and glides toward the tone's anchor;
+        # after, the shift from the clock glides away
+        glide = 1 - math.exp(-3 * dt / PALETTE_GLIDE)
+        if sound is not None and links["palette"]:
+            anchor = COOL_HUE + ((WARM_HUE - COOL_HUE) * sound.tone)
+            hue = getv(self._blend_func, self._t - self._init_t) + self.hue_shift
+            hue += wrap(anchor - hue) * glide
+            self.hue_shift = hue - getv(self._blend_func, t - self._init_t)
+        else:
+            self.hue_shift -= wrap(self.hue_shift) * glide
+
+    @property
+    def feel(self) -> float | None:
+        """The music's drive while Feel is on and the page listens, else None."""
+        if self.sound is None or not self.links["feel"]:
+            return None
+        return self.sound.drive
+
+    @property
+    def lands_on_bars(self) -> bool:
+        feel = self.feel
+        return feel is not None and feel >= 0.5 and self.beating
+
+    def _flash_at(self, t: float) -> float:
+        """The flash's envelope at t: full on its beat's frame, decaying faster the more the drive."""
+        if self._flash is None or self.sound is None or not self.links["flash"]:
+            return 0.0
+        slow, fast = FLASH_DECAY
+        decay = slow + ((fast - slow) * self.sound.drive)
+        since = max(0.0, t - self._flash[1])
+        return max(0.0, 1 - (since / decay)) ** 2
+
+    def _launch(self, run: Run, streamer_defs: list[StreamerValue], t: float, step: float | None=None):
+        # a step turns each streamer round the trunk, putting one with no angle of its own at the step
+        run.streamers.extend([
+            Streamer(
+                t,
+                t,
+                streamer_def.func,
+                streamer_def.move_dir,
+                streamer_def.spin_dir,
+                streamer_def.angle if step is None else (
+                    step if streamer_def.angle is None else streamer_def.angle + step),
+                streamer_def.spin,
+                streamer_def.length,
+                streamer_def.width,
+                streamer_def.lifetime,
+            )
+            for streamer_def in streamer_defs
+        ])
+
     def _spawn(self, run: Run, t: float):
         pattern = run.pattern
+        sound = self.sound
         if t >= run.next_sparkle:
-            run.next_sparkle += self.sparkle_delay
+            run.next_sparkle += self.sparkle_roll
             if pattern.grain == "raw":
                 run.sparkles.clear()
             else:
-                run.sparkles = {i: lit for i, lit in run.sparkles.items() if t - lit < 2 * self.sparkle_delay}
+                run.sparkles = {i: lit for i, lit in run.sparkles.items() if t - lit < 2 * self.sparkle_roll}
             count = len(self.pixels)
-            for idx in random.choices(range(count), k=int(count * getv(pattern.sparkles, t))):
+            share = getv(pattern.sparkles, t)
+            if sound is not None and self.links["sparkles"]:
+                # the highs make more of them, and each band's sit at its height: bass on the wide base,
+                # treble at the narrow top
+                weights = [
+                    (sound.low * (1 - p.y) ** 2) + (sound.mid * 4 * p.y * (1 - p.y)) + (sound.high * p.y ** 2) + 0.01
+                    for p in self.pixels
+                ]
+                k = int(count * share * (0.25 + (1.5 * sound.high)))
+                picks = random.choices(range(count), weights=weights, k=k)
+            else:
+                picks = random.choices(range(count), k=int(count * share))
+            for idx in picks:
                 run.sparkles.setdefault(idx, t)
 
-        if t >= run.next_streamer:
+        every = self.links["streamers"] if self.beating else 0
+        if every:
+            # the pattern's own streamers, launched on the beat, each launch a quarter turn on
+            run.next_streamer = t
+            run.streamers = [streamer for streamer in run.streamers if streamer.alive(t)]
+            if self.on_beat is not None and self.on_beat[0] % every == 0:
+                n, at = self.on_beat
+                self._launch(run, getv_streamers(pattern.streamers, t, None), at - run.start, ((n // every) % 4) / 4)
+        elif t >= run.next_streamer:
             run.next_streamer += self.streamer_delay
             streamer_defs = getv_streamers(pattern.streamers, t, run.last_streamer_t)
             run.last_streamer_t = t
             run.streamers = [streamer for streamer in run.streamers if streamer.alive(t)]
-            run.streamers.extend([
-                Streamer(
-                    t,
-                    t,
-                    streamer_def.func,
-                    streamer_def.move_dir,
-                    streamer_def.spin_dir,
-                    streamer_def.angle,
-                    streamer_def.spin,
-                    streamer_def.length,
-                    streamer_def.width,
-                    streamer_def.lifetime,
-                )
-                for streamer_def in streamer_defs
-            ])
+            self._launch(run, streamer_defs, t)
 
     def _sparkle(self, run: Run, idx: int, t: float) -> float:
         # raw sparkles are on or off; smooth ones fade in and out over their life
@@ -173,14 +301,20 @@ class Blender:
             return 0.0
         if run.pattern.grain == "raw":
             return 1.0
-        return math.sin(math.pi * min(1.0, (t - lit) / (2 * self.sparkle_delay))) ** 2
+        age = min(1.0, (t - lit) / (2 * self.sparkle_roll))
+        fade = math.sin(math.pi * age) ** 2
+        feel = self.feel
+        if feel is not None:
+            # the drive snaps them on and lets them fall away
+            fade += ((1 - age) ** 2 - fade) * feel
+        return fade
 
     def _render(self, run: Run, now: float) -> list[WRGB]:
         pattern = run.pattern
         t = now - run.start
         self._spawn(run, t)
         clock = now - self._init_t
-        blend_h = getv(self._blend_func, clock)
+        blend_h = getv(self._blend_func, clock) + self.hue_shift
         spread_h = getv(pattern.spread, t)
         spin = getv(pattern.spin, t)
         spiral = getv(pattern.spiral, t)
@@ -194,12 +328,19 @@ class Blender:
             "flux": getv(pattern.flux, t),
         }
 
+        beat_flash = self._flash_at(now)
+        chase = self.links["flash"] == "chase" and self._flash is not None
+        sector = (self._flash[0] % SECTORS) / SECTORS if chase else 0.0
+
         def grain(name: str, idx: int) -> float:
             return effects[name] * (self.noise[name](idx, clock) if smooth else random.random())
 
         frame = []
         for pixel in self.pixels:
-            pixel_t = (pixel.t + spin + (spiral * pixel.y)) % 1
+            pixel_t = (pixel.t + spin + self.spin_angle + (spiral * pixel.y)) % 1
+            flash = beat_flash
+            if flash and chase:
+                flash *= coverage(pixel.t, sector, sector + (1 / SECTORS), SECTOR_EDGE)
             for topology in topologies:
                 pixel_t = topology(pixel_t, pixel.y)
 
@@ -214,6 +355,9 @@ class Blender:
             for weight, color, suppress in pattern.base_color(t, blend_h, spread_h, pixel_t, pixel.y):
                 if effects["flash"] and "flash" not in suppress and color.l != -1.0:
                     color.l -= grain("flash", pixel.idx)
+                if flash and "flash" not in suppress and color.l != -1.0:
+                    # the beat's flash lifts the light toward white
+                    color.l += 0.8 * flash * (1 - color.l)
                 if effects["flicker"] and "flicker" not in suppress:
                     color.w += grain("flicker", pixel.idx)
                 if effects["flitter"] and "flitter" not in suppress and color.s != 0.0:
@@ -305,9 +449,18 @@ class Blender:
             source,
             Run(self.next_pattern, self._t),
             self._t,
-            self.transition_length,
+            self._change_length(),
             self.next_pattern.transition,
         )
+
+    def _change_length(self) -> float:
+        # with Feel, a groove's change is long, and a drive's lasts whole bars from the bar line it starts on
+        feel = self.feel
+        if feel is None:
+            return self.transition_length
+        if self.lands_on_bars:
+            return DRIVE_BARS * 4 * 60 / self.sound.bpm
+        return GROOVE_CHANGE + ((self.transition_length - GROOVE_CHANGE) * min(1.0, feel * 2))
 
     def glide(self):
         # eases the tree from the frame on show into the pattern's new settings
@@ -316,10 +469,12 @@ class Blender:
             self.glide_start = self._t
 
     def render(self, t: float) -> list[WRGB]:
+        self._listen(t)
         self._t = t
         if (self.change is None
                 and not self.pause_change
-                and t >= self.run.start + self.pattern_length):
+                and t >= self.run.start + self.pattern_length
+                and (not self.lands_on_bars or (self.on_beat is not None and self.on_beat[0] % 4 == 0))):
             self.start_transition()
         if self.change is not None and t >= self.change.start + self.change.length:
             self.run = self.change.run
@@ -334,7 +489,12 @@ class Blender:
             frame = self._mix(source, self._render(change.run, t), (t - change.start) / change.length, change.shape)
 
         if self.glide_from is not None:
-            progress = (t - self.glide_start) / self.glide_length
+            glide_length = self.glide_length
+            feel = self.feel
+            if feel is not None:
+                groove, drive = FEEL_GLIDE
+                glide_length = groove + ((drive - groove) * feel)
+            progress = (t - self.glide_start) / glide_length
             if progress >= 1:
                 self.glide_from = None
             else:

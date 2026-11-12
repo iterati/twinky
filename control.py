@@ -155,6 +155,20 @@ class Feature:
         except Exception:
             raise ValueError(f"{cidx}, {len(self.visible_controls())}")
 
+    def _to_dict(self) -> dict:
+        return {c.name: c.selected.name for c in self.controls}
+
+    def _from_dict(self, saved: dict, owner: str):
+        """Sets each control to its saved option, by name; owner names the feature's holder in a warning."""
+        for c in self.controls:
+            name = saved.get(c.name)
+            names = [o.name for o in c.options]
+            if name in names:
+                c.set(names.index(name))
+            elif name is not None:
+                log.warning("%s: no option %r for %s %s, kept %s",
+                            owner, name, self.name, c.name, c.selected.name)
+
 class BumpFeature(Feature):
     def __init__(self,
                  name: str,
@@ -523,6 +537,65 @@ class SpinFeature(Feature):
         else:
             return self.controls
 
+OFF_ON = [Option("off", False), Option("on", True)]
+# 0 first, then later and later, then earliest round to just early
+LATENCIES = [Option(f"{ms:+d} ms" if ms else "0 ms", ms / 1000)
+             for ms in list(range(0, 151, 25)) + list(range(-150, 0, 25))]
+
+class MusicFeature(Feature):
+    """How the music the page hears drives the tree: one feature for the whole show, held by the
+    Blender and in no pattern, so every pattern plays under it unchanged."""
+    def __init__(self):
+        self._on = ToggleControl("On")
+        self._streamers = Control("Streamers", [Option(n, v) for n, v in [
+            ("off", 0),
+            ("every beat", 1),
+            ("every 2 beats", 2),
+            ("every bar", 4),
+        ]])
+        self._flash = Control("Flash", [Option(n, v) for n, v in [
+            ("off", None),
+            ("whole tree", "tree"),
+            ("chasing sectors", "chase"),
+        ]])
+        self._sparkles = Control("Sparkle rate", OFF_ON)
+        self._palette = Control("Palette", OFF_ON)
+        self._feel = Control("Feel", OFF_ON)
+        self._spin = Control("Spin lock", [Option(n, v) for n, v in [
+            ("off", 0),
+            ("4 bars", 4),
+            ("8 bars", 8),
+        ]])
+        self._latency = Control("Latency", LATENCIES)
+        links = [self._streamers, self._flash, self._sparkles, self._palette, self._feel, self._spin]
+        super(MusicFeature, self).__init__("Music", [self._on] + links + [self._latency])
+        # every link starts on its first pick past off: a save keeps whichever he switches off
+        for control in links:
+            control.set(1)
+
+    @property
+    def value(self) -> dict:
+        return {
+            "on": self._on.value,
+            "streamers": self._streamers.value,  # beats a launch, 0 off
+            "flash": self._flash.value,
+            "sparkles": self._sparkles.value,
+            "palette": self._palette.value,
+            "feel": self._feel.value,
+            "spin": self._spin.value,  # bars a turn, 0 off
+            "latency": self._latency.value,  # seconds
+        }
+
+    def visible_controls(self) -> list[Control]:
+        if not self._on.value:
+            return [self._on]
+        return self.controls
+
+    def randomize(self):
+        # On and Latency stay as set
+        for control in self.controls[1:-1]:
+            control.randomize()
+
 class Pattern:
     def __init__(self,
                  name: str,
@@ -564,7 +637,7 @@ class WiredPattern(Pattern):
         self.dirty = False
 
     def _to_dict(self):
-        return {f.name: {c.name: c.selected.name for c in f.controls} for f in self.features}
+        return {f.name: f._to_dict() for f in self.features}
 
     def _from_dict(self, saved):
         if isinstance(saved, list):
@@ -574,14 +647,7 @@ class WiredPattern(Pattern):
                     self.features[fidx].fset(cidx, oidx)
         else:
             for f in self.features:
-                for c in f.controls:
-                    name = saved.get(f.name, {}).get(c.name)
-                    names = [o.name for o in c.options]
-                    if name in names:
-                        c.set(names.index(name))
-                    elif name is not None:
-                        log.warning("%s: no option %r for %s %s, kept %s",
-                                    self.name, name, f.name, c.name, c.selected.name)
+                f._from_dict(saved.get(f.name, {}), self.name)
         self.update(set_dirty=False)
                 
     def update(self, set_dirty=True):

@@ -13,6 +13,7 @@ import layout
 from server import Server
 from sim import SimLights
 from control import (
+    MusicFeature,
     WiredPattern,
     BasicBitch,
     CircusTent,
@@ -59,16 +60,24 @@ def switch_pattern(idx):
         a.start_transition(idx)
     return func
 
+# The menu lists the Music feature after the pattern's own, so a feature index past them is Music's
+
 def change_option(fidx, cidx, step):
     def func(a):
-        a.pattern.change(fidx, cidx, step)
+        if fidx < len(a.pattern.features):
+            a.pattern.change(fidx, cidx, step)
+        else:
+            a.music.change(cidx, step)
         a.glide()
 
     return func
 
 def set_option(fidx, cidx, oidx):
     def func(a):
-        a.pattern.set(fidx, cidx, oidx)
+        if fidx < len(a.pattern.features):
+            a.pattern.set(fidx, cidx, oidx)
+        else:
+            a.music.set(cidx, oidx)
         a.glide()
 
     return func
@@ -84,8 +93,11 @@ def randomize_pattern(a):
 
 def randomize_feature(fidx):
     def func(a):
-        a.pattern.features[fidx].randomize()
-        a.pattern.update()
+        if fidx < len(a.pattern.features):
+            a.pattern.features[fidx].randomize()
+            a.pattern.update()
+        else:
+            a.music.randomize()
         a.glide()
     return func
 
@@ -102,6 +114,25 @@ def toggle_configured(a):
         json.dump(a.pattern._to_dict(), file, indent=2, ensure_ascii=False)
         file.write("\n")
     log.info("Saved %s", a.pattern.name)
+
+def music_path() -> str:
+    return os.path.join(SAVES, "music.json")
+
+def save_music(a):
+    # the same shape as a pattern's save, its one feature by name
+    os.makedirs(SAVES, exist_ok=True)
+    with open(music_path(), 'w', encoding='utf-8') as file:
+        json.dump({a.music.name: a.music._to_dict()}, file, indent=2, ensure_ascii=False)
+        file.write("\n")
+    log.info("Saved Music")
+
+def load_music(music: MusicFeature):
+    if not os.path.exists(music_path()):
+        log.info("No configuration found for Music")
+    else:
+        with open(music_path(), encoding='utf-8') as file:
+            music._from_dict(json.load(file).get(music.name, {}), music.name)
+            log.info("Loaded saved config for Music")
 
 def load_pattern(pattern: WiredPattern):
     fname = save_path(pattern)
@@ -134,13 +165,16 @@ class Menu:
         self.selected_row = [0, 0, 0]
         self.curr_pattern = animation.pattern
 
+    @property
+    def features(self):
+        return self.animation.pattern.features + [self.animation.music]
+
     def print_menu(self, screen):
         screen.clear()
         h, w = screen.getmaxyx()
         colw = (w - 2) // 3
 
-        pattern = self.animation.pattern
-        feature = pattern.features[self.selected_row[1]]
+        feature = self.features[self.selected_row[1]]
 
         line = '\u2554'
         line += '\u2550' * (w - 2)
@@ -208,7 +242,7 @@ class Menu:
             screen.addstr(3 + i, 2, p.name, pair)
 
         # middle shows main settings
-        for i, f in enumerate(pattern.features):
+        for i, f in enumerate(self.features):
             pair = curses.color_pair(0)
             if self.selected_row[1] == i:
                 pair = curses.color_pair(1)
@@ -229,11 +263,11 @@ class Menu:
 
     @property
     def maxrow(self):
-        self.selected_row[1] %= len(self.animation.pattern.features)
+        self.selected_row[1] %= len(self.features)
         return [
             len(self.animation.patterns),
-            len(self.animation.pattern.features),
-            len(self.animation.pattern.features[self.selected_row[1]].visible_controls()),
+            len(self.features),
+            len(self.features[self.selected_row[1]].visible_controls()),
         ]
 
     def handle_input(self, screen) -> bool:
@@ -242,7 +276,10 @@ class Menu:
             self.queue.put(_sentinel)
             return True
         elif key == ord('s'):
-            self.queue.put(toggle_configured)
+            if self.selected_column > 0 and self.features[self.selected_row[1]] is self.animation.music:
+                self.queue.put(save_music)
+            else:
+                self.queue.put(toggle_configured)
         elif key == ord('R'):
             self.queue.put(random_pattern)
         elif key == ord('r'):
@@ -269,7 +306,7 @@ class Menu:
             self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]
         elif key in [ord('-'), ord('_')] :
             if self.selected_column == 1:
-                controls = self.animation.pattern.features[self.selected_row[1]].controls
+                controls = self.features[self.selected_row[1]].controls
                 idxs = [i for i, c in enumerate(controls)]
                 if len(idxs) > 0:
                     self.queue.put(set_option(self.selected_row[1], idxs[0], 1))
@@ -278,7 +315,7 @@ class Menu:
                 self.queue.put(change_option(self.selected_row[1], self.selected_row[2], -1))
         elif key in [ord('='), ord('+')] :
             if self.selected_column == 1:
-                controls = self.animation.pattern.features[self.selected_row[1]].controls
+                controls = self.features[self.selected_row[1]].controls
                 idxs = [i for i, c in enumerate(controls)]
                 if len(idxs) > 0:
                     self.queue.put(set_option(self.selected_row[1], idxs[0], 0))
@@ -342,6 +379,7 @@ if __name__ == "__main__":
     queue = Queue()
     animation = Blender(patterns, lights, 0, True)
     animation.pattern.randomize()
+    load_music(animation.music)
     server = Server(animation)
     animation.on_frame = server.send
     server.start()

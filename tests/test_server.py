@@ -1,9 +1,11 @@
-"""The simulator page's server: the layout, then the frames' exact bytes, the built page, and --sim."""
+"""The simulator page's server: the layout, then the frames' exact bytes, the page's music messages,
+the built page, and --sim."""
 import http.client
 import json
 import os
 import socket
 import struct
+import time
 
 import pytest
 from websockets.sync.client import connect
@@ -11,6 +13,7 @@ from websockets.sync.client import connect
 import layout
 import twinky
 from control import BasicBitch, CircusTent
+from music import Sound
 from server import Server
 from sim import SimLights
 from support import blender, frames, quiet
@@ -67,6 +70,18 @@ def test_then_each_frame_as_the_tree_is_sent_it(running):
         assert len(message) == 4 + 3200
         assert message[4:] == recorded(b, number)
     assert any(message[4:] != messages[0][4:] for message in messages)
+
+def test_a_pages_music_messages_reach_the_beat_clock(running):
+    b, server = running
+    fields = {"time": 100.0, "bpm": 128.0, "beat": 41.5, "bar": 10, "confidence": 0.8,
+              "low": 0.7, "mid": 0.4, "high": 0.2, "tone": 0.6, "drive": 0.3}
+    with connect(f"ws://127.0.0.1:{server.port}/ws") as ws:
+        ws.recv(timeout=5)
+        ws.send(json.dumps({"music": fields}))
+        deadline = time.monotonic() + 5
+        while b.beat.heard is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+    assert b.beat.heard == Sound(**fields)
 
 def get(port: int, path: str) -> http.client.HTTPResponse:
     conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)

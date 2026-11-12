@@ -1,5 +1,5 @@
 """The simulator page's server, on one port: the built page (web/dist) over HTTP, and at /ws the
-layout, then every frame's bytes as the tree is sent them."""
+layout, then every frame's bytes as the tree is sent them, and from the page, its music messages."""
 import asyncio
 import email.utils
 import json
@@ -10,6 +10,7 @@ import threading
 
 from websockets.asyncio.server import ServerConnection, broadcast, serve
 from websockets.datastructures import Headers
+from websockets.exceptions import ConnectionClosedError
 from websockets.http11 import Request, Response
 
 PORT = 8016
@@ -17,7 +18,8 @@ DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "dist")
 
 class Server:
     """Runs on its own event loop in its own thread. A page gets the layout as it connects, then one
-    binary message a frame: the frame number (4 bytes, little-endian) and W, R, G, B a light."""
+    binary message a frame: the frame number (4 bytes, little-endian) and W, R, G, B a light. A page
+    listening to music sends {"music": {...}} as text, the fields of music.Sound, for the beat clock."""
     def __init__(self, blender, port: int=PORT, dist: str=DIST):
         # every light where Pixel has it, after normalizing: x, y (its height, 0 to 1) and z, its
         # strand and index on the strand, and its angle round the trunk (0 to 1)
@@ -28,6 +30,7 @@ class Server:
             {"x": pixel.x, "y": pixel.y, "z": pixel.z, "strand": strand, "index": index, "angle": pixel.t}
             for pixel, (strand, index) in zip(blender.pixels, places)
         ]})
+        self.beat = blender.beat
         self.port = port
         self.dist = dist
         self.clients: set[ServerConnection] = set()
@@ -61,7 +64,10 @@ class Server:
         await connection.send(self.layout)
         self.clients.add(connection)
         try:
-            await connection.wait_closed()
+            async for message in connection:
+                self.beat.hear(json.loads(message)["music"])
+        except ConnectionClosedError:
+            pass  # a page gone without closing, as a tab closing can
         finally:
             self.clients.discard(connection)
 
