@@ -53,7 +53,8 @@ ones low on the tree and the treble ones at the top); Palette (the base hue glid
 light music and blue for dark); Feel (with drive, snappy sparkles and glides and changes from bar
 line to bar line; with groove, long glides); Spin lock (the tree turns once every 4 or 8 bars); and
 Latency (the lights later, +, or earlier, -, by up to 150 ms, to line them up with the sound). A
-second after the last message the links let go. `s` on Music saves its picks to `saves/music.json`.
+second after the last message the links let go, the hue and the spin gliding home. `s` on Music
+saves its picks to `saves/music.json`.
 
 ## Without the tree
 

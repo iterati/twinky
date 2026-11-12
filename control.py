@@ -537,7 +537,6 @@ class SpinFeature(Feature):
         else:
             return self.controls
 
-OFF_ON = [Option("off", False), Option("on", True)]
 # 0 first, then later and later, then earliest round to just early
 LATENCIES = [Option(f"{ms:+d} ms" if ms else "0 ms", ms / 1000)
              for ms in list(range(0, 151, 25)) + list(range(-150, 0, 25))]
@@ -558,19 +557,27 @@ class MusicFeature(Feature):
             ("whole tree", "tree"),
             ("chasing sectors", "chase"),
         ]])
-        self._sparkles = Control("Sparkle rate", OFF_ON)
-        self._palette = Control("Palette", OFF_ON)
-        self._feel = Control("Feel", OFF_ON)
+        self._sparkles = ToggleControl("Sparkle rate")
+        self._palette = ToggleControl("Palette")
+        self._feel = ToggleControl("Feel")
         self._spin = Control("Spin lock", [Option(n, v) for n, v in [
             ("off", 0),
             ("4 bars", 4),
             ("8 bars", 8),
         ]])
         self._latency = Control("Latency", LATENCIES)
-        links = [self._streamers, self._flash, self._sparkles, self._palette, self._feel, self._spin]
-        super(MusicFeature, self).__init__("Music", [self._on] + links + [self._latency])
-        # every link starts on its first pick past off: a save keeps whichever he switches off
-        for control in links:
+        super(MusicFeature, self).__init__("Music", [
+            self._on,
+            self._streamers,
+            self._flash,
+            self._sparkles,
+            self._palette,
+            self._feel,
+            self._spin,
+            self._latency,
+        ])
+        # every link starts on, as the toggles do: a save keeps whichever he switches off
+        for control in [self._streamers, self._flash, self._spin]:
             control.set(1)
 
     @property

@@ -21,6 +21,9 @@ export default function Listen({ send }: { send: (message: string) => void }) {
     const context = new AudioContext()
     let stream: MediaStream | null = null
     let stopped = false
+    // the inputs' names only come once the browser may listen
+    const listInputs = async () =>
+      setInputs((await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput'))
     const start = async () => {
       // the browser's voice processing wrecks music, so all of it is off
       stream = await navigator.mediaDevices.getUserMedia({
@@ -32,19 +35,21 @@ export default function Listen({ send }: { send: (message: string) => void }) {
         },
       })
       if (stopped) return stream.getTracks().forEach((track) => track.stop())
-      // the inputs' names only come once the browser may listen
-      setInputs((await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput'))
+      await listInputs()
+      if (stopped) return
+      navigator.mediaDevices.addEventListener('devicechange', listInputs)
       await context.audioWorklet.addModule(captureUrl)
       if (stopped) return
       const node = new AudioWorkletNode(context, 'capture')
       const analyser = new MusicAnalyser(context.sampleRate)
-      let sent = 0
+      let next = 0
       node.port.onmessage = (event: MessageEvent<Float32Array>) => {
         const f = analyser.analyse(event.data)
         const at = Date.now() / 1000
         listening.current = { analyser, features: f, at }
-        if (at - sent < SEND_EVERY) return
-        sent = at
+        if (at < next) return
+        // on a steady beat of its own, starting over after a gap
+        next = next + SEND_EVERY > at ? next + SEND_EVERY : at + SEND_EVERY
         const { bpm, beat, bar, confidence, low, mid, high, tone, drive } = f
         send(JSON.stringify({ music: { time: at, bpm, beat, bar, confidence, low, mid, high, tone, drive } }))
         setFeatures(f)
@@ -54,9 +59,12 @@ export default function Listen({ send }: { send: (message: string) => void }) {
       node.connect(context.destination)
       await context.resume()
     }
-    start().catch((e: Error) => setError(e.message))
+    start().catch((e: Error) => {
+      if (!stopped) setError(e.message)
+    })
     return () => {
       stopped = true
+      navigator.mediaDevices.removeEventListener('devicechange', listInputs)
       stream?.getTracks().forEach((track) => track.stop())
       void context.close()
       listening.current = null
@@ -88,7 +96,14 @@ export default function Listen({ send }: { send: (message: string) => void }) {
   return (
     <section className="listen" aria-label="Listen">
       <div className="row">
-        <select value={input} onChange={(e) => setInput(e.target.value)} aria-label="Input">
+        <select
+          value={input}
+          onChange={(e) => {
+            setError(null)
+            setInput(e.target.value)
+          }}
+          aria-label="Input"
+        >
           <option value="">Default input</option>
           {inputs.map((d) => (
             <option key={d.deviceId} value={d.deviceId}>

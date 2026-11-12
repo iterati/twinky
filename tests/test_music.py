@@ -123,7 +123,7 @@ def test_streamers_with_no_angle_of_their_own_step_round_the_trunk():
 def test_the_flash_lifts_the_tree_on_the_beat_and_decays_with_the_drive():
     b = blender([lit("Lit"), lit("Other")])
     b.beat = FakeClock(120.0, 0.0, drive=0.0)
-    music(b, flash="whole tree", palette="off")
+    music(b, flash="whole tree", palette="Off")
     level = {t: sum(map(sum, frame)) / len(frame) for t, frame in frames(b, 0, 4)}
     base = level[0.25]  # mid-beat, the flash long gone
     for beat in [1.0, 1.5, 2.0, 3.5]:
@@ -139,7 +139,7 @@ def test_the_flash_lifts_the_tree_on_the_beat_and_decays_with_the_drive():
 def test_chasing_sectors_light_a_quarter_of_the_trunk_each_beat():
     b = blender([lit("Lit"), lit("Other")])
     b.beat = FakeClock(120.0, 0.0)
-    music(b, flash="chasing sectors", palette="off")
+    music(b, flash="chasing sectors", palette="Off")
     dark = b.render(0.25)
     for n in [2, 3, 4, 5, 6]:  # a beat each half second
         b.render((n / 2) - FRAME)
@@ -191,15 +191,19 @@ def test_the_palette_glides_toward_the_tones_anchor():
 
 def test_the_spin_locks_to_the_bar():
     b = blender([lit("Lit"), lit("Other")])
-    b.beat = FakeClock(120.0, 0.0)
+    b.beat = FakeClock(120.0, 0.3)
     for bars in [4, 8]:
         music(b, spin_lock=f"{bars} bars")
+        for _ in frames(b, b._t + FRAME, b._t + 10):  # drawn round to its place in the bars
+            pass
         start = b._t + FRAME
         turned = 0.0
         last = b.spin_angle
-        for _ in frames(b, start, start + (bars * 2)):  # bars at 120 bpm take 2 s each
-            turned += (b.spin_angle - last) % 1
+        for t, _ in frames(b, start, start + (bars * 2)):  # bars at 120 bpm take 2 s each
+            turned += b.spin_angle - last
             last = b.spin_angle
+            # a turn from every so many bar lines on
+            assert abs(wrap(b.spin_angle - (b.sound.beat / (4 * bars)))) < 0.005
         assert turned == pytest.approx(1.0, abs=0.01)
 
 def test_with_drive_a_change_lands_on_bar_lines_and_in_groove_it_is_long():
@@ -217,6 +221,12 @@ def test_with_drive_a_change_lands_on_bar_lines_and_in_groove_it_is_long():
         pass
     b.start_transition()
     assert b.change.length == pytest.approx(12.0)
+    # a switch by hand in drive: the usual length, as it starts off the bar line
+    b.beat = FakeClock(120.0, 0.3, drive=1.0)
+    for _ in frames(b, 90, 91):
+        pass
+    b.start_transition(0)
+    assert b.change.length == b.transition_length
 
 def test_feel_snaps_the_sparkles_in_drive():
     b = blender([lit("Lit"), lit("Other")])
@@ -237,7 +247,7 @@ def test_the_links_let_go_when_messages_stop():
     b = blender([confetti, quiet(BasicBitch())])
     b.pixels = b.pixels[::20]
     b.beat = BeatClock()
-    music(b, palette="on", flash="whole tree")
+    music(b, palette="On", flash="whole tree")
     bpm = 120.0
     for k in range(round(10 / FRAME)):
         t = k * FRAME
@@ -252,9 +262,10 @@ def test_the_links_let_go_when_messages_stop():
             assert b.sparkle_roll == b.sparkle_delay
             assert b._flash_at(t) == 0
             assert b._change_length() == b.transition_length
-    # the streamers back on their own timer, the hue gliding home
+    # the streamers back on their own timer, the hue and the spin gliding home
     assert b.run.next_streamer > 9.5
     assert abs(wrap(b.hue_shift)) < 0.2
+    assert abs(wrap(b.spin_angle)) < 0.15
 
 def test_music_off_plays_the_patterns_as_they_were():
     random.seed(7)
@@ -327,7 +338,7 @@ def test_the_music_save_round_trips_by_name(tmp_path, monkeypatch):
     monkeypatch.setattr(twinky, "SAVES", str(tmp_path))
     b = blender([BasicBitch(), SlidingDoor()])
     twinky.load_music(b.music)  # none yet: the picks stay
-    music(b, streamers="every bar", flash="off", feel="off", latency="-75 ms")
+    music(b, streamers="every bar", flash="off", feel="Off", latency="-75 ms")
     twinky.save_music(b)
     with open(tmp_path / "music.json") as file:
         saved = json.load(file)

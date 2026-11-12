@@ -12,7 +12,6 @@ export type MusicFeatures = {
   high: number // 2-12 kHz, likewise
   tone: number // the spectral centroid over 4 s, 0 dark to 1 light
   drive: number // kick punch, onset density and beat confidence, 0 groove to 1 drive
-  onset: boolean // whether an onset was heard in the samples just taken
 }
 
 // The analysis window, in samples, and how many analysis frames a second
@@ -31,6 +30,8 @@ const BANDS = [
 ] as const
 const RANGE_SPAN = 10
 const TONE_SPAN = 4
+// The onset density's span, in seconds
+const DENSITY_SPAN = 4
 // The centroids, in Hz, that read as 0 and 1
 const DARK = 250
 const LIGHT = 4000
@@ -52,7 +53,7 @@ function blackmanHarris(size: number): Float64Array {
 }
 
 /** An in-place radix-2 FFT of re and im, their length a power of 2. */
-export function fft(re: Float64Array, im: Float64Array) {
+function fft(re: Float64Array, im: Float64Array) {
   const n = re.length
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1
@@ -143,7 +144,6 @@ export class MusicAnalyser {
   private thresholds = new History(3)
   private lastOnset = -Infinity
   private onsets: number[] = [] // the last 4 s's onset times
-  private heard = false
 
   // the beat: a beat's number and time, and the period, 0 until a tempo is found
   private period = 0
@@ -184,7 +184,6 @@ export class MusicAnalyser {
 
   /** Takes the next samples, of any length, and gives the features as of their end. */
   analyse(block: Float32Array): MusicFeatures {
-    this.heard = false
     for (const sample of block) {
       this.samples[this.written % SIZE] = sample
       this.written++
@@ -208,17 +207,18 @@ export class MusicAnalyser {
         ? this.tones.values.slice(0, this.tones.count).reduce((a, b) => a + b, 0) / this.tones.count
         : 0.5,
       drive: this.drive,
-      onset: this.heard,
     }
   }
 
   /** A tap of the tempo, at a time on the analyser's clock (MusicFeatures.time): from the second tap
-   * on, the beat lands on the taps, and the tempo search keeps near their tempo for 30 s. */
+   * on, the beat lands on the taps, and the tempo search keeps near their tempo for 30 s. Taps
+   * faster than 180 bpm or slower than 70 start over. */
   tap(time: number) {
-    this.taps = this.taps.filter((t) => time - t < 2.5)
+    const last = this.taps[this.taps.length - 1]
+    if (last === undefined || time - last < 60 / FASTEST || time - last > 60 / SLOWEST) this.taps = []
     this.taps.push(time)
     if (this.taps.length < 2) return
-    const period = (this.taps[this.taps.length - 1] - this.taps[0]) / (this.taps.length - 1)
+    const period = (time - this.taps[0]) / (this.taps.length - 1)
     this.tapped = { bpm: 60 / period, until: time + 30 }
     this.beatCount = this.period ? Math.round(this.beatAt(time)) : 0
     this.beatTime = time
@@ -272,7 +272,7 @@ export class MusicAnalyser {
         this.tones.push(clamp01((weighted / total - Math.log2(DARK)) / Math.log2(LIGHT / DARK)))
       }
     }
-    const rate = this.onsets.length / TONE_SPAN
+    const rate = this.onsets.length / DENSITY_SPAN
     const target = 0.4 * this.punch + 0.3 * clamp01(rate / 4) + 0.3 * this.confidence
     this.drive += (target - this.drive) * (1 - Math.exp(-1 / (2 * this.frameRate)))
     this.punch *= Math.exp(-1 / (4 * this.frameRate))
@@ -295,8 +295,7 @@ export class MusicAnalyser {
     const onset = this.fluxTimes.at(1) + offset / this.frameRate + ONSET_LAG
     if (onset - this.lastOnset < 0.1) return
     this.lastOnset = onset
-    this.heard = true
-    this.onsets = this.onsets.filter((t) => onset - t < TONE_SPAN)
+    this.onsets = this.onsets.filter((t) => onset - t < DENSITY_SPAN)
     this.onsets.push(onset)
     const jump = this.levels[0] - this.levelHistory[0].at(Math.min(3, this.levelHistory[0].count - 1))
     this.punch += (clamp01(jump / 12) - this.punch) * 0.25
@@ -398,8 +397,9 @@ export class MusicAnalyser {
     }
   }
 
-  /** Each band's level with a fast attack and a slow release, auto-gained by its own 10 s range:
-   * its ceiling no more than 20 dB under the loudest band's, and its floor 24 to 48 dB below that. */
+  /** Each band's level with a fast attack and a slow release, auto-gained by its own 10 s range, its
+   * floor 24 to 48 dB under its ceiling. So that a band holding only hiss or another band's leak
+   * stays dark, its ceiling is never more than 24 dB under the loudest band's. */
   private bandFrame(decibels: number[]) {
     const release = 1 - Math.exp(-1 / (0.25 * this.frameRate))
     const ranges = decibels.map((db, b) => {
@@ -417,7 +417,7 @@ export class MusicAnalyser {
     })
     const loudest = Math.max(...ranges.map(([, max]) => max))
     ranges.forEach(([min, max], b) => {
-      const ceiling = Math.max(max, loudest - 20, SILENCE)
+      const ceiling = Math.max(max, loudest - 24, SILENCE)
       const floor = Math.min(Math.max(min, ceiling - 48), ceiling - 24)
       this.bandValues[b] = clamp01((this.levels[b] - floor) / (ceiling - floor))
     })

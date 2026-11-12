@@ -180,6 +180,8 @@ class Blender:
         self.sound = sound
         self.beating = sound is not None and sound.bpm > 0 and sound.confidence >= BEAT_CONFIDENCE
         self.on_beat = None
+        glide = 1 - math.exp(-3 * dt / PALETTE_GLIDE)
+        locked = self.beating and links["spin"]
         if self.beating:
             # the frame nearest each beat takes it
             per_frame = FRAME * sound.bpm / 60
@@ -188,16 +190,22 @@ class Blender:
                 self.on_beat = (n, t + ((n - sound.beat) * 60 / sound.bpm))
                 if links["flash"]:
                     self._flash = self.on_beat
-            if links["spin"] and self._last_position is not None:
-                # one turn every so many bars, at the beat's pace; a jump in the beat moves nothing
+            if locked and self._last_position is not None:
+                # one turn every so many bars at the beat's pace, a jump in the beat moving nothing,
+                # drawn round to its place in the bars, a turn starting on every so many bar lines
+                bars = 4 * links["spin"]
                 step = sound.beat - self._last_position
                 if abs(step) < 4 * per_frame:
-                    self.spin_angle = (self.spin_angle + (step / (4 * links["spin"]))) % 1
+                    self.spin_angle += step / bars
+                self.spin_angle += wrap((sound.beat / bars) - self.spin_angle) * (1 - math.exp(-dt / 2))
             self._last_beat = n
             self._last_position = sound.beat
         else:
             self._last_beat = None
             self._last_position = None
+        if not locked:
+            # let go, the tree turns back home the short way
+            self.spin_angle -= wrap(self.spin_angle) * glide
 
         self.sparkle_roll = self.sparkle_delay
         if sound is not None and links["sparkles"]:
@@ -205,7 +213,6 @@ class Blender:
 
         # while the music pulls it, the base hue leaves its clock and glides toward the tone's anchor;
         # after, the shift from the clock glides away
-        glide = 1 - math.exp(-3 * dt / PALETTE_GLIDE)
         if sound is not None and links["palette"]:
             anchor = COOL_HUE + ((WARM_HUE - COOL_HUE) * sound.tone)
             hue = getv(self._blend_func, self._t - self._init_t) + self.hue_shift
@@ -434,7 +441,9 @@ class Blender:
                 return f"(PAUSED) {(self._t - self._init_t):.2f}"
         return f"-{left:.2f}"
 
-    def start_transition(self, next: int | None=None):
+    def start_transition(self, next: int | None=None, bars: bool=False):
+        """A change to the next pattern, or the one at next. With bars, it lasts whole bars, as an
+        automatic change in drive does from the bar line it starts on."""
         if next is not None:
             self.next_pattern = self.patterns[next]
         self.next_pattern.randomize()
@@ -449,17 +458,15 @@ class Blender:
             source,
             Run(self.next_pattern, self._t),
             self._t,
-            self._change_length(),
+            DRIVE_BARS * 4 * 60 / self.sound.bpm if bars else self._change_length(),
             self.next_pattern.transition,
         )
 
     def _change_length(self) -> float:
-        # with Feel, a groove's change is long, and a drive's lasts whole bars from the bar line it starts on
+        # with Feel, the more the groove, the longer the change
         feel = self.feel
         if feel is None:
             return self.transition_length
-        if self.lands_on_bars:
-            return DRIVE_BARS * 4 * 60 / self.sound.bpm
         return GROOVE_CHANGE + ((self.transition_length - GROOVE_CHANGE) * min(1.0, feel * 2))
 
     def glide(self):
@@ -475,7 +482,7 @@ class Blender:
                 and not self.pause_change
                 and t >= self.run.start + self.pattern_length
                 and (not self.lands_on_bars or (self.on_beat is not None and self.on_beat[0] % 4 == 0))):
-            self.start_transition()
+            self.start_transition(bars=self.lands_on_bars)
         if self.change is not None and t >= self.change.start + self.change.length:
             self.run = self.change.run
             self.change = None
