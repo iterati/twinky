@@ -12,7 +12,7 @@ import re
 from control import BlendFeature, Control, WiredPattern
 from hints import SOFTNESS, HintFeature, slot
 from motion import Modulator, Running, Target
-from palette import Palette, Stop
+from palette import Palette, Stop, js_round, palette_at
 
 LOOKS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "looks")
 
@@ -29,11 +29,14 @@ def read(scene: dict, path: str):
 
 def part(knob: str) -> str:
     """The moving part a modulator's target drives: a turn the sectors' spin, a contour knob the bands,
-    a palette knob the palette, any other the brightness."""
+    the palette's hue its hue (its depth in degrees), any other palette knob the palette's index, and
+    any other knob the brightness."""
     if knob.split(".")[-1] == "turn":
         return "spin"
     if knob.startswith("contour"):
         return "bands"
+    if knob == "palette.hue":
+        return "hue"
     if knob.startswith("palette"):
         return "palette"
     return "brightness"
@@ -57,7 +60,7 @@ def mapped(scene: dict) -> dict:
                 "glide": read(scene, f"{m}.glide"),
                 "depth": read(scene, f"{m}.targets[{j}].depth"),
                 # whole turns round the trunk, as part of one would tear at angle 0
-                "spread": round(target.get("phaseSpread", 0)),
+                "spread": js_round(target.get("phaseSpread", 0)),
             })
     return {
         "name": read(scene, "name"),
@@ -77,24 +80,21 @@ def mapped(scene: dict) -> dict:
         "timing": timing,
     }
 
-def look_path(name: str) -> str:
-    # named as Bermuda's export names its file
-    return os.path.join(LOOKS, re.sub(r"[^\w-]+", "-", name) + ".json")
-
 def import_look(path: str) -> str:
     """Writes the tree pattern for the look exported to path into looks/, and gives its file."""
     with open(path, encoding="utf-8") as file:
         values = mapped(json.load(file))
     os.makedirs(LOOKS, exist_ok=True)
-    out = look_path(values["name"])
+    # named as Bermuda's export names its file
+    out = os.path.join(LOOKS, re.sub(r"[^\w-]+", "-", values["name"], flags=re.ASCII) + ".json")
     with open(out, "w", encoding="utf-8") as file:
         json.dump(values, file, indent=2, ensure_ascii=False)
         file.write("\n")
     return out
 
 class LookFeature(HintFeature):
-    """The look's sectors, their spin, the bands, the palette and the brightness, each moved by the
-    modulators that drive it."""
+    """The look's sectors, their spin, the bands, the palette's index and hue and the brightness, each
+    moved by the modulators that drive it."""
     def __init__(self, values: dict):
         palette = values["palette"]
         self.palette_time = palette["time"]
@@ -103,7 +103,7 @@ class LookFeature(HintFeature):
         self.drift_speed = values["drift"]  # radians a beat
         self.drift = 0.0
         self.colour = 0.0
-        self.parts: dict[str, list[Running]] = {name: [] for name in ["spin", "bands", "palette", "brightness"]}
+        self.parts: dict[str, list[Running]] = {name: [] for name in ["spin", "bands", "palette", "hue", "brightness"]}
         for i, t in enumerate(values["timing"]):
             m = Modulator(str(i), t["wave"], t["period"], t["phase"], t["harmonics"], t["steps"], t["glide"])
             self.parts[t["part"]].append(Running(m, Target(t["part"], t["depth"], t["spread"])))
@@ -128,7 +128,9 @@ class LookFeature(HintFeature):
             band, _ = slot((y * self.bands) - (self.drift / (2 * math.pi)) - moved("bands"), softness)
             cover *= band
         brightness = min(1.0, max(0.0, 1 + moved("brightness")))
-        return cover * brightness, (k / self.sectors) + self.colour + moved("palette")
+        L, C, h = palette_at(self.palette, (k / self.sectors) + self.colour + moved("palette"))
+        # palette_at adds the palette's hue to every hue it mixes, so a hue moved after is the same
+        return cover * brightness, (L, C, h + moved("hue"))
 
 class Look(WiredPattern):
     def __init__(self, values: dict):
@@ -140,7 +142,7 @@ def load_looks() -> list[Look]:
     if not os.path.isdir(LOOKS):
         return []
     looks = []
-    for name in sorted(os.listdir(LOOKS)):
+    for name in sorted(n for n in os.listdir(LOOKS) if n.endswith(".json")):
         with open(os.path.join(LOOKS, name), encoding="utf-8") as file:
             looks.append(Look(json.load(file)))
     return looks

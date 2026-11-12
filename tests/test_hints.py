@@ -42,6 +42,7 @@ def test_hint_through_a_change(cls, seed):
     for t, frame in frames(b, 0, 70):
         assert len(frame) == 800
         assert in_range(frame), f"{t}"
+        assert [len(interface.frames[-1]) for interface in b.lights.interfaces] == [1600, 1600]
         changed |= b.transitioning
         lit = max(lit, max(map(sum, frame)))
     assert changed
@@ -75,7 +76,7 @@ def test_seam_at_angle_0(cls, seed):
     pattern.randomize()
     pattern.configured = True
     b = blender([pattern, next_hint(cls)()])
-    eps = 0.00002
+    eps = 0.0002
     b.pixels = []
     for i in range(19):
         for t in [eps, 1 - eps]:

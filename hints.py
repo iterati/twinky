@@ -17,13 +17,13 @@ FILL = 0.5
 # How far the wash and the palette drift dim at their wave's trough
 DIP = 0.6
 # The hidden field: a star's outer radius, as a share of the lattice's spacing, how deep its points
-# are cut, its soft edge (of the base's radius), the glow of a star between its sparkles, and how
+# are cut, its soft edge (of the base's radius), the share of Twinkles a light sparkles in, and how
 # sharp a sparkle is
 STAR = 0.34
 STAR_CUT = 0.45
 STAR_EDGE = 0.08
-GLOW = 0.12
-SPARKLE = 6
+SPARKLES = 0.5
+SPARKLE = 4
 # The beat wave's harmonics, for a hint's Wave control
 HARMONICS = (1, 2)
 
@@ -63,9 +63,9 @@ class PaletteColor(Color):
         return (self.w * 255, *(255 * c for c in rgb))
 
 class Hint(BaseColor):
-    """A hint's light, from its feature: as much of the palette's colour at the feature's index as its
-    shape covers the light, and off for the rest. The base hue's clock (with the Music's palette
-    link) turns the index."""
+    """A hint's light, from its feature: as much of its palette's colour as its shape covers the
+    light, and off for the rest. The palette is the hint's own, off the base hue's clock, as a
+    BaseColor with blend off is."""
     def __init__(self, feature: "HintFeature"):
         super(Hint, self).__init__()
         self.feature = feature
@@ -74,14 +74,15 @@ class Hint(BaseColor):
         self.feature.frame(beats, dt)
 
     def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float):
-        cover, index = self.feature.light(pixel_t % 1, pixel_y)
-        color = PaletteColor(palette_at(self.feature.palette, index + blend))
-        return [(cover, color, []), (1 - cover, Color(), [])]
+        cover, lch = self.feature.light(pixel_t % 1, pixel_y)
+        return [(cover, PaletteColor(lch), []), (1 - cover, Color(), [])]
 
 class HintFeature(Feature):
     """A hint's controls and its shape: light gives, for a light at an angle round the trunk (0 to 1)
-    and a height, how much of the shape covers it (0 to 1) and its palette index. Its modulators run
-    on each frame's beats: the beat clock's while music plays, else one a second."""
+    and a height, how much of the shape covers it (0 to 1) and its colour from the palette. Its
+    modulators run on each frame's beats: the beat clock's while music plays, else one a second. Its
+    value sets them from the controls and gives the same Hint each time, so their phases run on
+    through a change of control, as Bermuda's do."""
     def __init__(self, name: str, controls: list[Control], runnings: list[Running]):
         super(HintFeature, self).__init__(name, controls)
         self.runnings = runnings
@@ -92,7 +93,7 @@ class HintFeature(Feature):
         for running in self.runnings:
             running.advance(beats, dt)
 
-    def light(self, x: float, y: float) -> tuple[float, float]:
+    def light(self, x: float, y: float) -> tuple[float, tuple[float, float, float]]:
         raise NotImplementedError
 
     @property
@@ -125,7 +126,7 @@ class WashFeature(HintFeature):
         return super(WashFeature, self).value
 
     def light(self, x, y):
-        return 1 - (DIP * (1 - self.running.at(x))), (y * self._span.value) - self.running.phase
+        return 1 - (DIP * (1 - self.running.at(x))), palette_at(self.palette, (y * self._span.value) - self.running.phase)
 
 class SectorsFeature(HintFeature):
     """Soft sectors round the trunk, each its own colour, spinning or swaying a sector either way."""
@@ -161,7 +162,7 @@ class SectorsFeature(HintFeature):
         else:
             turn = self.running.offset(0) / count
         cover, k = slot(((x - (turn * self._direction.value)) % 1) * count, self._softness.value)
-        return cover, k / count
+        return cover, palette_at(self.palette, k / count)
 
 class BandsFeature(HintFeature):
     """Rings up the tree that climb, fall, or rise and fall back, at the contour's drift."""
@@ -201,9 +202,9 @@ class BandsFeature(HintFeature):
             offset = (self.drift / (2 * math.pi)) * (1 if direction == "↑ " else -1)
         bands = self._bands.value
         cover, k = slot((y * bands) - offset, self._softness.value)
-        return cover, k / bands
+        return cover, palette_at(self.palette, k / bands)
 
-class SpiralFeature(HintFeature):
+class SpiralArmsFeature(HintFeature):
     """Soft arms winding up the tree and turning round it, the palette running up each."""
     def __init__(self):
         self._palette = Control("Palette", PALETTES)
@@ -213,7 +214,7 @@ class SpiralFeature(HintFeature):
         self._direction = Control("Direction", DIRECTIONS)
         self._softness = Control("Softness", SOFTNESS)
         self.running = Running(Modulator("turn", "ramp", 16), Target("turn", 1))
-        super(SpiralFeature, self).__init__("Spiral", [
+        super(SpiralArmsFeature, self).__init__("Spiral", [
             self._palette,
             self._arms,
             self._twist,
@@ -226,19 +227,19 @@ class SpiralFeature(HintFeature):
     def value(self):
         self.palette = preset(self._palette.value)
         self.running.m.period = self._period.value
-        return super(SpiralFeature, self).value
+        return super(SpiralArmsFeature, self).value
 
     def light(self, x, y):
         arms = self._arms.value
         turn = self.running.at(0) * self._direction.value
         cover, k = slot(((x + (self._twist.value * y) - turn) % 1) * arms, self._softness.value)
-        return cover, (k / arms) + (y / 2)
+        return cover, palette_at(self.palette, (k / arms) + (y / 2))
 
 class HiddenFieldFeature(HintFeature):
     """Sparse sparkles that trace a hidden field over a few seconds: a lattice of stars seen from above
     the treetop, turning slowly. A light's place seen from above is its angle and height on the cone,
-    so the field has no seam and turns with the spin, and each light sparkles once a Twinkle, at a
-    time its height picks, where a star covers it."""
+    so the field has no seam and turns with the spin and the spin ring, and a light sparkles only
+    where a star covers it."""
     def __init__(self):
         self._palette = Control("Palette", PALETTES)
         self._points = Control("Points", [Option(str(v), v) for v in [4, 5, 6]])
@@ -286,10 +287,14 @@ class HiddenFieldFeature(HintFeature):
         rho = math.hypot(dx, dz) / spacing
         edge = STAR * (1 - (STAR_CUT * (0.5 - (0.5 * math.cos(self._points.value * math.atan2(dz, dx))))))
         inside = min(1.0, max(0.0, (((edge - rho) * spacing) / STAR_EDGE) + 0.5))
+        # a light sparkles in some Twinkles, at a time in them its height picks, and is dark between
         seed = (math.sin(y * 12345.678) * 43758.5453) % 1
-        sparkle = math.sin(math.pi * (((self.beats / self._twinkle.value) + seed) % 1)) ** SPARKLE
+        twinkle = (self.beats / self._twinkle.value) + seed
+        if (math.sin((math.floor(twinkle) * 91.7) + (seed * 977.3)) * 43758.5453) % 1 >= SPARKLES:
+            return 0.0, (0.0, 0.0, 0.0)
+        sparkle = math.sin(math.pi * (twinkle % 1)) ** SPARKLE
         # each star its own colour, the golden ratio's steps apart along the palette
-        return inside * (GLOW + ((1 - GLOW) * sparkle)), ((c * 0.381966) + (r * 0.618034)) % 1
+        return inside * sparkle, palette_at(self.palette, ((c * 0.381966) + (r * 0.618034)) % 1)
 
 class PaletteDriftFeature(HintFeature):
     """The palette drifting round the trunk at the palette's time, a wave of brightness travelling
@@ -327,7 +332,7 @@ class PaletteDriftFeature(HintFeature):
         self.colour = (self.colour + (self._time.value * self._direction.value * beats)) % 1
 
     def light(self, x, y):
-        return 1 - (DIP * (1 - self.running.at(y))), (self._repeats.value * x) + self.colour
+        return 1 - (DIP * (1 - self.running.at(y))), palette_at(self.palette, (self._repeats.value * x) + self.colour)
 
 class Wash(WiredPattern):
     def __init__(self):
@@ -347,7 +352,7 @@ class Bands(WiredPattern):
 class Spiral(WiredPattern):
     def __init__(self):
         super(Spiral, self).__init__("Spiral")
-        self.features = [SpiralFeature(), BlendFeature()]
+        self.features = [SpiralArmsFeature(), BlendFeature()]
 
 class HiddenField(WiredPattern):
     def __init__(self):

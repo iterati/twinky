@@ -45,7 +45,8 @@ LOOK = {
          "targets": [{"knob": "levels[hexA].shape.r", "depth": 0.3},
                      {"knob": "contour.rings", "depth": 0.5, "phaseSpread": 2.2}]},
         {"id": "hue", "wave": "steps", "period": 16, "phase": 0, "steps": [0, 1, 0.5], "glide": 2,
-         "targets": [{"knob": "palette.hue", "depth": 0.2, "phaseSpread": 0.3}]},
+         "targets": [{"knob": "palette.hue", "depth": 30, "phaseSpread": 0.3},
+                     {"knob": "palette.contrast", "depth": 0.1}]},
     ],
     "frame": {}, "line": {}, "composite": {}, "post": {}, "macros": [], "presets": [], "midi": {}, "loop": {},
 }
@@ -73,8 +74,10 @@ def test_a_look_maps_to_its_palette_sectors_bands_drift_and_timing():
          "glide": 0, "depth": 0.3, "spread": 0},
         {"part": "bands", "wave": "beat", "period": 2, "phase": 0, "harmonics": [3, 5], "steps": None,
          "glide": 0, "depth": 0.5, "spread": 2},
+        {"part": "hue", "wave": "steps", "period": 16, "phase": 0, "harmonics": None, "steps": [0, 1, 0.5],
+         "glide": 2, "depth": 30, "spread": 0},
         {"part": "palette", "wave": "steps", "period": 16, "phase": 0, "harmonics": None, "steps": [0, 1, 0.5],
-         "glide": 2, "depth": 0.2, "spread": 0},
+         "glide": 2, "depth": 0.1, "spread": 0},
     ]
 
 @pytest.mark.parametrize("path, field", [
@@ -109,6 +112,7 @@ def test_import_look_writes_the_values_by_name_and_twinky_plays_them(tmp_path, m
     assert out == str(tmp_path / "looks" / "Disco-Ball.json")
     with open(out) as file:
         assert json.load(file) == look.mapped(LOOK)
+    (tmp_path / "looks" / ".DS_Store").write_bytes(b"\0\1")
     names = [p.name for p in twinky.start_patterns()]
     assert names[-1] == "Disco Ball" and len(names) == 17
 
@@ -118,7 +122,7 @@ def test_the_imported_pattern_renders_finite_and_moves_its_parts():
     b = blender([pattern, Wash()])
     feature = pattern.features[0]
     assert feature.sectors == 6 and feature.bands == 3
-    assert [len(feature.parts[name]) for name in ["spin", "bands", "palette", "brightness"]] == [1, 1, 1, 1]
+    assert [len(feature.parts[name]) for name in ["spin", "bands", "palette", "hue", "brightness"]] == [1, 1, 1, 1, 1]
     lit = 0.0
     for t, frame in frames(b, 0, 70):
         assert in_range(frame), f"{t}"

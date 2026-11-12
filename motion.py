@@ -2,10 +2,10 @@
 numbers: the waves, the phase that runs at a modulator's period in beats, the phase spread, the
 depth and glide. On the tree a link group's member becomes a light's share of the spread: its angle
 round the trunk or its height, 0 to 1, so the phase is a wave travelling round or up the tree."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import math
 
-# The shares of a spread a running target keeps its glided wave at, as Bermuda keeps one for each
+# The shares of a spread a gliding target keeps its glided wave at, as Bermuda keeps one for each
 # member of a link group; a light reads between the two nearest its own
 MEMBERS = 128
 
@@ -24,7 +24,6 @@ class Modulator:
     harmonics: tuple[float, float] | None = None  # the beat wave's
     steps: list[float] | None = None  # the steps wave's
     glide: float = 0.0  # in seconds
-    targets: list[Target] = field(default_factory=list)
 
 def wave(m: Modulator, p: float) -> float:
     """A wave's value at phase p (cycles), 0 to 1; cos and tri start at 1 as the Tapestries' sinT and
@@ -42,15 +41,14 @@ def wave(m: Modulator, p: float) -> float:
     if m.wave == "steps":
         steps = m.steps
         return steps[min(len(steps) - 1, math.floor(f * len(steps)))]
-    raise ValueError(f"No wave {m.wave!r}")
 
 def follow(start: float | None, to: float, glide: float, dt: float) -> float:
     return to if start is None or glide <= 0 else to + (start - to) * math.exp(-dt / glide)
 
 class Running:
     """One of a modulator's targets as it runs on the tree, motion.ts's advance for one target: the
-    modulator's phase, run on by each frame's beats, and the glided wave at MEMBERS + 1 even shares
-    of the spread."""
+    modulator's phase, run on by each frame's beats, and with a glide, the glided wave at MEMBERS + 1
+    even shares of the spread."""
     def __init__(self, m: Modulator, target: Target):
         self.m = m
         self.target = target
@@ -60,12 +58,18 @@ class Running:
     def advance(self, beats: float, dt: float):
         m = self.m
         self.phase = (self.phase + beats / m.period) % 1
-        for member in range(MEMBERS + 1):
-            raw = wave(m, self.phase + m.phase + (self.target.phase_spread * member) / MEMBERS)
-            self.smooth[member] = follow(self.smooth[member], raw, m.glide, dt)
+        if m.glide > 0:
+            for member in range(MEMBERS + 1):
+                self.smooth[member] = follow(self.smooth[member], self.raw(member / MEMBERS), m.glide, dt)
+
+    def raw(self, share: float) -> float:
+        m = self.m
+        return wave(m, self.phase + m.phase + self.target.phase_spread * share)
 
     def at(self, share: float) -> float:
         """The glided wave at a light's share of the spread, 0 to 1."""
+        if self.m.glide <= 0:
+            return self.raw(share)
         x = min(1.0, max(0.0, share)) * MEMBERS
         k = min(MEMBERS - 1, math.floor(x))
         a, b = self.smooth[k], self.smooth[k + 1]
