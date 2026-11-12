@@ -4,13 +4,14 @@ import json
 import logging
 import os
 from queue import Queue, Empty
+import socket
 import threading
 from threading import Thread
 import time
 from core import Blender, FRAME, wait_for
 from device import Lights
 import layout
-from server import Server
+from server import PORT, Server
 from sim import SimLights
 from control import (
     MusicFeature,
@@ -104,6 +105,11 @@ def randomize_feature(fidx):
 def pauseplay(a):
     a.pause_change = not a.pause_change
 
+def spin_ring(angle):
+    def func(a):
+        a.ring_angle = angle
+    return func
+
 def save_path(pattern: WiredPattern) -> str:
     return os.path.join(SAVES, f"{pattern.name.replace(' ', '_').lower()}.json")
 
@@ -145,7 +151,45 @@ def load_pattern(pattern: WiredPattern):
             log.info("Loaded saved config for %s", pattern.name)
     return pattern
 
-def open_lights(argv: list[str] | None=None):
+def remote_command(message: dict):
+    """The TUI's own command for a message from the remote page. The page's view may be a moment
+    behind, so a command for a feature runs only while the page's pattern is on show and the control
+    is still there."""
+    command = message["command"]
+    if command == "switch":
+        return switch_pattern(message["to"])
+    if command == "random":
+        return random_pattern
+    if command == "pause":
+        return pauseplay
+    if command == "save":
+        return toggle_configured
+    if command == "save music":
+        return save_music
+    if command == "spin":
+        return spin_ring(message["angle"])
+    if command == "randomize" and "feature" not in message:
+        return randomize_pattern
+    fidx = message["feature"]
+    cidx = message.get("control", 0)
+    if command == "randomize":
+        func = randomize_feature(fidx)
+    elif command == "change":
+        func = change_option(fidx, cidx, message["step"])
+    elif command == "set":
+        func = set_option(fidx, cidx, message["option"])
+    else:
+        raise ValueError(f"No command {command!r}")
+
+    def shown(a):
+        features = a.pattern.features + [a.music]
+        if a.pattern.name == message["pattern"] and fidx < len(features) and cidx < len(features[fidx].visible_controls()):
+            func(a)
+        else:
+            log.info("Dropped the remote's %s, for %s as it was", command, message["pattern"])
+    return shown
+
+def parse_args(argv: list[str] | None=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Animates the Twinkly tree, and plays it at http://localhost:8016/")
     parser.add_argument(
         "--sim",
@@ -154,13 +198,32 @@ def open_lights(argv: list[str] | None=None):
         metavar="LAYOUT",
         help="play a simulated tree instead of finding the real one: the cone, or a layout file such as layouts/tree.json",
     )
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--remote",
+        action="store_true",
+        help="listen on the home network too, for the remote page at http://<this Mac>:8016/remote",
+    )
+    return parser.parse_args(argv)
+
+def open_lights(args: argparse.Namespace):
     return SimLights(args.sim) if args.sim else Lights()
 
+def listen_host(args: argparse.Namespace) -> str:
+    # every interface with --remote, else only this Mac
+    return "0.0.0.0" if args.remote else "localhost"
+
+def lan_address() -> str:
+    """This Mac's address on the home network, the one its route out leaves from (a UDP socket's
+    connect sends nothing)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.connect(("192.0.2.1", 9))
+        return s.getsockname()[0]
+
 class Menu:
-    def __init__(self, animation, queue):
+    def __init__(self, animation, queue, remote: str | None=None):
         self.animation = animation
         self.queue = queue
+        self.remote = remote  # the remote page's address, with --remote
         self.selected_column = 0
         self.selected_row = [0, 0, 0]
         self.curr_pattern = animation.pattern
@@ -231,6 +294,8 @@ class Menu:
         line += '\u2550' * ((w - 1) - len(line))
         line += '\u255d'
         screen.addstr(h-2, 0, line)
+        if self.remote is not None:
+            screen.addstr(h-2, 2, f" remote: {self.remote} ")
 
         # left shows patterns
         for i, p in enumerate(self.animation.patterns):
@@ -375,19 +440,21 @@ if __name__ == "__main__":
         load_pattern(SlidingDoor()),
         load_pattern(SpiralTop()),
     ]
-    lights = open_lights()
+    args = parse_args()
+    lights = open_lights(args)
     queue = Queue()
     animation = Blender(patterns, lights, 0, True)
     animation.pattern.randomize()
     load_music(animation.music)
-    server = Server(animation)
+    remote = f"http://{lan_address()}:{PORT}/remote" if args.remote else None
+    server = Server(animation, host=listen_host(args), on_command=lambda message: queue.put(remote_command(message)))
     animation.on_frame = server.send
     server.start()
     animation_thread = Thread(
         target=animation_thread_task,
         args=(animation, queue)
     )
-    menu = Menu(animation, queue)
+    menu = Menu(animation, queue, remote)
     animation_thread.start()
     curses.wrapper(menu)
     animation_thread.join()

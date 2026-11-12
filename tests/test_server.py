@@ -103,15 +103,15 @@ def test_the_page_is_served(running):
 
 def test_sim_plays_the_cone_or_a_layout(tmp_path, monkeypatch):
     monkeypatch.setattr(twinky, "Lights", lambda: "the real tree")
-    assert twinky.open_lights([]) == "the real tree"
+    assert twinky.open_lights(twinky.parse_args([])) == "the real tree"
 
-    cone = twinky.open_lights(["--sim"])
+    cone = twinky.open_lights(twinky.parse_args(["--sim"]))
     assert isinstance(cone, SimLights)
     assert [i.layout for i in cone.interfaces] == layout.load(os.path.join(layout.LAYOUTS, "cone.json"))
 
     path = str(tmp_path / "tree.json")
     layout.save(path, layout.cone(strands=3, per_strand=50, seed=7))
-    tree = twinky.open_lights(["--sim", path])
+    tree = twinky.open_lights(twinky.parse_args(["--sim", path]))
     assert isinstance(tree, SimLights)
     assert [i.layout for i in tree.interfaces] == layout.cone(strands=3, per_strand=50, seed=7)
 

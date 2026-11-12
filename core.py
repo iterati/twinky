@@ -146,6 +146,9 @@ class Blender:
         self.sparkle_roll = self.sparkle_delay
         self.spin_angle = 0.0
         self.hue_shift = 0.0
+        # the remote's spin ring: a turn it adds for every light, beside the spin lock's, kept
+        # where the drag leaves it
+        self.ring_angle = 0.0
 
     @property
     def pattern(self) -> WiredPattern:
@@ -344,7 +347,7 @@ class Blender:
 
         frame = []
         for pixel in self.pixels:
-            pixel_t = (pixel.t + spin + self.spin_angle + (spiral * pixel.y)) % 1
+            pixel_t = (pixel.t + spin + self.spin_angle + self.ring_angle + (spiral * pixel.y)) % 1
             flash = beat_flash
             if flash and chase:
                 flash *= coverage(pixel.t, sector, sector + (1 / SECTORS), SECTOR_EDGE)
@@ -417,16 +420,21 @@ class Blender:
         return frame
 
     @property
+    def mark(self) -> str:
+        """? not saved, ! saved, * changed since."""
+        pattern_state = "?"
+        if self.pattern.configured:
+            pattern_state = "!"
+        if self.pattern.dirty:
+            pattern_state = "*"
+        return pattern_state
+
+    @property
     def pattern_name(self) -> str:
         if self.change is not None:
             return f"{self.pattern.name}->{self.change.run.pattern.name}"
         else:
-            pattern_state = "?"
-            if self.pattern.configured:
-                pattern_state = "!"
-            if self.pattern.dirty:
-                pattern_state = "*"
-            return f"{self.pattern.name}{pattern_state}"
+            return f"{self.pattern.name}{self.mark}"
 
     @property
     def time_str(self) -> str:
