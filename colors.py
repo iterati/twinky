@@ -88,7 +88,7 @@ class BaseColor:
         self.blend = blend
         self.spread = spread
 
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel) -> BaseColorValue:
         color = Color(
             w=getv(self.color_w, t),
             h=(
@@ -120,7 +120,7 @@ class WindowColor(BaseColor):
         self.ratio = ratio
         self.funcs = funcs
         
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel) -> BaseColorValue:
         ratio = getv(self.ratio, t)
         iteration = 0
         if isinstance(self.ratio, Curve):
@@ -162,7 +162,7 @@ class SplitColor(BaseColor):
             [BaseColor(l=0), BaseColor()]
         )
 
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel) -> BaseColorValue:
         count = int(getv(self.count, t))
         x = pixel_t % 1
         side = int(x * count)
@@ -200,7 +200,7 @@ class FallingColor(BaseColor):
         )
         self._hue_func = 0 if hue_func is None else hue_func
 
-    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel=None) -> BaseColorValue:
+    def __call__(self, t: float, blend: float, spread: float, pixel_t: float, pixel_y: float, pixel) -> BaseColorValue:
         # the colors fall num_colors bands a period, with no wrap, so the pattern's clock can run on
         pixel_y += (t + self._offset) * self._num_colors / self._period
         l = getv(self._fade_func, pixel_y)

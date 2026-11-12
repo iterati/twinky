@@ -7,7 +7,7 @@ import random
 import pytest
 
 from core import Pixel
-from effects import EFFECTS, EffectPattern, Fireworks, Lightning, RAINBOW, Ripples, Drips
+from effects import EFFECTS, RAINBOW, Drips, EffectPattern, Fireworks, Lightning, Ripples
 from support import FRAME, blender, frames, in_range
 from test_music import FakeClock, music
 
@@ -85,12 +85,15 @@ def test_seam_at_angle_0(cls):
             seam.append(Pixel(800 + len(seam), r * math.cos(a), y, r * math.sin(a)))
     assert [round(p.t) for p in seam[:2]] == [1, 0]
     b.pixels = b.pixels + seam
-    worst = 0.0
+    worst = lit = 0.0
     for _, frame in frames(b, 0, 10):
         pairs = frame[800:]
+        lit = max(lit, *map(max, pairs))
         for a, c in zip(pairs[0::2], pairs[1::2]):
             worst = max(worst, *(abs(x - y) for x, y in zip(a, c)))
     assert worst <= 16
+    # and the effect reached the seam
+    assert lit > 100
 
 @pytest.mark.parametrize("cls", EFFECTS, ids=name)
 def test_no_light_pops_from_dark_to_full(cls):
@@ -131,13 +134,18 @@ def test_grain_raw_hardens_the_edges(cls):
         # a light is in or out: each layer covering it a whole share
         assert all(w == pytest.approx(1 / len(light)) for w in light)
 
+def turned_frames(cls, palette: str, hue: float):
+    """4 s of the effect at the palette, the base hue turned by hue from its clock."""
+    random.seed(8)
+    b = blender([effect(cls, Palette=palette), EffectPattern(next_effect(cls)())])
+    b.hue_shift = hue
+    return [frame for _, frame in frames(b, 0, 4)]
+
 @pytest.mark.parametrize("cls", [cls for cls in EFFECTS if "Palette" in [k[0] for k in cls.knobs]], ids=name)
 def test_only_the_rainbow_palette_drifts(cls):
-    color = (0.0, 0.25, 1.0, 0.0)
     for palette in [o for o, _ in next(k for k in cls.knobs if k[0] == "Palette")[1]]:
-        e = effect(cls, Palette=palette).effect
-        e.hue = 0.125
-        assert e.drifted(color)[1] == pytest.approx(0.375 if palette == RAINBOW else 0.25)
+        turned = turned_frames(cls, palette, 0.25) != turned_frames(cls, palette, 0.0)
+        assert turned == (palette == RAINBOW), palette
 
 def test_an_effect_starts_again_with_its_run():
     random.seed(8)
@@ -164,22 +172,22 @@ def test_the_effects_join_the_rotation(tmp_path, monkeypatch):
     names = [p.name for p in twinky.start_patterns()]
     assert names[16:26] == [cls.name for cls in EFFECTS]
 
-def beat_frames(cls, confidence: float, seconds: float=4.0):
-    """The effect under Music, its own links alone, at 120 bpm: on the beat with a sure tempo, or
-    hearing the same bands with none."""
+def beat_frames(cls, first: float, seconds: float=4.0):
+    """The effect under Music, its own links alone, at 120 bpm, its beats counted from first."""
     random.seed(9)
     pattern = effect(cls)
     b = blender([pattern, EffectPattern(next_effect(cls)())])
-    b.beat = FakeClock(120.0, 0.0, confidence=confidence)
+    b.beat = FakeClock(120.0, first)
     music(b, streamers="off", flash="off", sparkle_rate="Off", palette="Off", feel="Off", spin_lock="off")
     return pattern, [frame for _, frame in frames(b, 0, seconds)]
 
 @pytest.mark.parametrize("cls", EFFECTS, ids=name)
 def test_a_beat_reaches_an_effect(cls):
-    pattern, beating = beat_frames(cls, 0.9)
+    pattern, on_beat = beat_frames(cls, 0.0)
     assert pattern.effect.beat_at == 3.5
-    _, unsure = beat_frames(cls, 0.0)
-    assert beating != unsure
+    # the same tempo and bands, the beats a quarter of one later: the lights move with them
+    _, later = beat_frames(cls, 0.125)
+    assert on_beat != later
 
 @pytest.mark.parametrize("cls", [Fireworks, Ripples, Drips], ids=name)
 def test_a_launch_waits_for_the_beat(cls):

@@ -253,7 +253,7 @@ class Effect(BaseColor):
         r = self.surface(y) * depth
         return (r * math.cos(angle), y, r * math.sin(angle))
 
-    def __call__(self, t, blend, spread, pixel_t, pixel_y, pixel=None):
+    def __call__(self, t, blend, spread, pixel_t, pixel_y, pixel):
         out = []
         total = 0.0
         for cover, (w, h, s, l) in self.layers[pixel.idx]:
@@ -873,8 +873,9 @@ class Drips(Effect):
             age = t - drip["start"]
             # a bead forms, then runs, picking up speed
             b = smoothstep(0, 0.6, age)
-            if age > 0.6:
-                drip["fallen"] += dt * speed * min(1.0, 0.3 + age - 0.6)
+            run = age - 0.6
+            if run > 0:
+                drip["fallen"] += dt * speed * (0.3 + run if run < 1.4 else 1.0)
             y = drip["y"] - drip["fallen"]
             if y <= pool_top * 0.6:
                 self.drips.remove(drip)
