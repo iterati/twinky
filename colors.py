@@ -98,6 +98,10 @@ class BaseColor:
         )
         return [(1.0, color, self.suppress)]
 
+    def frame(self, beats: float, dt: float):
+        """Called once a frame, before the lights, with the frame's beats and seconds: a hint's
+        modulators run on them (hints.py)."""
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.color_w},{self.color_h},{self.color_s},{self.color_l})"
 

@@ -143,6 +143,7 @@ class Blender:
         self._last_beat: int | None = None
         self._last_position: float | None = None
         self._flash: tuple[int, float] | None = None  # the last flash's beat and time
+        self.dt = 0.0  # the seconds since the frame before, as _listen takes them
         self.sparkle_roll = self.sparkle_delay
         self.spin_angle = 0.0
         self.hue_shift = 0.0
@@ -177,6 +178,7 @@ class Blender:
         """Reads the beat clock for the frame at t: the sound, the beat the frame is nearest, and the
         sparkles' roll, spin and base hue the music sets."""
         dt = min(max(t - self._t, 0.0), 0.25)
+        self.dt = dt
         links = self.music.value
         sound = self.beat.at(t, links["latency"]) if links["on"] else None
         self.links = links
@@ -337,6 +339,9 @@ class Blender:
             "flitter": getv(pattern.flitter, t),
             "flux": getv(pattern.flux, t),
         }
+
+        # the frame's beats while the music's tempo is sure, else one a second
+        pattern.base_color.frame(self.dt * (self.sound.bpm / 60 if self.beating else 1), self.dt)
 
         beat_flash = self._flash_at(now)
         chase = self.links["flash"] == "chase" and self._flash is not None
