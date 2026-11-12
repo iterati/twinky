@@ -10,7 +10,9 @@ from threading import Thread
 import time
 from core import Blender, FRAME, wait_for
 from device import Lights
+from hints import HINTS
 import layout
+import look
 from server import PORT, Server
 from sim import SimLights
 from control import (
@@ -151,6 +153,24 @@ def load_pattern(pattern: WiredPattern):
             log.info("Loaded saved config for %s", pattern.name)
     return pattern
 
+def start_patterns() -> list[WiredPattern]:
+    """The rotation: the ten patterns, the six hints and a pattern for each look in looks/, each with
+    its save."""
+    return [load_pattern(pattern) for pattern in [
+        BasicBitch(),
+        CircusTent(),
+        CoiledSpring(),
+        Confetti(),
+        FallingSnow(),
+        Galaxus(),
+        Groovy(),
+        RainbowStorm(),
+        SlidingDoor(),
+        SpiralTop(),
+        *(cls() for cls in HINTS),
+        *look.load_looks(),
+    ]]
+
 def remote_command(message: dict):
     """The TUI's own command for a message from the remote page. The page's view may be a moment
     behind, so a command for a feature runs only while the page's pattern is on show and the control
@@ -211,6 +231,11 @@ def parse_args(argv: list[str] | None=None) -> argparse.Namespace:
         "--remote",
         action="store_true",
         help="listen on the home network too, for the remote page at http://<this Mac>:8016/remote",
+    )
+    parser.add_argument(
+        "--import-look",
+        metavar="FILE",
+        help="write the pattern for a look Bermuda exported as JSON to looks/, played from the next start, and stop",
     )
     return parser.parse_args(argv)
 
@@ -437,19 +462,11 @@ if __name__ == "__main__":
         "Crash in %s", args.thread.name if args.thread else "a thread",
         exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
     )
-    patterns = [
-        load_pattern(BasicBitch()),
-        load_pattern(CircusTent()),
-        load_pattern(CoiledSpring()),
-        load_pattern(Confetti()),
-        load_pattern(FallingSnow()),
-        load_pattern(Galaxus()),
-        load_pattern(Groovy()),
-        load_pattern(RainbowStorm()),
-        load_pattern(SlidingDoor()),
-        load_pattern(SpiralTop()),
-    ]
     args = parse_args()
+    if args.import_look:
+        print("Wrote", look.import_look(args.import_look))
+        raise SystemExit
+    patterns = start_patterns()
     lights = open_lights(args)
     queue = Queue()
     animation = Blender(patterns, lights, 0, True)
