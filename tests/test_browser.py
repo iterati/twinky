@@ -32,27 +32,21 @@ def sim_frames(seed: int, to: int | None, steps: int) -> list[bytes]:
         animation.write(animation.render(T0 + k * FRAME))
     return [frame_message(number, frame) for number, frame in enumerate(sent)]
 
-def engine_frames(seed: int, to: int | None, steps: int) -> list[bytes]:
+def engine_frames(seed: int, to: int | None, steps: int) -> tuple[list[bytes], str]:
+    """The page engine's frames on the same clock, and the pattern on show after them."""
     random.seed(seed)
     engine = browser.Engine()
     engine.init(T0)
     if to is not None:
         engine.command(json.dumps({"command": "switch", "to": to}))
-    return [engine.step(T0 + k * engine.frame) for k in range(steps)]
+    frames = [engine.step(T0 + k * engine.frame) for k in range(steps)]
+    return frames, engine.blender.pattern.name
 
 @pytest.mark.parametrize("to, name", [(None, "Basic Bitch"), (5, "Galaxus"), (18, "Fireworks")])
 def test_the_engine_plays_the_frames_twinky_sim_does(to, name):
     expected = sim_frames(7, to, 112)
-    assert engine_frames(7, to, 112) == expected
+    assert engine_frames(7, to, 112) == (expected, name)
     assert [struct.unpack_from("<I", m)[0] for m in expected] == list(range(112))
-    random.seed(7)
-    engine = browser.Engine()
-    engine.init(T0)
-    if to is not None:
-        engine.command(json.dumps({"command": "switch", "to": to}))
-    for k in range(112):
-        engine.step(T0 + k * FRAME)
-    assert engine.blender.pattern.name == name
 
 def test_the_engine_keeps_no_frames_and_gives_the_servers_layout():
     engine = browser.Engine()

@@ -30,7 +30,8 @@ async function freePort(): Promise<number> {
   })
 }
 
-/** The share of the page's pixels that are lit, from a screenshot. */
+/** The share of the tree's part of the page that is lit, from a screenshot of the middle, clear of the
+ * header, the knobs and the Listen panel. */
 async function lit(page: Page): Promise<number> {
   return page.evaluate(
     async (shot: string) => {
@@ -45,7 +46,7 @@ async function lit(page: Page): Promise<number> {
       for (let i = 0; i < data.length; i += 4) if (data[i] + data[i + 1] + data[i + 2] > 60) count++
       return count / (data.length / 4)
     },
-    await page.screenshot({ encoding: 'base64' }),
+    await page.screenshot({ encoding: 'base64', clip: { x: 340, y: 70, width: 600, height: 620 } }),
   )
 }
 

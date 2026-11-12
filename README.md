@@ -47,6 +47,9 @@ folder (`base: './'`), `dist/` works from any path, such as the site's `/twinky/
 `.py` in the repo but `device.py`, `server.py` and `twinky.py` (the device, the server's sockets and
 threads, and the TUI), with `layouts/`, `looks/` and `saves/`, and from `.venv` pytweening and
 xled_plus's `ledcolor.py`, which are pure Python (`vite.config.ts`); so the build needs the venv.
+In the page run `browser.py`, `commands.py`, `core.py`, `control.py`, `colors.py`, `effects.py`,
+`hints.py`, `layout.py`, `look.py`, `motion.py`, `music.py`, `palette.py`, `param.py`, `sim.py`,
+`streamer.py`, `topologies.py`, `utils.py` and `wire.py`.
 What both twinky and the page run moved out of those three: the rotation and the commands to
 `commands.py`, the layout, frame and state messages to `wire.py`. Pyodide's own files are copied from
 `node_modules/pyodide` into `dist/pyodide/`, never fetched from a CDN. The first load is about 13 MB

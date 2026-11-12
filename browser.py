@@ -11,9 +11,11 @@ from sim import SimLights
 from wire import frame_message, layout_message, remote_state
 
 class Engine:
+    """twinky --sim's Blender on the lights, the cone if not given, that the page's worker steps: init
+    once, then step a frame at a time, command between frames, and changed_state after each."""
     frame = FRAME
 
-    def __init__(self, lights=None):
+    def __init__(self, lights: SimLights | None=None):
         self.blender = commands.start(lights if lights is not None else SimLights())
         self.layout = layout_message(self.blender)
         self.number = 0

@@ -54,6 +54,8 @@ export default function App() {
     const simulate = () => {
       const w = new Worker(new URL('./engine.worker.ts', import.meta.url), { type: 'module' })
       w.onmessage = receive
+      // a worker that never loads
+      w.onerror = (event) => setError(event.message || 'the engine did not load')
       worker = w
       link.current = (message) => w.postMessage(message)
       setMode('simulated')
