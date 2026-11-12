@@ -49,7 +49,10 @@ threads, and the TUI), with `layouts/`, `looks/` and `saves/`, and from `.venv` 
 xled_plus's `ledcolor.py`, which are pure Python (`vite.config.ts`); so the build needs the venv.
 What both twinky and the page run moved out of those three: the rotation and the commands to
 `commands.py`, the layout, frame and state messages to `wire.py`. Pyodide's own files are copied from
-`node_modules/pyodide` into `dist/pyodide/`, never fetched from a CDN.
+`node_modules/pyodide` into `dist/pyodide/`, never fetched from a CDN. The first load is about 13 MB
+(under 6 MB gzipped), most of it Pyodide's WebAssembly; the tree's first frame came about 5 seconds
+after the page opened, in headless Chromium on a local server, and then 16 frames a second, as
+`--sim` gives.
 
 ## Music
 

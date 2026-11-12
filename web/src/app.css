@@ -169,7 +169,7 @@ header {
   position: fixed;
   top: 60px;
   right: 16px;
-  bottom: 16px;
+  max-height: calc(100% - 76px);
   width: 260px;
   display: flex;
   flex-direction: column;

@@ -1,13 +1,25 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import puppeteer, { type Browser, type Page } from 'puppeteer-core'
 import { build, preview, type PreviewServer } from 'vite'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 // The built page with no twinky: its /ws passed to a port nothing listens on, in headless Chromium
-// (CHROMIUM names it, else chromium on the PATH)
+
+// CHROMIUM, else Chromium or Chrome on the PATH, else the Mac's Chrome
+function chromium(): string {
+  const found = [
+    process.env.CHROMIUM,
+    ...(process.env.PATH ?? '')
+      .split(delimiter)
+      .flatMap((dir) => ['chromium', 'chromium-browser', 'google-chrome'].map((name) => join(dir, name))),
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  ].find((path) => path && existsSync(path))
+  if (!found) throw new Error('No Chromium or Chrome: name one in CHROMIUM')
+  return found
+}
 
 async function freePort(): Promise<number> {
   return new Promise((resolve) => {
@@ -53,7 +65,7 @@ describe('the page with no twinky', () => {
       preview: { port: await freePort(), proxy: { '/ws': { target: `ws://localhost:${nothing}`, ws: true } } },
     })
     browser = await puppeteer.launch({
-      executablePath: process.env.CHROMIUM ?? 'chromium',
+      executablePath: chromium(),
       args: ['--no-sandbox', '--enable-unsafe-swiftshader'],
     })
     page = await browser.newPage()

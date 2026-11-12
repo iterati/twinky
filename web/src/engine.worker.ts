@@ -5,7 +5,8 @@ import { frameMessage, installEngine } from './engine'
 // page what twinky's server would (the layout and the state as text, then each frame's bytes) and takes
 // the remote's commands as text, run between frames as twinky's queue runs them
 
-const post = (message: string | ArrayBuffer) => self.postMessage(message, typeof message === 'string' ? [] : [message])
+const post = (message: string | ArrayBuffer) =>
+  self.postMessage(message, { transfer: typeof message === 'string' ? [] : [message] })
 
 try {
   // Pyodide's files beside the pages, as the build has them
