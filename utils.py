@@ -36,7 +36,10 @@ def mk_bounce(period, s, e=None):
         (period,        s),
     ]
 
-def mk_ramp(period, s, e):
+def mk_ramp(period, s, e=None):
+    if e is None:
+        e = s
+        s = 0
     return [
         (0,      s),
         (period, e),

@@ -283,33 +283,39 @@ def test_a_curved_knob_sweeps_from_its_rest_to_its_value_over_its_period(cls):
     assert pattern.effect.knob[knob] == value
     assert f"{knob} Period" not in [c.name for c in feature.visible_controls()]
 
-def test_the_fireworks_build_to_a_finale_then_pause():
+@pytest.mark.parametrize("build", ["1/2", "1"])
+def test_the_fireworks_build_to_a_finale_then_pause(build):
     random.seed(12)
-    pattern = effect(Fireworks)
+    pattern = effect(Fireworks, Build=build)
     b = blender([pattern, EffectPattern(next_effect(Fireworks)())])
     launches = {}
     for t, _ in frames(b, 0, 40):
         fresh = [r for r in pattern.effect.rockets if r["start"] == t]
         if fresh:
             launches[t] = len(fresh)
-    finales = [t for t, n in launches.items() if n == VOLLEY]
-    # once a build, as it reaches 0.9 of its 32 s ramp (eased, 25.4 s), then the pause, and the rockets
-    # coming quicker as it builds
-    assert len(finales) == 1 and 25.4 <= finales[0] < 27
-    assert not [t for t in launches if finales[0] < t < finales[0] + PAUSE]
+    # the finale as the 32 s build falls back to its rest, then the pause, the rockets coming quicker
+    # as the show builds
+    assert [t for t, n in launches.items() if n == VOLLEY] == [32.0]
+    assert not [t for t in launches if 32 < t < 32 + PAUSE]
     early = [t for t in launches if t < 10]
-    late = [t for t in launches if 18 < t < finales[0]]
-    assert len(late) / (finales[0] - 18) > 1.5 * len(early) / 10
+    late = [t for t in launches if 22 < t < 32]
+    assert len(late) > len(early)
 
 def test_ripples_first_ring_paints_the_tree():
-    # the first drop falls at once, and its ring repaints the tree as it spreads: within 2 s, a share
-    # of the tree holds its colour
+    # the first drop falls at once, and its ring alone repaints the tree behind it as it spreads:
+    # within 2 s, a share of the tree holds its colour
     random.seed(14)
     pattern = effect(Ripples)
     b = blender([pattern, EffectPattern(next_effect(Ripples)())])
-    for t, frame in frames(b, 0, 2):
+    b.render(0.0)
+    ripples = pattern.effect
+    assert len(ripples.drops) == 1
+    ripples.next_drop = math.inf
+    for t, frame in frames(b, FRAME, 2):
         pass
-    assert len(pattern.effect.drops) >= 1
-    painted = sum(c > 0.2 for c in pattern.effect.painted) / len(frame)
-    assert painted > 0.1
+    _, (cx, cy, cz), _ = ripples.drops[0]
+    front = 2 * ripples.knob["Speed"]
+    ahead = [i for i, (x, y, z) in enumerate(ripples.points) if math.dist((x, y, z), (cx, cy, cz)) > front]
+    assert sum(c > 0.2 for c in ripples.painted) / len(frame) > 0.1
+    assert not [i for i in ahead if ripples.painted[i] > 0]
     assert sum(max(light) > 0.06 * 255 for light in frame) / len(frame) > 0.1

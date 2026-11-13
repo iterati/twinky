@@ -29,8 +29,8 @@ for k in range(steps):
 print(hashlib.sha256(b"".join(frame_message(n, f) for n, f in enumerate(sent))).hexdigest())
 `
 
-// the heaviest effect, the Lava lamp, held at its hottest: the mean seconds of its frames, rendered
-// and written as the page's engine does them
+// the heaviest effect, the Lava lamp, held at its hottest: its frames' mean time, rendered and
+// written as the page's engine does them, as a share of a frame's
 const LAVA = `
 import random, time
 from core import FRAME, Blender
@@ -46,7 +46,7 @@ b.init(0.0)
 start = time.perf_counter()
 for k in range(${STEPS}):
     b.write(b.render(k * FRAME))
-(time.perf_counter() - start) / ${STEPS}
+(time.perf_counter() - start) / ${STEPS} / FRAME
 `
 
 function sim(seed: number, to?: number): string {
@@ -91,8 +91,6 @@ describe('the page engine', () => {
   })
 
   it('renders the Lava lamp at its hottest within a frame', { timeout: 60_000 }, () => {
-    const engine = browser.Engine()
-    expect(pyodide.runPython(LAVA) as number).toBeLessThan(engine.frame)
-    engine.destroy()
+    expect(pyodide.runPython(LAVA) as number).toBeLessThan(1)
   })
 })

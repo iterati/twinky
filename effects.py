@@ -20,7 +20,7 @@ import random
 
 from colors import BaseColor, Color
 from control import BlendFeature, Control, Feature, Option, WiredPattern
-from hints import Sweep
+from hints import HintFeature, Sweep
 from param import getv
 from utils import mk_ramp
 
@@ -308,10 +308,8 @@ class EffectFeature(Feature):
             control.set([n for n, _ in options].index(start))
         super(EffectFeature, self).__init__(effect.name, controls)
 
-    def visible_controls(self):
-        # a sweep's Curve and Period only while it's Curved
-        hidden = [c for sweep in self.sweeps if not sweep.curved.value for c in (sweep.curve, sweep.period)]
-        return [c for c in self.controls if c not in hidden]
+    # a sweep's Curve and Period only while it's Curved, as a hint's
+    visible_controls = HintFeature.visible_controls
 
     @property
     def value(self):
@@ -400,19 +398,19 @@ FIREFLY_COLORS = {
 # The swarm: the flies at Count's rest, how many it takes to fall into step and to blink all as one
 # wave, how hard a fly is pulled into step, a turn a second, and the share of its blink a fly is lit
 FEW_FLIES = 4
-STEP_FROM = 60
-STEP_AT = 110
+STEP_FROM = 30
+STEP_AT = 60
 PULL = 2.0
 BLINK = 0.45
 
 class Fireflies(Effect):
     """A swarm of soft warm lights, each blinking in its own time and wandering a little: as Count
     sweeps it grows from a few to its Count, the flies falling into step until they blink together
-    in a wave round the tree, and it scatters again. The beat swells their glow; the high band sets
+    in a wave round the tree, and it scatters again. A firefly lights on the beat; the high band sets
     how many there are."""
     name = "Fireflies"
     knobs = [
-        ("Count", [("few", 12), ("some", 40), ("swarm", 120)], "swarm", FEW_FLIES),
+        ("Count", [("some", 60), ("many", 90), ("swarm", 120)], "swarm", FEW_FLIES),
         ("Pace", [("lazy", 1.6), ("gentle", 1.0)], "gentle"),
         ("Colour", [(n, n) for n in FIREFLY_COLORS], "amber"),
         ("Size", [("small", 0.055), ("soft", 0.075)], "soft"),
@@ -442,7 +440,10 @@ class Fireflies(Effect):
         pull = PULL * smoothstep(STEP_FROM, STEP_AT, count) * dt
         color = FIREFLY_COLORS[k["Colour"]]
         size, size2 = k["Size"], k["Size"] ** 2
-        glow = 1 + 0.5 * self.swell
+        # a dark fly of the swarm lights on the beat
+        dark = [f for f in self.flies[:int(count)] if f["phase"] >= BLINK]
+        if self.beat is not None and dark:
+            random.choice(dark)["phase"] = 0.0
         layers = [[] for _ in self.points]
         for j, f in enumerate(self.flies):
             target = self.wave + f["angle"] / (2 * math.pi)
@@ -451,7 +452,7 @@ class Fireflies(Effect):
             joined = min(1.0, count - j)
             if joined <= 0 or f["phase"] >= BLINK:
                 continue
-            b = joined * glow * math.sin(math.pi * f["phase"] / BLINK) ** 2
+            b = joined * math.sin(math.pi * f["phase"] / BLINK) ** 2
             if b <= 0.01:
                 continue
             s = f["seed"]
@@ -462,7 +463,7 @@ class Fireflies(Effect):
                 x, y, z = self.points[i]
                 c = b * bump((x - px) ** 2 + (y - py) ** 2 + (z - pz) ** 2, size2)
                 if c > 0:
-                    layers[i].append((min(1.0, c), color))
+                    layers[i].append((c, color))
         return layers
 
 FIREWORK_PALETTES = {
@@ -472,9 +473,8 @@ FIREWORK_PALETTES = {
     "blue-white": [FULL(BLUE), COOL_WHITE],
 }
 
-# The finale: the build it goes up at, its rockets all at once, the seconds of dark after it, and
-# the warm flash a burst lights the whole tree with
-FINALE = 0.9
+# The finale: its rockets all at once, the seconds of dark after it, and the warm flash a burst
+# lights the whole tree with
 VOLLEY = 7
 PAUSE = 5.0
 FLASH = (0.6, YELLOW, 0.3, -0.4)
@@ -484,8 +484,8 @@ SPARK = 0.065
 class Fireworks(Effect):
     """A spark climbs, bursts into a sphere of colour on the cone's surface, and falls with fading
     trails, each burst lighting the whole tree for a moment. As Build sweeps the show builds, the
-    rockets coming quicker and bursting bigger, to a finale of many at once, then a pause before it
-    starts again. A rocket goes up on the beat, Rate the most there can be as the show starts; the
+    rockets coming quicker and bursting bigger, to a finale of many at once as the build ends, then a
+    pause while the next starts. A rocket goes up on the beat, Rate the most there can be as the show starts; the
     low band sets the burst's Size."""
     name = "Fireworks"
     knobs = [
@@ -503,8 +503,8 @@ class Fireworks(Effect):
         self.rockets = []
         self.sparks = []
         self.next_launch = 0.3
-        self.finale = -PAUSE  # when the last finale went up
-        self.peaked = False  # whether it went up in this build, which ends as the build falls back
+        self.build = 0.0
+        self.finale = False  # whether a finale is due, on the next beat with the music
         self.flash = 0.0
 
     def _colors(self):
@@ -527,19 +527,22 @@ class Fireworks(Effect):
         k = self.knob
         self.trail.fade(dt, k["Trails"])
         build = getv(k["Build"], t)
-        self.peaked &= build >= FINALE
-        if t >= self.finale + PAUSE and self.due(self.next_launch):
-            finale = build >= FINALE and not self.peaked
-            self.next_launch = t + k["Rate"] * (1 - 0.8 * build) * random.uniform(0.7, 1.3)
-            if finale:
-                self.finale, self.peaked = t, True
-            for _ in range(VOLLEY if finale else 1):
+        # the build falling back to its rest ends the show: the finale, then the pause
+        self.finale |= build < self.build / 2
+        self.build = build
+        if self.due(t if self.finale else self.next_launch):
+            if self.finale:
+                self.next_launch = t + PAUSE
+            else:
+                self.next_launch = t + k["Rate"] * (1 - 0.8 * build) * random.uniform(0.7, 1.3)
+            for _ in range(VOLLEY if self.finale else 1):
                 self.rockets.append({
                     "start": t,
                     "angle": random.uniform(0, 2 * math.pi),
                     "top": random.uniform(0.45, 0.8),
                     "climb": random.uniform(1.5, 1.9),
                 })
+            self.finale = False
         size = banded(k["Size"], self.low) if self.sound is not None else k["Size"]
         size *= 1 + 0.4 * build
         self.flash *= math.exp(-dt / 0.25)
@@ -601,7 +604,7 @@ RIPPLE_PALETTES = {
 }
 
 # How much of a light a ring's paint covers once the ring has passed it, and how quickly a ring
-# repaints a light under its middle, in seconds
+# repaints a light half its width behind its middle, in seconds
 PAINT = 0.4
 REPAINT = 0.1
 
@@ -649,13 +652,14 @@ class Ripples(Effect):
             for i, (x, y, z) in enumerate(self.points):
                 d = math.sqrt((x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2)
                 if lo <= d <= hi:
-                    ring = bump((d - front) ** 2, width * width)
-                    # the ring repaints the light as it passes, however far it has spread
-                    m = 1 - math.exp(-ring * dt / REPAINT)
-                    self.paint[i] = color if self.painted[i] == 0 else mix(self.paint[i], color, m)
-                    self.painted[i] += (PAINT - self.painted[i]) * m
-                    if amp * ring > 0.003:
-                        layers[i].append((amp * ring, color))
+                    if d < front:
+                        # the ring repaints the tree behind its middle, however far it has spread
+                        m = 1 - math.exp(-bump((d - front + width / 2) ** 2, width * width / 4) * dt / REPAINT)
+                        self.paint[i] = color if self.painted[i] == 0 else mix(self.paint[i], color, m)
+                        self.painted[i] += (PAINT - self.painted[i]) * m
+                    ring = amp * bump((d - front) ** 2, width * width)
+                    if ring > 0.003:
+                        layers[i].append((ring, color))
         return [light + [(c, self.paint[i])] if (c := self.painted[i]) > 0.004 else light for i, light in enumerate(layers)]
 
 # Each palette's wax, cool and hot, and the glow behind it
@@ -746,7 +750,7 @@ class Comets(Effect):
     they fade. The beat gives the comets a push, a surge in Speed; the bands' level sets the Tail."""
     name = "Comets"
     knobs = [
-        ("Comets", [("3", 3), ("5", 5), ("7", 7)], "7"),
+        ("Comets", [(str(n), n) for n in (1, 2, 3, 5, 7)], "7"),
         ("Speed", [("slow", 0.1), ("medium", 0.16), ("quick", 0.24)], "medium"),
         ("Tail", [("short", 0.5), ("medium", 1.0), ("long", 1.8)], "long"),
         ("Palette", [(n, n) for n in COMET_PALETTES], RAINBOW),
