@@ -156,7 +156,7 @@ def check_set(b, state):
 
 def check_pace(b, state):
     # easy, one on to brisk
-    assert state["walk"]["pace"]["pick"] == 2 and b.walk.pace.value == (2.0, 1)
+    assert state["walk"]["pace"]["pick"] == 2 and b.walk.pace.value == (2.0, 2)
 
 def check_reach(b, state):
     # jump, one back to any

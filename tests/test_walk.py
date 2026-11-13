@@ -247,3 +247,24 @@ def test_a_saved_patterns_controls_are_held(monkeypatch):
     reach(b, "near")
     commands.nudge(b)
     assert b.change.run.pattern.name == "Circus Tent"
+
+def test_back_gives_a_pattern_saved_since_the_step_its_mark_back(stepping, tmp_path, monkeypatch):
+    monkeypatch.setattr(commands, "SAVES", str(tmp_path))
+    b = walker([BasicBitch(), CircusTent()])
+    reach(b, "near")
+    b.pattern.dirty = False
+    before = picks(b.pattern)
+    commands.nudge(b)
+    commands.toggle_configured(b)
+    assert b.pattern.configured
+    commands.walk_back(b)
+    # the picks before the step, which the save does not hold: not saved, so the walk moves them again
+    assert picks(b.pattern) == before and b.mark == "?" and not b.pattern.configured
+
+def test_nudge_waits_out_a_change(stepping):
+    b = walker([BasicBitch(), CircusTent()])
+    reach(b, "near")
+    commands.switch_pattern(1)(b)
+    before = picks(b.pattern)
+    commands.nudge(b)
+    assert picks(b.pattern) == before and not b.walk.back_steps

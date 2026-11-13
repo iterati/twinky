@@ -27,17 +27,17 @@ usual change, the new one freshly randomized. Space pauses it, as it paused the 
 starts paused. Its live controls:
 
 - Pace (`<` and `>`, or `,` and `.`): slow, easy, brisk or fast, a step every 8, 4, 2 or 1 seconds;
-  with Music on and its beat sure, on every 4th bar line, every 2nd, or (brisk and fast) every one
-  instead.
+  with Music on and its beat sure, on every 8th, 4th, 2nd or every bar line instead.
 - Reach (`[` and `]`): near (the next option either way), far (up to 3 away), any (any option) or
   jump, the old autopilot: a freshly randomized pattern every 60 seconds, from a bar line in drive.
 - Stay (`t`): the walk stays on this pattern, moving only its knobs (at jump, rerolling them all).
 - Pin (`p`, the selected feature): the walk holds a pinned feature still and moves the rest. Pins
-  are the walk's alone, not saved, left as they are by Random and Shuffle, and cleared when the
-  pattern changes. Music is not walked, and has none.
+  are the walk's alone: not saved, left as they are by Shuffle, and cleared when the pattern changes,
+  Random's change too. Music is not walked, and has none.
 - Back (`b`): undoes the walk's last step, gliding back, and again the one before, 10 kept; a change
-  of pattern it undoes changes back to that pattern with its controls as they were. It works paused.
-- Nudge (`n`): one step now, as the walk would take it.
+  of pattern it undoes changes back to that pattern with its controls as they were, and a step's
+  pattern gets its mark back, saved or not. It works paused.
+- Nudge (`n`): one step now, as the walk would take it, so none while a change runs.
 
 A saved pattern's controls are held, as before: the walk only moves on from it, unless Stay is on.
 The TUI's footer shows the keys, Pace, Reach and Stay, and a pinned feature says so.
@@ -120,10 +120,10 @@ value for its whole option list) and its pin and On switch on the header, then t
 switch, the other way round from Pause; Pace and Reach as steppers, Stay, Back and Nudge), then the
 spin ring; along the bottom, Random (the TUI's `R`), Shuffle (`r`: the open card's feature, or with
 every card closed the whole pattern), Pause (space) and Save (`s`: the pattern, or Music with its
-card open). It keeps the
-screen on, ticks on each minus and plus, and drags the tree round live with the spin ring, the tree
-staying where it's let go (its bottom is the side nearest you). Every tap is one of the TUI's own
-commands on the same queue, so the phone and the TUI can drive at once and stay in step.
+card open). It keeps the screen on, ticks on each minus and plus, and drags the tree round live with
+the spin ring, the tree staying where it's let go (its bottom is the side nearest you). Every tap is
+one of the TUI's own commands on the same queue, so the phone and the TUI can drive at once and stay
+in step.
 
 On `/ws?remote` twinky sends the state as JSON as the remote connects and whenever anything changes,
 from the phone, the TUI or an automatic change, and the TUI's time text 4 times a second:

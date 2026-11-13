@@ -9,9 +9,9 @@ from control import Control, Feature, Option, ToggleControl, WiredPattern
 
 # the seconds between steps, or while the music's beat is sure, the bars
 PACES = [Option(n, v) for n, v in [
-    ("slow", (8.0, 4)),
-    ("easy", (4.0, 2)),
-    ("brisk", (2.0, 1)),
+    ("slow", (8.0, 8)),
+    ("easy", (4.0, 4)),
+    ("brisk", (2.0, 2)),
     ("fast", (1.0, 1)),
 ]]
 # how many options away a step may go; at jump, the old autopilot: a freshly randomized pattern every
@@ -40,16 +40,14 @@ class Walk:
         self.stay = ToggleControl("Stay")
         self.stay.set(1)  # Off
         self.pins: set[int] = set()  # the pattern on show's features the walk holds still, by index
-        # where each step left from: the pattern, its picks by name, and whether it was changed since its save
-        self.back_steps: deque[tuple[WiredPattern, dict, bool]] = deque(maxlen=BACK_STEPS)
+        # where each step left from: the pattern, its picks by name, whether it was saved and whether
+        # changed since
+        self.back_steps: deque[tuple[WiredPattern, dict, bool, bool]] = deque(maxlen=BACK_STEPS)
         self.last_step = 0.0
 
     @property
     def jumping(self) -> bool:
         return self.reach.value is None
-
-    def toggle_pin(self, fidx: int):
-        self.pins ^= {fidx}
 
     def due(self, b) -> bool:
         """Whether the walk steps on the Blender's frame now. At jump, as the old autopilot, a minute
@@ -84,7 +82,7 @@ class Walk:
         pattern = b.pattern
         roll = None if self.jumping else random.random()
         if not self.stay.value and (roll is None or roll < CHANGE):
-            self.back_steps.append((pattern, pattern._to_dict(), pattern.dirty))
+            self.back_steps.append((pattern, pattern._to_dict(), pattern.configured, pattern.dirty))
             b.start_transition(bars=b.lands_on_bars)
             return
         if pattern.configured:
@@ -92,12 +90,12 @@ class Walk:
         features = [fidx for fidx, f in enumerate(pattern.features) if fidx not in self.pins and movable(f)]
         if not features:
             return
-        self.back_steps.append((pattern, pattern._to_dict(), pattern.dirty))
+        self.back_steps.append((pattern, pattern._to_dict(), pattern.configured, pattern.dirty))
         if roll is None:
             for fidx in features:
                 pattern.features[fidx].randomize()
             pattern.update()
-        elif roll < CHANGE + REROLL:
+        elif CHANGE <= roll < CHANGE + REROLL:
             pattern.features[random.choice(features)].randomize()
             pattern.update()
         else:
@@ -111,14 +109,15 @@ class Walk:
 
     def back(self, b):
         """Undoes the last step kept: the pattern it left from, back on show if it isn't, with its
-        controls as they were."""
+        controls and its mark as they were."""
         if not self.back_steps:
             return
-        pattern, picks, dirty = self.back_steps.pop()
+        pattern, picks, configured, dirty = self.back_steps.pop()
         on_show = b.change.run.pattern if b.change is not None else b.pattern
         if pattern is not on_show:
             b.start_transition(b.patterns.index(pattern))
         pattern._from_dict(picks)
+        pattern.configured = configured
         pattern.dirty = dirty
         if pattern is on_show:
             b.glide()

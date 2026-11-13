@@ -1,5 +1,5 @@
 import Pin from './remote/Pin'
-import type { Command, State } from './remote/remote'
+import type { State } from './remote/remote'
 import Walk from './remote/Walk'
 
 /** The simulated tree's picker and knobs: twinky's patterns, the remote's Walk card, and the one on
@@ -8,12 +8,11 @@ import Walk from './remote/Walk'
 export default function Simulated({ state, send }: { state: State; send: (message: string) => void }) {
   const { pattern } = state
   const features = state.features.slice(0, -1)
-  const command = (c: Command) => send(JSON.stringify(c))
   return (
     <section className="simulated" aria-label="Simulated tree">
       <select
         value={state.patterns.indexOf(pattern)}
-        onChange={(e) => command({ command: 'switch', to: Number(e.target.value) })}
+        onChange={(e) => send(JSON.stringify({ command: 'switch', to: Number(e.target.value) }))}
         aria-label="Pattern"
       >
         {state.patterns.map((name, i) => (
@@ -23,7 +22,7 @@ export default function Simulated({ state, send }: { state: State; send: (messag
         ))}
       </select>
       {state.to && <div className="to">changing to {state.to}</div>}
-      <Walk walk={state.walk} paused={state.paused} send={command} />
+      <Walk walk={state.walk} paused={state.paused} send={(command) => send(JSON.stringify(command))} />
       {features.map((feature, f) => (
         <fieldset key={`${pattern} ${feature.name}`}>
           <legend>
@@ -31,7 +30,7 @@ export default function Simulated({ state, send }: { state: State; send: (messag
             <Pin
               name={feature.name}
               pinned={state.walk.pins.includes(f)}
-              onClick={() => command({ command: 'pin', pattern, feature: f })}
+              onClick={() => send(JSON.stringify({ command: 'pin', pattern, feature: f }))}
             />
           </legend>
           {feature.controls.map((c, i) => (
@@ -40,14 +39,16 @@ export default function Simulated({ state, send }: { state: State; send: (messag
               <select
                 value={c.pick}
                 onChange={(e) =>
-                  command({
-                    command: 'set',
-                    pattern,
-                    feature: f,
-                    control: i,
-                    name: c.name,
-                    option: Number(e.target.value),
-                  })
+                  send(
+                    JSON.stringify({
+                      command: 'set',
+                      pattern,
+                      feature: f,
+                      control: i,
+                      name: c.name,
+                      option: Number(e.target.value),
+                    }),
+                  )
                 }
               >
                 {c.options.map((option, o) => (

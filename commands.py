@@ -96,14 +96,16 @@ def toggle_pin(fidx):
     def func(a):
         # Music is no pattern's, so the walk never moves it
         if fidx < len(a.pattern.features):
-            a.walk.toggle_pin(fidx)
+            a.walk.pins ^= {fidx}
     return func
 
 def walk_back(a):
     a.walk.back(a)
 
 def nudge(a):
-    a.walk.step(a)
+    # as the walk would: never while a change runs
+    if not a.transitioning:
+        a.walk.step(a)
 
 def spin_ring(angle):
     def func(a):
