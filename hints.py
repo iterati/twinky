@@ -9,7 +9,23 @@ import math
 from pytweening import easeOutBack
 
 from colors import BaseColor, Color
-from control import CURVES, DIRECTIONS, BlendFeature, Control, Feature, Option, ToggleControl, WiredPattern
+from control import (
+    CURVES,
+    DIRECTIONS,
+    INTS16,
+    BlendFeature,
+    Control,
+    Feature,
+    FlickerFeature,
+    FlitterFeature,
+    FluxFeature,
+    Option,
+    SparklesFeature,
+    SpinFeature,
+    SpiralTopologyFeature,
+    ToggleControl,
+    WiredPattern,
+)
 from motion import Modulator, Running, Target, wave
 from palette import COSINES, Palette, Vec3, oklch_to_linear, palette_at, stops_from_cosine
 from param import Curve, Param, getv
@@ -384,10 +400,22 @@ class HiddenFieldFeature(HintFeature):
         return inside * sparkle, palette_at(self.palette, ((c * 0.381966) + (r * 0.618034)) % 1)
 
 class HintPattern(WiredPattern):
-    """A hint and Blend. While the music's tempo is sure, the hint's clock is drawn onto the beat."""
+    """A hint, his layers as his patterns compose them (Spiral, Spin, Flicker, Flitter, Flux and
+    Sparkles) and Blend. His layers start off, Spiral's Repeats at 1 and unmirrored, so the hint's
+    own look is in charge until the walk or Random turns them up. While the music's tempo is sure,
+    the hint's clock is drawn onto the beat."""
     def __init__(self, feature: HintFeature):
         super(HintPattern, self).__init__(feature.name)
-        self.features = [feature, BlendFeature()]
+        spiral = SpiralTopologyFeature(repeats=INTS16)
+        spin = SpinFeature()
+        flicker = FlickerFeature(max_v=1/2)
+        flitter = FlitterFeature(max_v=1/2)
+        flux = FluxFeature(max_v=1/2)
+        sparkles = SparklesFeature(flux=flux)
+        for toggle in [spiral._mirrored, spiral._enabled, spin._enabled, flicker._enabled, flitter._enabled,
+                       flux._enabled, sparkles._enabled]:
+            toggle.set(1)  # Off
+        self.features = [feature, spiral, spin, flicker, flitter, flux, sparkles, BlendFeature()]
 
     def step(self, t, pixels, sound, beating, beat, hue):
         if beating:

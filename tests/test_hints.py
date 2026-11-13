@@ -1,9 +1,10 @@
 """The three hints on the simulated tree: T1a's pattern cases (through a change, every option, the
 seam), their soft edges, their colour as linear light, their clock in beats, and the music's links;
-their sweeps, layers, Ride and tick, and that each keeps changing over a minute."""
+their sweeps, layers, Ride and tick, that each keeps changing over a minute, and his layers on them."""
 import json
 import os
 import random
+import statistics
 
 import pytest
 
@@ -13,7 +14,7 @@ from core import Pixel
 from hints import HINTS, TICK, HiddenField, Hint, HintFeature, PaletteColor, Slices, Wash, tick
 from palette import oklch_to_linear
 from param import getv
-from support import FRAME, blender, frames, in_range
+from support import FRAME, blender, frames, in_range, quiet
 from test_music import FakeClock, music
 
 def name(cls) -> str:
@@ -72,13 +73,15 @@ def test_every_option_of_every_control(cls):
 @pytest.mark.parametrize("seed", [5, 6, 7])
 @pytest.mark.parametrize("cls", HINTS, ids=name)
 def test_seam_at_angle_0(cls, seed):
-    # lights just either side of angle 0 at the same height agree as the hints move: angle 0 is no edge
+    # lights just either side of angle 0 at the same height agree as the hints move: angle 0 is no edge.
+    # His Spiral and Spin as randomized, but not his grain, each light's own; the two lights close
+    # enough that his Repeats and Mirrored, up to 12 times round the trunk, keep them neighbours
     random.seed(seed)
     pattern = cls()
     pattern.randomize()
-    pattern.configured = True
+    quiet(pattern)
     b = blender([pattern, next_hint(cls)()])
-    eps = 0.0002
+    eps = 0.00002
     b.pixels = []
     for i in range(19):
         for t in [eps, 1 - eps]:
@@ -109,7 +112,7 @@ def test_soft_edges_no_light_jumps_from_off_to_full_in_a_frame(hint, bpm):
     random.seed(9)
     cls, picks = FASTEST[hint]
     pattern = pick(cls(), **picks)
-    pattern.features[1].controls[1].set(0)  # Grain smooth
+    pattern.features[-1].controls[1].set(0)  # Grain smooth
     b = blender([pattern, Wash()])
     if bpm is not None:
         b.beat = FakeClock(bpm, 0.0)
@@ -176,7 +179,8 @@ def test_a_hints_save_round_trips_by_name(cls, tmp_path, monkeypatch):
     random.seed(11)
     monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     pattern = cls()
-    assert len({c.name for f in pattern.features for c in f.controls}) == sum(len(f.controls) for f in pattern.features)
+    assert len({f.name for f in pattern.features}) == len(pattern.features)
+    assert all(len({c.name for c in f.controls}) == len(f.controls) for f in pattern.features)
     pattern.randomize()
     commands.toggle_configured(type("Animation", (), {"pattern": pattern})())
     with open(tmp_path / os.path.basename(commands.save_path(pattern))) as file:
@@ -327,3 +331,45 @@ def test_the_reveal_swings_from_sparkles_to_solid_stars_over_a_minute():
     assert swing(seconds_of(held, Wash())) < 0.3
     revealed = pick(HiddenField(), reveal="1", **{"reveal curved": "On", "reveal period": "32"})
     assert swing(seconds_of(revealed, Wash())) > 0.6
+
+@pytest.mark.parametrize("cls", HINTS, ids=name)
+def test_each_hint_lists_his_layers_blend_last(cls):
+    pattern = cls()
+    assert [f.name for f in pattern.features] == [
+        pattern.name, "Spiral", "Spin", "Flicker", "Flitter", "Flux", "Sparkles", "Blend"]
+    # as constructed they're off and Spiral moves no light, so the hint's own look is in charge
+    pattern.update(set_dirty=False)
+    assert (pattern.spin, pattern.flicker, pattern.flitter, pattern.flux, pattern.sparkles) == (0, 0, 0, 0, 0)
+    moves = [topology(0.0) for topology in pattern.topologies]
+    for x, y in [(0.1, 0.2), (0.45, 0.9), (0.8, 0.5)]:
+        for move in moves:
+            x = move(x, y)
+        assert x == pytest.approx(x)
+
+def whites_of(pattern, other) -> list[list[tuple[float, float, float, float]]]:
+    """A minute of the hint on a quarter of the lights at 4 frames a second: each frame's lights."""
+    random.seed(13)
+    b = blender([pattern, other])
+    b.pause_change = True
+    b.pixels = b.pixels[::4]
+    return [b.render(k / 4) for k in range(4 * 60)]
+
+@pytest.mark.parametrize("cls", HINTS, ids=name)
+def test_a_hint_with_flicker_turned_up_twinkles_over_a_minute(cls):
+    # a hint's own colours never light the white LEDs; Flicker at 1/2 lights them, each light rising
+    # and falling over the minute on its own, out of step with the rest, over the hint's own colours
+    other = Slices if cls is Wash else Wash
+    plain = whites_of(pick(cls()), other())
+    flickering = pick(cls())
+    flicker = flickering.features[3]
+    flicker._enabled.set(0)
+    flicker._start.set([o.name for o in flicker._start.options].index("1/2"))
+    flicker._curved.set(1)  # Off
+    flickering.update(set_dirty=False)
+    grained = whites_of(flickering, other())
+    assert all(w == 0 for frame in plain for w, *_ in frame)
+    whites = [[w / 255 for w, *_ in frame] for frame in grained]
+    assert statistics.mean(statistics.pstdev(light) for light in zip(*whites)) > 0.08
+    assert statistics.mean(statistics.pstdev(frame) for frame in whites) > 0.08
+    assert max(map(max, whites)) <= 0.5 + 1e-9
+    assert [[rgb for _, *rgb in frame] for frame in grained] == [[rgb for _, *rgb in frame] for frame in plain]

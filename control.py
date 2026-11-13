@@ -423,8 +423,9 @@ class SpiralFeature(Feature):
 class SpiralTopologyFeature(Feature):
     def __init__(self,
                  toggleable=True,
-                 force_curve=False):
-        self._repeats = Control("Repeats", INTS26)
+                 force_curve=False,
+                 repeats: list[Option]=INTS26):
+        self._repeats = Control("Repeats", repeats)
         self._mirrored = ToggleControl("Mirrored")
         self._enabled = ToggleControl("Enabled")
         self._value = Control("Twists", [Option(str(v), v) for v in [

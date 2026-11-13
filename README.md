@@ -185,7 +185,9 @@ a lattice of stars seen from above the treetop, and as its Reveal sweeps, they t
 until the stars stand solid, turning twice as fast, then dissolve. Each picks one of Bermuda's six cosine
 palettes. A swept knob is a Curved knob, as the patterns in `control.py` have: its value, or with its
 Curved on, its Curve from the knob's rest to its value and back each Period (Lean to its value and
-as far the other side). Their
+as far the other side). Each hint also has the layers of the patterns in `control.py`, as Circus
+Tent has them: Spiral, Spin, Flicker, Flitter, Flux and Sparkles, then Blend, each off (Spiral's
+Repeats at 1) until the walk or Random turns it up. Their
 periods and sweeps count beats of the beat clock while music plays, seconds otherwise, and while
 the music's tempo is sure, a hint's clock is drawn onto the beat, so a tick lands on a beat and a
 sweep turns on a bar line. `palette.py` and `motion.py` are Python ports of Bermuda's `src/colour.ts`
