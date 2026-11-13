@@ -36,6 +36,12 @@ def mk_bounce(period, s, e=None):
         (period,        s),
     ]
 
+def mk_ramp(period, s, e):
+    return [
+        (0,      s),
+        (period, e),
+    ]
+
 def coverage(x, start, end, edge, wrap=True):
     """How much of a light at x, seen as a box `edge` wide, the span from start to end covers.
     With wrap, the span is an angle round the trunk."""

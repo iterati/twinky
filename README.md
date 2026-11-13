@@ -204,22 +204,32 @@ this reads is refused, naming the field.
 ## Effects
 
 Ten patterns in the rotation are effects in the tree's 3D space, each light lit from its x, y and z
-rather than its angle and height: Aurora (curtains of green and violet folding up the tree), Fireflies
-(soft warm lights wandering in clusters), Fireworks (a spark climbs and bursts on the surface, its
-sparks falling in fading trails), Ripples (rings spreading from drops), Lava lamp (blobs rising,
-merging and splitting), Comets (two or three orbiting with tails), Hearth (fire at the bottom cooling
-up the tree, with embers), Lightning (one branching bolt, then an afterglow), Drips (paint running
-down into a pool) and Heartbeat (a double pulse from the core). Each has one feature of its own knobs
-and Blend: Grain raw hardens an effect's soft edges, a light in or out. Only the rainbow palettes
-turn with the base hue every 66 s; the named ones stay as named.
+rather than its angle and height, and each develops over the minute rather than holding one look:
+Aurora (curtains of green and violet folding up the tree, building to a substorm's surge of quick,
+fine, bright folds and calming), Fireflies (a swarm growing to 120, falling into step to blink
+in a wave round the tree, and scattering), Fireworks (a spark climbs and bursts on the surface, its
+sparks falling in fading trails, the show building to a finale of many at once, then a pause),
+Ripples (rings spreading from drops right across the tree, each repainting it in its colour), Lava
+lamp (blobs rising, merging and splitting as the lamp heats, fast, many and yellow, and cools, few,
+big, slow and red), Comets (up to seven on tilted, drifting orbits with long glittering tails),
+Hearth (a fire's life: embers, catching, a blaze with flare-ups, dying back), Lightning (a storm
+building, its bolts striking closer and more often, striking again, with sheet lightning in the
+clouds), Drips (paint running down in pours and trickles, the pool rising and draining) and Heartbeat
+(a double pulse from the core, resting to racing and back, warming from violet through red to orange).
+Each has one feature of its own knobs and Blend: Grain raw hardens an effect's soft edges, a light in
+or out. Eight of them have a swept knob, a Curved knob as the hints' are, on the run's clock in
+seconds: Aurora's Surge, the Fireflies' Count, Fireworks' Build (a ramp, up to its value and straight
+back), the Lava lamp's Heat, Hearth's Height, Lightning's Storm, and Drips' and Heartbeat's Rate. Only
+the rainbow palettes turn with the base hue every 66 s; the named ones stay as named.
 
 With Music on and the page listening, the beat and the bands drive them: a rocket, drop or drip
-waits for a beat, Fireworks' Rate and Lightning's Interval the least time between, Lightning on a
-bar line; a firefly lights on each beat; the beat swells Aurora and the blobs, pushes the comets and
-flares the fire; Heartbeat pulses on the beat. A band moves a knob from half as set (quiet) to half
-as much again (loud): the low band Aurora's and the Lava lamp's Speed, Fireworks' Size, Hearth's
-Height, Heartbeat's Reach and Lightning's clouds; the high band Aurora's violet, the fireflies' Count
-and Hearth's Embers; the bands together Ripples' Width, the comets' Tail and Drips' Speed.
+waits for a beat, Fireworks' Rate and Lightning's Interval the least time between as the show or the
+storm starts, Lightning on a bar line; the beat swells the fireflies, Aurora and the blobs, pushes
+the comets and flares the fire; Heartbeat pulses on the beat, as hard as the tempo. A band moves a
+knob from half as set (quiet) to half as much again (loud): the low band Aurora's and the Lava lamp's
+Speed, Fireworks' Size, Hearth's Height, Heartbeat's Reach and Lightning's clouds; the high band
+Aurora's violet, the fireflies' Count and Hearth's Embers; the bands together Ripples' Width, the
+comets' Tail and Drips' Speed.
 
 They are in `effects.py`. Once a frame, before the lights, the Blender calls a pattern's `step` with
 the run's clock, every light, the sound, the beat and the base hue, and an effect works out each

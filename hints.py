@@ -79,9 +79,10 @@ def tick(clock: float) -> float:
     return n + easeOutBack(min(1.0, (clock - n) / TICK))
 
 class Sweep:
-    """A hint's knob as the Curved knobs of control.py's patterns are: its control's value, or
-    Curved, a Curve each Period of the hint's clock from rest to the value and back (as mk_bump), or
-    with mk_bounce and a rest of 0, to the value, back through 0 to its negative and back."""
+    """A hint's or an effect's knob as the Curved knobs of control.py's patterns are: its control's
+    value, or Curved, a Curve each Period of its clock from rest to the value and back (as mk_bump),
+    with mk_bounce and a rest of 0, to the value, back through 0 to its negative and back, or with
+    mk_ramp, from rest to the value and straight back to rest."""
     def __init__(self, name: str, options: list[Option], rest: float=0.0, shape=mk_bump):
         self.control = Control(name, options)
         self.curved = ToggleControl(f"{name} Curved")

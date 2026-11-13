@@ -1,13 +1,16 @@
 """The ten effects on the simulated tree: T1a's pattern cases (through a change, every option, the
 seam), no light popping from dark to full in a frame but Lightning's strike, the grain and the
-rainbow's drift, a run starting the effect again, and the music's beat and bands reaching them."""
+rainbow's drift, a run starting the effect again, and the music's beat and bands reaching them; each
+developing over a minute, its Curved knob's sweep, the finale and Ripples' first ring's paint."""
 import math
 import random
 
 import pytest
 
 from core import Pixel
-from effects import EFFECTS, RAINBOW, Drips, EffectPattern, Fireworks, Lightning, Ripples
+from effects import (EFFECTS, PAUSE, RAINBOW, VOLLEY, Aurora, Comets, Drips, EffectPattern, Fireflies, Fireworks,
+                     Hearth, Heartbeat, LavaLamp, Lightning, Ripples)
+from param import getv
 from support import FRAME, blender, frames, in_range
 from test_music import FakeClock, music
 
@@ -219,3 +222,94 @@ def test_lightning_strikes_on_a_bar_line():
     # a bar every 2 s at 120 bpm
     assert len(strikes) >= 3
     assert all(t % 2 == 0 for t in strikes)
+
+def windows(cls) -> list[tuple[float, ...]]:
+    """A minute of the effect as set on a quarter of the lights at 4 frames a second, in 10 s windows:
+    each window's share of lights lit and its mean W, R, G and B."""
+    random.seed(13)
+    b = blender([effect(cls), EffectPattern(next_effect(cls)())])
+    b.pause_change = True
+    b.pixels = [Pixel(i, p.x, p.y, p.z) for i, p in enumerate(b.pixels[::4])]
+    lights = [b.render(k / 4) for k in range(4 * 60)]
+    out = []
+    for w in range(6):
+        window = [light for frame in lights[40 * w:40 * (w + 1)] for light in frame]
+        lit = sum(max(light) > 0.06 * 255 for light in window) / len(window)
+        out.append((lit, *(sum(light[c] for light in window) / len(window) / 255 for c in range(4))))
+    return out
+
+# How far apart the minute's windows get at least, against the effect each replaced, which measured
+# Aurora 0.44, Fireflies 0.006, Fireworks 0.03, Ripples 0.21, Lava lamp 0.08, Comets 0.006, Hearth
+# 0.22, Lightning 0.05, Drips 0.08 and Heartbeat 0, an exact loop
+DEVELOPS = {Aurora: 0.6, Fireflies: 0.2, Fireworks: 0.15, Ripples: 0.3, LavaLamp: 0.2, Comets: 0.05,
+            Hearth: 0.5, Lightning: 0.3, Drips: 0.35, Heartbeat: 0.4}
+
+@pytest.mark.parametrize("cls", EFFECTS, ids=name)
+def test_each_effect_develops_over_a_minute(cls):
+    # the two windows furthest apart, by their lit share and colour summed
+    ws = windows(cls)
+    assert max(sum(abs(a - c) for a, c in zip(u, v)) for u in ws for v in ws) > DEVELOPS[cls]
+
+SWEPT = {cls: next(k for k in cls.knobs if len(k) > 3) for cls in EFFECTS if any(len(k) > 3 for k in cls.knobs)}
+
+def test_eight_effects_have_a_swept_knob():
+    assert {cls: k[0] for cls, k in SWEPT.items()} == {
+        Aurora: "Surge", Fireflies: "Count", Fireworks: "Build", LavaLamp: "Heat", Hearth: "Height",
+        Lightning: "Storm", Drips: "Rate", Heartbeat: "Rate"}
+
+@pytest.mark.parametrize("cls", list(SWEPT), ids=name)
+def test_a_curved_knob_sweeps_from_its_rest_to_its_value_over_its_period(cls):
+    # as an effect starts: Curved, a sine in and out over 32 s of the run's clock, from the knob's rest
+    knob, options, start, rest = SWEPT[cls][:4]
+    value = dict(options)[start]
+    pattern = effect(cls)
+    feature = pattern.features[0]
+    swept = pattern.effect.knob[knob]
+    assert getv(swept, 0.0) == rest
+    if cls is Fireworks:
+        # a ramp: up to the value over the period, then straight back to rest
+        assert getv(swept, 16.0) == pytest.approx((rest + value) / 2)
+        assert getv(swept, 31.9) == pytest.approx(value, abs=0.01 * abs(value - rest))
+    else:
+        assert getv(swept, 8.0) == pytest.approx((rest + value) / 2)
+        assert getv(swept, 16.0) == pytest.approx(value)
+        assert getv(swept, 24.0) == pytest.approx((rest + value) / 2)
+    assert getv(swept, 32.0) == pytest.approx(rest)
+    assert f"{knob} Period" in [c.name for c in feature.visible_controls()]
+    # Curved off, the value, its Curve and Period hidden
+    sweep = feature.sweeps[0]
+    sweep.curved.set(1)
+    pattern.update(set_dirty=False)
+    assert pattern.effect.knob[knob] == value
+    assert f"{knob} Period" not in [c.name for c in feature.visible_controls()]
+
+def test_the_fireworks_build_to_a_finale_then_pause():
+    random.seed(12)
+    pattern = effect(Fireworks)
+    b = blender([pattern, EffectPattern(next_effect(Fireworks)())])
+    launches = {}
+    for t, _ in frames(b, 0, 40):
+        fresh = [r for r in pattern.effect.rockets if r["start"] == t]
+        if fresh:
+            launches[t] = len(fresh)
+    finales = [t for t, n in launches.items() if n == VOLLEY]
+    # once a build, as it reaches 0.9 of its 32 s ramp (eased, 25.4 s), then the pause, and the rockets
+    # coming quicker as it builds
+    assert len(finales) == 1 and 25.4 <= finales[0] < 27
+    assert not [t for t in launches if finales[0] < t < finales[0] + PAUSE]
+    early = [t for t in launches if t < 10]
+    late = [t for t in launches if 18 < t < finales[0]]
+    assert len(late) / (finales[0] - 18) > 1.5 * len(early) / 10
+
+def test_ripples_first_ring_paints_the_tree():
+    # the first drop falls at once, and its ring repaints the tree as it spreads: within 2 s, a share
+    # of the tree holds its colour
+    random.seed(14)
+    pattern = effect(Ripples)
+    b = blender([pattern, EffectPattern(next_effect(Ripples)())])
+    for t, frame in frames(b, 0, 2):
+        pass
+    assert len(pattern.effect.drops) >= 1
+    painted = sum(c > 0.2 for c in pattern.effect.painted) / len(frame)
+    assert painted > 0.1
+    assert sum(max(light) > 0.06 * 255 for light in frame) / len(frame) > 0.1
