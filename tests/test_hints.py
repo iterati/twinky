@@ -103,8 +103,9 @@ FASTEST = {
 @pytest.mark.parametrize("bpm", [None, 180.0])
 @pytest.mark.parametrize("hint", list(FASTEST))
 def test_soft_edges_no_light_jumps_from_off_to_full_in_a_frame(hint, bpm):
-    # at the fastest and sharpest options, and the music's fastest tempo: every light rises and falls
-    # over frames, never from off to its full brightness in one
+    # at the shapes' fastest and sharpest options, a sweep at a middling pace (at its fastest a sweep
+    # moves as fast as it's set), and the music's fastest tempo: every light rises and falls over
+    # frames, never from off to its full brightness in one
     random.seed(9)
     cls, picks = FASTEST[hint]
     pattern = pick(cls(), **picks)
@@ -162,7 +163,11 @@ def test_the_spin_lock_turns_a_hint():
     music(b, flash="off", spin_lock="4 bars")
     for _ in frames(b, 0, 12):
         pass
-    still = b.render(12.0)
+    b.render(12.0)
+    # the same frame again, the hint not moving on
+    b.dt = 0.0
+    still = b._render(b.run, 12.0)
+    assert b._render(b.run, 12.0) == still
     b.spin_angle += 0.1
     assert b._render(b.run, 12.0) != still
 
@@ -220,7 +225,7 @@ def test_with_music_beating_a_curved_knob_counts_beats_and_turns_on_bar_lines():
             if before > span < after]
     assert ends and all(abs(beat - (4 * round(beat / 4))) < 2 * 0.125 for beat in ends)
     assert min(span for _, span in settled) == pytest.approx(1/4, abs=0.02)
-    assert all(abs(((feature.clock - beat + 2) % 4) - 2) < 1e-3 for beat, _ in seen[-1:])
+    assert abs(((feature.clock - seen[-1][0] + 2) % 4) - 2) < 1e-3
 
 class TwoLayers(HintFeature):
     def __init__(self):
@@ -273,7 +278,7 @@ def test_slices_tick_on_the_beat_with_music():
     held = []
     for t, _ in frames(b, 0, 12):
         if t > 8 and TICK + 0.1 < b.sound.beat % 1:
-            held.append((b.sound.beat, feature.swept[0] * 16))
+            held.append((b.sound.beat, feature.turn * 16))
     # between its steps, a step a beat, the turn holds still, a whole step on
     assert held and all(abs(turn - round(turn)) < 0.01 for _, turn in held)
     assert len({round(turn) for _, turn in held}) >= 7
@@ -288,8 +293,8 @@ def seconds_of(pattern, other) -> list[list[float]]:
     return [[sum(light) / 255 for light in b.render(k / 4)] for k in range(4 * 60)][::4]
 
 def novelty(seconds) -> float:
-    """As the design notes' metric: how far each second of the minute's last half is from the
-    nearest at least 4 s before it, against how far apart two seconds are as a rule. 0 is a loop."""
+    """How far each second of the minute's last half is from the nearest at least 4 s before it,
+    against how far apart two seconds are as a rule: 0 is a loop, the picture seen before."""
     def apart(a, b):
         return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
 
@@ -297,27 +302,27 @@ def novelty(seconds) -> float:
     return sum(min(apart(seconds[k], seconds[j]) for j in range(k - 3)) for k in range(30, 60)) / 30 / typical
 
 def swing(seconds) -> float:
-    """As the design notes' metric: how far the share of lights lit and twice their mean level
-    swing between 2 s windows over the minute."""
+    """How far the share of lights lit and twice their mean level swing between 2 s windows over
+    the minute."""
     lit = [sum(sum(v > 0.06 for v in s) / len(s) for s in seconds[k:k + 2]) / 2 for k in range(0, 60, 2)]
     mean = [sum(sum(s) / len(s) for s in seconds[k:k + 2]) / 2 for k in range(0, 60, 2)]
     return (max(lit) - min(lit)) + (2 * (max(mean) - min(mean)))
 
 @pytest.mark.parametrize("axis", ["up", "round"])
 def test_the_tide_keeps_changing_over_a_minute(axis):
-    # the old Wash was an exact loop, its novelty 0
+    # the Wash it replaces was an exact loop, its novelty 0
     assert novelty(seconds_of(pick(Wash(), axis=axis), Slices())) > 0.4
 
 @pytest.mark.parametrize("axis", ["around", "up", "leaned"])
 def test_slices_keep_changing_over_a_minute(axis):
     # as Sectors, Bands and Spiral did, the slices loop without their lean; with it, they don't
-    flat = pick(Slices(), axis=axis, lean="3", **{"lean curved": "Off"})
+    flat = pick(Slices(), axis=axis, lean="4", **{"lean curved": "Off"})
     assert novelty(seconds_of(flat, Wash())) < 0.05
-    leaning = pick(Slices(), axis=axis, lean="3", **{"lean curved": "On", "lean period": "48"})
+    leaning = pick(Slices(), axis=axis, lean="4", **{"lean curved": "On", "lean period": "48"})
     assert novelty(seconds_of(leaning, Wash())) > 0.2
 
 def test_the_reveal_swings_from_sparkles_to_solid_stars_over_a_minute():
-    # the old Hidden Field's swing was under 0.2, much as the field held revealed
+    # held, the field barely swings, as the Hidden Field it replaces didn't
     held = pick(HiddenField(), reveal="1", **{"reveal curved": "Off"})
     assert swing(seconds_of(held, Wash())) < 0.3
     revealed = pick(HiddenField(), reveal="1", **{"reveal curved": "On", "reveal period": "32"})

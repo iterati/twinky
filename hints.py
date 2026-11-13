@@ -2,7 +2,8 @@
 these are slow, soft-edged shapes in Bermuda's palettes (palette.py), moved by its modulators and
 their timing (motion.py), most of them using the angle round the trunk. Each light's brightness is
 how much of the shape covers it, so motion glides instead of stepping from light to light. Their
-knobs sweep as his Curved knobs do, on the hint's clock, so a hint keeps changing over the minute."""
+knobs sweep as the Curved knobs of control.py's patterns do, on the hint's clock, so a hint keeps
+changing over the minute."""
 import math
 
 from pytweening import easeOutBack
@@ -78,9 +79,9 @@ def tick(clock: float) -> float:
     return n + easeOutBack(min(1.0, (clock - n) / TICK))
 
 class Sweep:
-    """A hint's knob as his Curved knobs are: its control's value, or Curved, a Curve each Period of
-    the hint's clock from rest to the value and back (as mk_bump), or with mk_bounce, to the value,
-    through rest to its far side and back."""
+    """A hint's knob as the Curved knobs of control.py's patterns are: its control's value, or
+    Curved, a Curve each Period of the hint's clock from rest to the value and back (as mk_bump), or
+    with mk_bounce and a rest of 0, to the value, back through 0 to its negative and back."""
     def __init__(self, name: str, options: list[Option], rest: float=0.0, shape=mk_bump):
         self.control = Control(name, options)
         self.curved = ToggleControl(f"{name} Curved")
@@ -195,7 +196,7 @@ class WashFeature(HintFeature):
         self._period = Control("Period", BEATS)
         self._span = Sweep("Span", [Option(n, v) for n, v in [("1/4", 1/4), ("1/2", 1/2), ("1", 1)]], rest=3/2)
         self._wave = Control("Wave", WAVES)
-        self._spread = Sweep("Spread", [Option(str(v), v) for v in [1, 2, 3]])
+        self._spread = Sweep("Spread", [Option(str(v), v) for v in [0, 1, 2, 3]], rest=3)
         self._ride = ToggleControl("Ride")
         self.span: Param = 0.0
         self.spread: Param = 0.0
@@ -264,10 +265,12 @@ class SlicesFeature(HintFeature):
         self._direction = Control("Direction", DIRECTIONS)
         self._motion = Control("Motion", [Option(n, n) for n in ["glide", "tick"]])
         # slots of lean over the tree's height
-        self._lean = Sweep("Lean", [Option(str(v), v) for v in [1, 3, 9]], shape=mk_bounce)
+        self._lean = Sweep("Lean", [Option(str(v), v) for v in [1, 2, 4]], shape=mk_bounce)
         self._softness = Control("Softness", SOFTNESS)
         self.lean: Param = 0.0
-        self.swept = (0.0, 0.0)
+        self.turn = 0.0  # the turn round the trunk, or with Axis up the climb up the tree
+        self.stepped = 0.0  # the clock as the turn last stepped on it, ticked or not
+        self.swept = 0.0
         super(SlicesFeature, self).__init__("Slices", [
             self._palette,
             self._axis,
@@ -287,12 +290,14 @@ class SlicesFeature(HintFeature):
 
     def frame(self, beats, dt):
         super(SlicesFeature, self).frame(beats, dt)
-        clock = tick(self.clock) if self._motion.value == "tick" else self.clock
-        # the turn round the trunk, or with Axis up the climb up the tree, a whole one each period
-        self.swept = (clock * self._direction.value / self._period.value, getv(self.lean, self.clock))
+        # a whole turn each period, run on from where it is, so it moves on through a change of control
+        stepped = tick(self.clock) if self._motion.value == "tick" else self.clock
+        self.turn = (self.turn + ((stepped - self.stepped) * self._direction.value / self._period.value)) % 1
+        self.stepped = stepped
+        self.swept = getv(self.lean, self.clock)
 
     def light(self, x, y):
-        turn, lean = self.swept
+        turn, lean = self.turn, self.swept
         count = self._count.value
         axis = self._axis.value
         if axis == "up":

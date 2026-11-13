@@ -182,9 +182,10 @@ of the palette round the trunk (Axis around, as Sectors were), up it (up, as Ban
 (as Spiral's arms were), turning or climbing, gliding or with Motion tick stepping once a beat with
 an overshoot, and leaning one way and the other, the rings tilting. Hidden Field is sparkles tracing
 a lattice of stars seen from above the treetop, and as its Reveal sweeps, they thicken and soften
-until the stars stand solid, turning faster, then dissolve. Each picks one of Bermuda's six cosine
-palettes. A swept knob is one of his Curved knobs: its value, or with its Curved on, its Curve from
-the knob's rest to its value and back each Period (Lean to its value and its other side). Their
+until the stars stand solid, turning twice as fast, then dissolve. Each picks one of Bermuda's six cosine
+palettes. A swept knob is a Curved knob, as the patterns in `control.py` have: its value, or with its
+Curved on, its Curve from the knob's rest to its value and back each Period (Lean to its value and
+as far the other side). Their
 periods and sweeps count beats of the beat clock while music plays, seconds otherwise, and while
 the music's tempo is sure, a hint's clock is drawn onto the beat, so a tick lands on a beat and a
 sweep turns on a bar line. `palette.py` and `motion.py` are Python ports of Bermuda's `src/colour.ts`
