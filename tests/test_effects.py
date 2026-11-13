@@ -170,7 +170,7 @@ def test_the_effects_join_the_rotation(tmp_path, monkeypatch):
     monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     monkeypatch.setattr(look, "LOOKS", str(tmp_path / "looks"))
     names = [p.name for p in commands.start_patterns()]
-    assert names[16:26] == [cls.name for cls in EFFECTS]
+    assert names[13:23] == [cls.name for cls in EFFECTS]
 
 def beat_frames(cls, first: float, seconds: float=4.0):
     """The effect under Music, its own links alone, at 120 bpm, its beats counted from first."""

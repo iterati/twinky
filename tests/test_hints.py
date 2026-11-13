@@ -1,5 +1,6 @@
-"""The six hints on the simulated tree: T1a's pattern cases (through a change, every option, the
-seam), their soft edges, their colour as linear light, their clock in beats, and the music's links."""
+"""The three hints on the simulated tree: T1a's pattern cases (through a change, every option, the
+seam), their soft edges, their colour as linear light, their clock in beats, and the music's links;
+their sweeps, layers, Ride and tick, and that each keeps changing over a minute."""
 import json
 import os
 import random
@@ -9,8 +10,9 @@ import pytest
 import commands
 import look
 from core import Pixel
-from hints import HINTS, PaletteColor, Sectors, Wash
+from hints import HINTS, TICK, HiddenField, Hint, HintFeature, PaletteColor, Slices, Wash, tick
 from palette import oklch_to_linear
+from param import getv
 from support import FRAME, blender, frames, in_range
 from test_music import FakeClock, music
 
@@ -89,11 +91,13 @@ def test_seam_at_angle_0(cls, seed):
             worst = max(worst, *(abs(x - y) for x, y in zip(a, c)))
     assert worst <= 16
 
+SLICES = {"count": "6", "period": "16", "motion": "glide", "lean": "1", "lean period": "32", "softness": "1/2"}
 FASTEST = {
-    "Sectors": {"count": "6", "period": "16", "softness": "1/2"},
-    "Bands": {"bands": "6", "drift": "1.0", "softness": "1/2"},
-    "Spiral": {"arms": "3", "twist": "2", "period": "16", "softness": "1/2"},
-    "Hidden Field": {"lattice": "1/4", "period": "128", "twinkle": "4"},
+    "Slices around": (Slices, {"axis": "around"} | SLICES),
+    "Slices up": (Slices, {"axis": "up"} | SLICES),
+    "Slices leaned": (Slices, {"axis": "leaned"} | SLICES),
+    "Hidden Field": (HiddenField, {"lattice": "1/4", "period": "128", "twinkle": "4", "reveal": "1",
+                                   "reveal period": "16"}),
 }
 
 @pytest.mark.parametrize("bpm", [None, 180.0])
@@ -102,8 +106,8 @@ def test_soft_edges_no_light_jumps_from_off_to_full_in_a_frame(hint, bpm):
     # at the fastest and sharpest options, and the music's fastest tempo: every light rises and falls
     # over frames, never from off to its full brightness in one
     random.seed(9)
-    cls = next(cls for cls in HINTS if cls().name == hint)
-    pattern = pick(cls(), **FASTEST[hint])
+    cls, picks = FASTEST[hint]
+    pattern = pick(cls(), **picks)
     pattern.features[1].controls[1].set(0)  # Grain smooth
     b = blender([pattern, Wash()])
     if bpm is not None:
@@ -130,8 +134,8 @@ def test_the_palettes_colour_reaches_the_lights_as_linear_light():
     assert color.as_wrgb() == (0, 0, 0, 0)
 
 def test_a_hints_periods_count_beats_while_music_plays_and_seconds_otherwise():
-    pattern = pick(Sectors(), period="16", motion="spin")
-    b = blender([pattern, Wash()])
+    pattern = pick(Wash(), period="16")
+    b = blender([pattern, Slices()])
     running = pattern.features[0].running
     for _ in frames(b, 0, 4):
         pass
@@ -144,7 +148,7 @@ def test_a_hints_periods_count_beats_while_music_plays_and_seconds_otherwise():
 
 def test_the_beat_flash_shows_on_a_hint():
     random.seed(10)
-    b = blender([pick(Wash(), wave="cos"), Sectors()])
+    b = blender([pick(Wash(), wave="cos"), Slices()])
     b.beat = FakeClock(120.0, 0.0, drive=0.0)
     music(b, flash="whole tree", palette="Off", spin_lock="off")
     level = {t: sum(map(sum, frame)) / len(frame) for t, frame in frames(b, 0, 4)}
@@ -153,7 +157,7 @@ def test_the_beat_flash_shows_on_a_hint():
         assert level[beat + FRAME] < level[beat]
 
 def test_the_spin_lock_turns_a_hint():
-    b = blender([pick(Sectors(), period="64", motion="sway"), Wash()])
+    b = blender([pick(Slices(), period="64"), Wash()])
     b.beat = FakeClock(120.0, 0.0)
     music(b, flash="off", spin_lock="4 bars")
     for _ in frames(b, 0, 12):
@@ -179,5 +183,142 @@ def test_the_hints_join_the_rotation(tmp_path, monkeypatch):
     monkeypatch.setattr(commands, "SAVES", str(tmp_path))
     monkeypatch.setattr(look, "LOOKS", str(tmp_path / "looks"))
     names = [p.name for p in commands.start_patterns()]
-    assert names[10:16] == ["Wash", "Sectors", "Bands", "Spiral", "Hidden Field", "Palette Drift"]
-    assert len(set(names)) == 26
+    assert names[10:13] == ["Wash", "Slices", "Hidden Field"]
+    assert len(set(names)) == 23
+
+def test_a_curved_knob_sweeps_between_its_values_over_its_period():
+    # Span from its rest, 3/2, to its value and back each period, eased as its Curve: seconds here
+    pattern = pick(Wash(), span="1/4", **{"span curved": "On", "span curve": "linear", "span period": "16"})
+    feature = pattern.features[0]
+    b = blender([pattern, Slices()])
+    spans = {t: feature.swept[0] for t, _ in frames(b, 0, 17)}
+    assert spans[0.0] == pytest.approx(3/2)
+    assert spans[4.0] == pytest.approx((3/2 + 1/4) / 2, abs=1e-6)
+    assert spans[8.0] == pytest.approx(1/4)
+    assert spans[16.0] == pytest.approx(3/2)
+    assert min(spans.values()) == pytest.approx(1/4) and max(spans.values()) == pytest.approx(3/2)
+    # and Curved off, the value
+    pick(pattern, **{"span curved": "Off"})
+    for _ in frames(b, 17, 18):
+        pass
+    assert feature.swept[0] == 1/4
+    assert [c.name for c in feature.visible_controls()].count("Span Period") == 0
+
+def test_with_music_beating_a_curved_knob_counts_beats_and_turns_on_bar_lines():
+    # the music's bar lines half a beat off the hint's start: its clock is drawn onto them
+    pattern = pick(Wash(), span="1/4", **{"span curved": "On", "span curve": "linear", "span period": "16"})
+    feature = pattern.features[0]
+    b = blender([pattern, Slices()])
+    b.beat = FakeClock(120.0, 0.25)
+    music(b, flash="off", palette="Off", spin_lock="off")
+    seen = []
+    for _ in frames(b, 0, 24):
+        seen.append((b.sound.beat, getv(feature.span, feature.clock)))
+    settled = seen[8 * 16:]
+    # 16 beats a period: 8 s at 120 bpm, the far end and back
+    ends = [beat for (_, before), (beat, span), (_, after) in zip(settled, settled[1:], settled[2:])
+            if before > span < after]
+    assert ends and all(abs(beat - (4 * round(beat / 4))) < 2 * 0.125 for beat in ends)
+    assert min(span for _, span in settled) == pytest.approx(1/4, abs=0.02)
+    assert all(abs(((feature.clock - beat + 2) % 4) - 2) < 1e-3 for beat, _ in seen[-1:])
+
+class TwoLayers(HintFeature):
+    def __init__(self):
+        super(TwoLayers, self).__init__("Two Layers", [], [])
+
+    def layers(self, x, y):
+        return [(0.25, (0.6, 0.1, 30.0), 0.0), (0.5, (0.5, 0.12, 200.0), -0.5)]
+
+def test_a_layered_hint_gives_its_layers_colours():
+    layers = Hint(TwoLayers())(0.0, 0.3, 0.0, 0.2, 0.5, None)
+    assert [weight for weight, _, _ in layers] == [0.25, 0.5, 0.25]
+    a, b, off = (color.as_wrgb() for _, color, _ in layers)
+    assert a == pytest.approx((0, *(255 * c for c in oklch_to_linear((0.6, 0.1, 30.0)))))
+    assert b == pytest.approx((0, *(127.5 * c for c in oklch_to_linear((0.5, 0.12, 200.0)))))
+    assert off == (0, 0, 0, 0)
+
+def test_wash_round_crossfades_two_whole_turns_of_the_palette():
+    # a Span of 1/4 is half a turn round the trunk: half each of no turn and one, as bright as the wave
+    pattern = pick(Wash(), axis="round", span="1/4", **{"span curved": "Off"})
+    feature = pattern.features[0]
+    feature.frame(1.0, 1.0)
+    (a, _, _), (b, _, _) = feature.layers(0.3, 0.6)
+    assert a == pytest.approx(b) and 0 < a + b <= 1
+
+@pytest.mark.parametrize("ride", ["On", "Off"])
+def test_ride_turns_the_palette_with_the_base_hue(ride):
+    pattern = pick(Wash(), ride=ride)
+    feature = pattern.features[0]
+    feature.frame(1.0, 1.0)
+    (_, lch, _), = feature.layers(0.3, 0.6)
+    hint = pattern.base_color
+    for blend in [0.0, 0.25, 0.6]:
+        (_, color, _), _ = hint(0.0, blend, 0.0, 0.3, 0.6, None)
+        turned = 360 * blend if ride == "On" else 0.0
+        assert color.as_wrgb() == pytest.approx((0, *(255 * c for c in oklch_to_linear((lch[0], lch[1], lch[2] + turned)))))
+
+def test_the_tick_steps_and_holds():
+    assert tick(2.0) == 2.0
+    # it steps in TICK of the beat, overshooting, then holds on the next
+    assert max(tick(2 + (k * TICK / 20)) for k in range(21)) > 3.05
+    assert tick(2 + TICK) == pytest.approx(3.0)
+    assert all(tick(2 + TICK + (k * (1 - TICK) / 10)) == pytest.approx(3.0) for k in range(10))
+
+def test_slices_tick_on_the_beat_with_music():
+    pattern = pick(Slices(), motion="tick", period="16")
+    feature = pattern.features[0]
+    b = blender([pattern, Wash()])
+    b.beat = FakeClock(120.0, 0.25)
+    music(b, flash="off", palette="Off", spin_lock="off")
+    held = []
+    for t, _ in frames(b, 0, 12):
+        if t > 8 and TICK + 0.1 < b.sound.beat % 1:
+            held.append((b.sound.beat, feature.swept[0] * 16))
+    # between its steps, a step a beat, the turn holds still, a whole step on
+    assert held and all(abs(turn - round(turn)) < 0.01 for _, turn in held)
+    assert len({round(turn) for _, turn in held}) >= 7
+
+def seconds_of(pattern, other) -> list[list[float]]:
+    """A minute of the hint on a quarter of the lights at 4 frames a second: each second's lights'
+    levels."""
+    random.seed(13)
+    b = blender([pattern, other])
+    b.pause_change = True
+    b.pixels = b.pixels[::4]
+    return [[sum(light) / 255 for light in b.render(k / 4)] for k in range(4 * 60)][::4]
+
+def novelty(seconds) -> float:
+    """As the design notes' metric: how far each second of the minute's last half is from the
+    nearest at least 4 s before it, against how far apart two seconds are as a rule. 0 is a loop."""
+    def apart(a, b):
+        return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
+
+    typical = sum(apart(a, b) for a in seconds[::3] for b in seconds[1::3]) / (len(seconds[::3]) * len(seconds[1::3]))
+    return sum(min(apart(seconds[k], seconds[j]) for j in range(k - 3)) for k in range(30, 60)) / 30 / typical
+
+def swing(seconds) -> float:
+    """As the design notes' metric: how far the share of lights lit and twice their mean level
+    swing between 2 s windows over the minute."""
+    lit = [sum(sum(v > 0.06 for v in s) / len(s) for s in seconds[k:k + 2]) / 2 for k in range(0, 60, 2)]
+    mean = [sum(sum(s) / len(s) for s in seconds[k:k + 2]) / 2 for k in range(0, 60, 2)]
+    return (max(lit) - min(lit)) + (2 * (max(mean) - min(mean)))
+
+@pytest.mark.parametrize("axis", ["up", "round"])
+def test_the_tide_keeps_changing_over_a_minute(axis):
+    # the old Wash was an exact loop, its novelty 0
+    assert novelty(seconds_of(pick(Wash(), axis=axis), Slices())) > 0.4
+
+@pytest.mark.parametrize("axis", ["around", "up", "leaned"])
+def test_slices_keep_changing_over_a_minute(axis):
+    # as Sectors, Bands and Spiral did, the slices loop without their lean; with it, they don't
+    flat = pick(Slices(), axis=axis, lean="3", **{"lean curved": "Off"})
+    assert novelty(seconds_of(flat, Wash())) < 0.05
+    leaning = pick(Slices(), axis=axis, lean="3", **{"lean curved": "On", "lean period": "48"})
+    assert novelty(seconds_of(leaning, Wash())) > 0.2
+
+def test_the_reveal_swings_from_sparkles_to_solid_stars_over_a_minute():
+    # the old Hidden Field's swing was under 0.2, much as the field held revealed
+    held = pick(HiddenField(), reveal="1", **{"reveal curved": "Off"})
+    assert swing(seconds_of(held, Wash())) < 0.3
+    revealed = pick(HiddenField(), reveal="1", **{"reveal curved": "On", "reveal period": "32"})
+    assert swing(seconds_of(revealed, Wash())) > 0.6

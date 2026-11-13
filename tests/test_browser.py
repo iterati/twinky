@@ -42,7 +42,7 @@ def engine_frames(seed: int, to: int | None, steps: int) -> tuple[list[bytes], s
     frames = [engine.step(T0 + k * engine.frame) for k in range(steps)]
     return frames, engine.blender.pattern.name
 
-@pytest.mark.parametrize("to, name", [(None, "Basic Bitch"), (5, "Galaxus"), (18, "Fireworks")])
+@pytest.mark.parametrize("to, name", [(None, "Basic Bitch"), (5, "Galaxus"), (15, "Fireworks")])
 def test_the_engine_plays_the_frames_twinky_sim_does(to, name):
     expected = sim_frames(7, to, 112)
     assert engine_frames(7, to, 112) == (expected, name)
@@ -62,10 +62,10 @@ def test_the_state_comes_on_a_change_and_commands_run():
     engine.init(T0)
     engine.step(T0)
     state = json.loads(engine.changed_state())["state"]
-    assert state["pattern"] == "Basic Bitch" and state["patterns"][18] == "Fireworks"
+    assert state["pattern"] == "Basic Bitch" and state["patterns"][15] == "Fireworks"
     engine.step(T0 + FRAME)
     assert engine.changed_state() is None
-    engine.command(json.dumps({"command": "switch", "to": 18}))
+    engine.command(json.dumps({"command": "switch", "to": 15}))
     engine.step(T0 + 2 * FRAME)
     assert json.loads(engine.changed_state())["state"]["to"] == "Fireworks"
     # a knob, as the page's picker sends it: the pattern's first feature's first control

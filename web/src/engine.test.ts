@@ -43,20 +43,29 @@ describe('the page engine', () => {
     browser = installEngine(pyodide)
   }, 60_000)
 
-  // the pattern twinky starts on, a pattern switched to and an effect
+  // the pattern twinky starts on, a pattern switched to, the three hints and an effect
   it.each([
     ['Basic Bitch', undefined],
     ['Galaxus', 5],
-    ['Fireworks', 18],
+    ['Wash', 10],
+    ['Slices', 11],
+    ['Hidden Field', 12],
+    ['Fireworks', 15],
   ])('plays %s frame for frame as twinky --sim does', { timeout: 60_000 }, (name, to) => {
     pyodide.runPython('import random\nrandom.seed(7)')
     const engine = browser.Engine()
     engine.init(T0)
     if (to !== undefined) engine.command(JSON.stringify({ command: 'switch', to }))
     const hash = createHash('sha256')
-    for (let k = 0; k < STEPS; k++) hash.update(new Uint8Array(frameMessage(engine.step(T0 + k * engine.frame))))
+    let last = new Uint8Array()
+    for (let k = 0; k < STEPS; k++) {
+      last = new Uint8Array(frameMessage(engine.step(T0 + k * engine.frame)))
+      hash.update(last)
+    }
     expect(JSON.parse(engine.changed_state()!).state.pattern).toBe(name)
     expect(hash.digest('hex')).toBe(sim(7, to))
+    // the last frame, the pattern alone once a change has run, lights the tree
+    expect(last.subarray(4).some((byte) => byte > 0)).toBe(true)
     engine.destroy()
   })
 })

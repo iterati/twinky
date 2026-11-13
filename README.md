@@ -173,16 +173,23 @@ connections: allow it.
 
 ## Hints, and looks from Bermuda
 
-Six patterns in the rotation are hints of Bermuda's looks rather than its pictures, which 800
-lights can't show: slow, soft-edged shapes in Bermuda's palettes, moved by its modulators, most of
-them round the trunk. Wash (the palette running up the tree, a wave of brightness round it),
-Sectors (soft sectors spinning or swaying round the trunk), Bands (rings climbing, falling, or rising
-and falling at the contour's drift), Spiral (soft arms winding up and turning), Hidden Field (sparse
-sparkles tracing a lattice of stars seen from above the treetop) and Palette Drift (the palette
-drifting round the trunk). Each picks one of Bermuda's six cosine palettes, and their periods count
-beats of the beat clock while music plays, seconds otherwise. `palette.py` and `motion.py` are
-Python ports of Bermuda's `src/colour.ts` and `src/motion.ts`, its names in snake_case, to read side
-by side with them; the hints are in `hints.py`.
+Three patterns in the rotation are hints of Bermuda's looks rather than its pictures, which 800
+lights can't show: soft-edged shapes in Bermuda's palettes, moved by its modulators, most of them
+round the trunk. Wash is a tide: the palette running up the tree (Axis up) or round the trunk (Axis
+round, as Palette Drift's was), a wave of brightness across it, its Span and Spread swept, the
+palette climbing and wobbling, and with Ride on, turning with the base hue. Slices are soft slices
+of the palette round the trunk (Axis around, as Sectors were), up it (up, as Bands were) or leaned
+(as Spiral's arms were), turning or climbing, gliding or with Motion tick stepping once a beat with
+an overshoot, and leaning one way and the other, the rings tilting. Hidden Field is sparkles tracing
+a lattice of stars seen from above the treetop, and as its Reveal sweeps, they thicken and soften
+until the stars stand solid, turning faster, then dissolve. Each picks one of Bermuda's six cosine
+palettes. A swept knob is one of his Curved knobs: its value, or with its Curved on, its Curve from
+the knob's rest to its value and back each Period (Lean to its value and its other side). Their
+periods and sweeps count beats of the beat clock while music plays, seconds otherwise, and while
+the music's tempo is sure, a hint's clock is drawn onto the beat, so a tick lands on a beat and a
+sweep turns on a bar line. `palette.py` and `motion.py` are Python ports of Bermuda's `src/colour.ts`
+and `src/motion.ts`, its names in snake_case, to read side by side with them; the hints are in
+`hints.py`.
 
 Bermuda's Bank exports a look as JSON (export). To play it on the tree:
 

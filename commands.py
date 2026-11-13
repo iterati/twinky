@@ -154,7 +154,7 @@ def load_pattern(pattern: WiredPattern):
     return pattern
 
 def start_patterns() -> list[WiredPattern]:
-    """The rotation: the ten patterns, the six hints, the ten effects and a pattern for each look in
+    """The rotation: the ten patterns, the three hints, the ten effects and a pattern for each look in
     looks/, each with its save."""
     return [load_pattern(pattern) for pattern in [
         BasicBitch(),
