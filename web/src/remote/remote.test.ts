@@ -1,5 +1,9 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { cardControls, knob, ringTurn, stepped, type Feature } from './remote'
+import Pin from './Pin'
+import { cardControls, knob, ringTurn, stepped, type Feature, type Walk as WalkState } from './remote'
+import Walk from './Walk'
 
 function feature(on: number | null, names: string[]): Feature {
   return { name: 'Flicker', switch: on, controls: names.map((name) => ({ name, options: ['a', 'b'], pick: 0 })) }
@@ -67,5 +71,53 @@ describe('ringTurn', () => {
     const at = knob(0, center, 80)
     expect(at.x).toBeCloseTo(100)
     expect(at.y).toBeCloseTo(180)
+  })
+})
+
+// a tag of the markup by its aria-label, and the text of the markup, its tags and React's comments gone
+const tag = (html: string, label: string) =>
+  html.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`))?.[0] ?? ''
+const text = (html: string) =>
+  html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+describe('the Walk card', () => {
+  const walk: WalkState = {
+    pace: { name: 'Pace', options: ['slow', 'easy', 'brisk', 'fast'], pick: 1 },
+    reach: { name: 'Reach', options: ['near', 'far', 'any', 'jump'], pick: 0 },
+    stay: false,
+    pins: [],
+    back: false,
+  }
+  const card = (state: WalkState, paused: boolean) =>
+    renderToStaticMarkup(createElement(Walk, { walk: state, paused, send: () => {} }))
+
+  it('shows Pace and Reach as steppers, Stay and its On switch, and Back and Nudge', () => {
+    const html = card(walk, true)
+    expect(text(html)).toBe('Walk − Pace: easy + − Reach: near + Stay on this pattern Back Nudge')
+    for (const label of ['Pace down', 'Pace up', 'Reach down', 'Reach up']) expect(tag(html, label)).not.toBe('')
+    expect(tag(html, 'Walk On')).toContain('aria-checked="false"')
+    expect(tag(html, 'Walk Stay')).toContain('aria-checked="false"')
+    expect(html).toMatch(/<button disabled="">Back<\/button>/)
+  })
+
+  it('says when it walks, stays and has a step to go back', () => {
+    const html = card({ ...walk, stay: true, back: true, reach: { ...walk.reach, pick: 3 } }, false)
+    expect(tag(html, 'Walk On')).toContain('aria-checked="true"')
+    expect(tag(html, 'Walk Stay')).toContain('aria-checked="true"')
+    expect(html).toMatch(/<button>Back<\/button>/)
+    expect(text(html)).toContain('Reach: jump')
+  })
+})
+
+describe('the pin', () => {
+  it('names its feature and says whether it holds', () => {
+    for (const pinned of [true, false]) {
+      const html = renderToStaticMarkup(createElement(Pin, { name: 'Pulse', pinned, onClick: () => {} }))
+      expect(tag(html, 'Pin Pulse')).toContain(`aria-pressed="${pinned}"`)
+      expect(tag(html, 'Pin Pulse')).toContain('class="pin"')
+    }
   })
 })

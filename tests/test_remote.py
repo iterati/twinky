@@ -87,6 +87,14 @@ def test_the_state_holds_the_pattern_its_features_and_music(running):
     # Pulse, Flicker and the rest open on their Enabled switch, Music on its On; Blend has none
     switches = {f["name"]: f["switch"] for f in state["features"]}
     assert switches["Pulse"] == 0 and switches["Music"] == 0 and switches["Blend"] is None
+    # the walk's knobs, at jump in these tests
+    assert state["walk"] == {
+        "pace": {"name": "Pace", "options": ["slow", "easy", "brisk", "fast"], "pick": 1},
+        "reach": {"name": "Reach", "options": ["near", "far", "any", "jump"], "pick": 3},
+        "stay": False,
+        "pins": [],
+        "back": False,
+    }
 
 def test_the_mark_for_a_pattern_unsaved_saved_and_changed(running):
     b, server, queue = running
@@ -146,6 +154,28 @@ def check_set(b, state):
     # Music's Flash: chasing sectors
     assert state["features"][6]["controls"][2]["pick"] == 2 and b.music.value["flash"] == "chase"
 
+def check_pace(b, state):
+    # easy, one on to brisk
+    assert state["walk"]["pace"]["pick"] == 2 and b.walk.pace.value == (2.0, 1)
+
+def check_reach(b, state):
+    # jump, one back to any
+    assert state["walk"]["reach"]["pick"] == 2 and not b.walk.jumping
+
+def check_stay(b, state):
+    assert state["walk"]["stay"] is True and b.walk.stay.value
+
+def check_pin(b, state):
+    assert state["walk"]["pins"] == [1] and b.walk.pins == {1}
+
+def check_back(b, state):
+    # with no step to undo, nothing: the nudge test undoes one
+    assert not b.walk.back_steps and not b.transitioning
+
+def check_nudge(b, state):
+    # at jump, the pattern's change
+    assert state["to"] == "Circus Tent" and state["walk"]["back"] is True
+
 @pytest.mark.parametrize("message, closure, check", [
     ({"command": "switch", "to": 1}, "switch_pattern.<locals>.func", check_switch),
     ({"command": "random"}, commands.random_pattern, check_random),
@@ -160,8 +190,14 @@ def check_set(b, state):
      "change_option.<locals>.func", check_change),
     ({"command": "set", "pattern": "Basic Bitch", "feature": 6, "control": 2, "name": "Flash", "option": 2},
      "set_option.<locals>.func", check_set),
+    ({"command": "pace", "step": 1}, "walk_pace.<locals>.func", check_pace),
+    ({"command": "reach", "step": -1}, "walk_reach.<locals>.func", check_reach),
+    ({"command": "stay"}, commands.toggle_stay, check_stay),
+    ({"command": "pin", "pattern": "Basic Bitch", "feature": 1}, "toggle_pin.<locals>.func", check_pin),
+    ({"command": "back"}, commands.walk_back, check_back),
+    ({"command": "nudge"}, commands.nudge, check_nudge),
 ], ids=["switch", "random", "pause", "save", "save music", "spin", "randomize", "randomize feature",
-        "change", "set"])
+        "change", "set", "pace", "reach", "stay", "pin", "back", "nudge"])
 def test_each_command_puts_the_tuis_own_closure_on_the_queue(running, message, closure, check):
     b, server, queue = running
     b.pattern.features[5].controls[0].set(0)
@@ -177,8 +213,8 @@ def test_each_command_puts_the_tuis_own_closure_on_the_queue(running, message, c
             assert command.__qualname__ == closure
         else:
             assert command is closure
-        # Music's save is no change to the state
-        check(b, None if message["command"] == "save music" else next_state(ws))
+        # Music's save is no change to the state, nor Back with no step
+        check(b, None if message["command"] in ["save music", "back"] else next_state(ws))
 
 def test_a_command_for_a_pattern_or_control_no_longer_shown_is_dropped(running):
     b, server, queue = running
@@ -195,14 +231,29 @@ def test_a_command_for_a_pattern_or_control_no_longer_shown_is_dropped(running):
         ws.send(json.dumps({"command": "change", "pattern": "Circus Tent", "feature": 5, "control": 0,
                             "name": "Transition", "step": 1}))
         run(b, queue)
+        ws.send(json.dumps({"command": "pin", "pattern": "Circus Tent", "feature": 1}))
+        run(b, queue)
         # Music's Streamers, gone once Music is off, then the control after On once it is back
         music(0, "On", 1)
         assert next_state(ws)["features"][6]["controls"][0]["pick"] == 1
         music(1, "Streamers", 0)
         music(0, "On", 0)
         music(1, "Flash", 0)
-    assert b.pattern._to_dict() == picks and not b.pattern.dirty
+    assert b.pattern._to_dict() == picks and not b.pattern.dirty and b.walk.pins == set()
     assert b.music.value["streamers"] == 1 and b.music.value["flash"] == "tree"
+
+def test_nudge_then_back_from_the_remote(running):
+    b, server, queue = running
+    with remote(server) as ws:
+        next_state(ws)
+        ws.send(json.dumps({"command": "nudge"}))
+        run(b, queue)
+        state = next_state(ws)
+        assert state["to"] == "Circus Tent" and state["walk"]["back"] is True
+        ws.send(json.dumps({"command": "back"}))
+        run(b, queue)
+        state = next_state(ws)
+        assert state["to"] == "Basic Bitch" and state["walk"]["back"] is False
 
 def test_a_command_queued_by_the_tui_sends_the_same_state(running):
     b, server, queue = running

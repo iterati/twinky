@@ -35,6 +35,8 @@ def quiet(pattern: WiredPattern, streamers: bool=False) -> WiredPattern:
 
 def blender(patterns: list[WiredPattern], start_idx: int=0) -> Blender:
     b = Blender(patterns, SimLights(), start_idx, False)
+    # the walk at jump, the old autopilot: a change a minute, as the tests of changes count on
+    b.walk.reach.set(len(b.walk.reach.options) - 1)
     b.init(0.0)
     return b
 

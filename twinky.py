@@ -9,6 +9,7 @@ from threading import Thread
 import time
 from commands import (
     change_option,
+    nudge,
     pauseplay,
     random_pattern,
     randomize_feature,
@@ -19,6 +20,11 @@ from commands import (
     start,
     switch_pattern,
     toggle_configured,
+    toggle_pin,
+    toggle_stay,
+    walk_back,
+    walk_pace,
+    walk_reach,
 )
 from core import FRAME, wait_for
 from device import Lights
@@ -136,7 +142,7 @@ class Menu:
         line += '\u2563'
         screen.addstr(2, 0, line)
 
-        for i in range(3, h-4):
+        for i in range(3, h-5):
             screen.addstr(i, 0, '\u2551')
             screen.addstr(i, colw, '\u2502')
             screen.addstr(i, colw*2, '\u2502')
@@ -149,10 +155,19 @@ class Menu:
         line += '\u2567'
         line += '\u2550' * ((w - 1) - len(line))
         line += '\u2563'
-        screen.addstr(h-4, 0, line)
+        screen.addstr(h-5, 0, line)
 
+        walk = self.animation.walk
+        screen.addstr(h-4, 0, '\u2551')
+        screen.addstr(h-4, 2, "q - quit, R - random mode, r - randomize mode/feature, spc - pause mode change")
+        screen.addstr(h-4, w-1, '\u2551')
         screen.addstr(h-3, 0, '\u2551')
-        screen.addstr(h-3, 2, "q - quit, R - random mode, r - randomize mode/feature, spc - pause mode change")
+        screen.addstr(
+            h-3,
+            2,
+            f"< > - pace {walk.pace.selected.name}, [ ] - reach {walk.reach.selected.name}, "
+            f"t - stay {walk.stay.selected.name.lower()}, p - pin, b - back, n - nudge",
+        )
         screen.addstr(h-3, w-1, '\u2551')
 
         line = '\u255a'
@@ -182,7 +197,8 @@ class Menu:
                 pair = curses.color_pair(1)
                 if self.selected_column == 1:
                     pair |= curses.A_BOLD
-            screen.addstr(3 + i, colw + 2, f.name, pair)
+            pin = " (pinned)" if i in self.animation.walk.pins else ""
+            screen.addstr(3 + i, colw + 2, f.name + pin, pair)
 
         # right shows control settings
         for i, c in enumerate(feature.visible_controls()):
@@ -226,6 +242,18 @@ class Menu:
                 self.queue.put(switch_pattern(self.selected_row[0]))
         elif key == ord(' '):
             self.queue.put(pauseplay)
+        elif key in [ord('<'), ord(','), ord('>'), ord('.')]:
+            self.queue.put(walk_pace(-1 if key in [ord('<'), ord(',')] else 1))
+        elif key in [ord('['), ord(']')]:
+            self.queue.put(walk_reach(-1 if key == ord('[') else 1))
+        elif key == ord('t'):
+            self.queue.put(toggle_stay)
+        elif key == ord('p'):
+            self.queue.put(toggle_pin(self.selected_row[1]))
+        elif key == ord('b'):
+            self.queue.put(walk_back)
+        elif key == ord('n'):
+            self.queue.put(nudge)
         elif key == curses.KEY_LEFT:
             self.selected_column = (self.selected_column - 1) % 3
             self.selected_row[self.selected_column] %= self.maxrow[self.selected_column]

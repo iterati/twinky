@@ -12,15 +12,27 @@ export type Feature = {
   controls: Control[] // the visible ones
 }
 
+export type Walk = {
+  pace: Control // the seconds between steps, slow to fast
+  reach: Control // how far a step goes, near to jump
+  stay: boolean // on this pattern, moving only its knobs
+  pins: number[] // the features held still, by their index in features
+  back: boolean // a step for Back to undo
+}
+
 export type State = {
   patterns: string[]
   pattern: string
   mark: '?' | '!' | '*' // not saved, saved, changed since
   to: string | null // the pattern a change is running to
   features: Feature[] // the pattern's, then Music
+  walk: Walk
   paused: boolean
   ring: number // the spin ring's turn, in turns
 }
+
+// one of twinky's commands, as the remote and the simulator page send them
+export type Command = { command: string } & Record<string, string | number>
 
 /** A card's stepper rows: its visible controls but the switch on its header, each with its index among
  * the visible ones, as twinky's commands count them. */

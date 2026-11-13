@@ -214,6 +214,9 @@ header {
 }
 
 .simulated legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 0 6px 0 0;
   color: #ffd9a0;
 }
@@ -231,6 +234,142 @@ header {
 
 .simulated label select {
   width: 120px;
+}
+
+.simulated button {
+  font: inherit;
+  color: #bbb;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.simulated button:disabled {
+  color: #555;
+  cursor: default;
+}
+
+.simulated .walk {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #333;
+}
+
+.simulated .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulated .card-name,
+.simulated .switch,
+.simulated .pin {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.simulated .card-name {
+  color: #ffd9a0;
+}
+
+.simulated .card-name::after {
+  content: ' \25B8';
+  color: #999;
+}
+
+.simulated .card-name[aria-expanded='true']::after {
+  content: ' \25BE';
+}
+
+.simulated .switch span {
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background: #333;
+}
+
+.simulated .switch span::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #bbb;
+  transition: transform 0.15s;
+}
+
+.simulated .switch[aria-checked='true'] span {
+  background: #ffd9a0;
+}
+
+.simulated .switch[aria-checked='true'] span::after {
+  transform: translateX(14px);
+  background: #111;
+}
+
+.simulated .stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.simulated .stepper > button {
+  width: 30px;
+  padding: 3px 0;
+}
+
+.simulated .stepper .value {
+  flex: 1;
+  text-align: center;
+  color: #bbb;
+}
+
+.simulated .stepper .control,
+.simulated .walk-stay > span {
+  color: #999;
+}
+
+.simulated .walk-stay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.simulated .walk-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.simulated .pin {
+  display: flex;
+  color: #666;
+}
+
+.simulated .pin svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.simulated .pin[aria-pressed='true'] {
+  color: #ffd9a0;
+}
+
+.simulated .pin[aria-pressed='true'] svg {
+  fill: currentColor;
 }
 
 @media (max-width: 500px) {

@@ -11,6 +11,7 @@ from music import BeatClock, Sound
 from param import getv, Curve
 from streamer import Streamer, StreamerValue, getv_streamers
 from utils import coverage
+from walk import Walk
 
 # A light's color as it goes to the tree: W, R, G and B, each 0 to 255. Frames are mixed in these.
 WRGB = tuple[float, float, float, float]
@@ -124,6 +125,8 @@ class Blender:
         pattern.randomize()
         self.run = Run(pattern, 0.0)
         self.next_pattern = self._pick_next()
+        # the autopilot, stopped by pause_change
+        self.walk = Walk()
         self.change: Change | None = None
         self.frame: list[WRGB] | None = None
         self.glide_from: list[WRGB] | None = None
@@ -172,6 +175,7 @@ class Blender:
         self._t = t
         self.run = Run(self.pattern, t)
         self.change = None
+        self.walk.last_step = t
         self.running = True
 
     def _listen(self, t: float):
@@ -449,7 +453,7 @@ class Blender:
         if self.change is not None:
             left = self.change.start + self.change.length - self._t
         else:
-            left = self.run.start + self.pattern_length - self._t
+            left = self.walk.left(self)
         if self.pause_change:
             if self.change is not None:
                 return f"(PAUSED) -{left:.2f}"
@@ -463,6 +467,7 @@ class Blender:
         if next is not None:
             self.next_pattern = self.patterns[next]
         self.next_pattern.randomize()
+        self.walk.pins.clear()
         source: Run | list[WRGB] = self.run
         if self.frame is not None and (self.change is not None or self.next_pattern is self.pattern):
             # a switch in the middle of a change, or to the pattern on show: fade from the frame on
@@ -494,15 +499,15 @@ class Blender:
     def render(self, t: float) -> list[WRGB]:
         self._listen(t)
         self._t = t
-        if (self.change is None
-                and not self.pause_change
-                and t >= self.run.start + self.pattern_length
-                and (not self.lands_on_bars or (self.on_beat is not None and self.on_beat[0] % 4 == 0))):
-            self.start_transition(bars=self.lands_on_bars)
+        if self.change is None and not self.pause_change and self.walk.due(self):
+            self.walk.step(self)
         if self.change is not None and t >= self.change.start + self.change.length:
             self.run = self.change.run
             self.change = None
             self.next_pattern = self._pick_next()
+            # the pins were the last pattern's, and the walk's next step counts from here
+            self.walk.pins.clear()
+            self.walk.last_step = t
 
         if self.change is None:
             frame = self._render(self.run, t)

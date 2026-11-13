@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { cardControls, stepped, type State } from './remote'
+import Pin from './Pin'
+import { cardControls, stepped, type Command, type State } from './remote'
 import Ring from './Ring'
+import Stepper from './Stepper'
+import Walk from './Walk'
 
 const MARKS = { '?': 'not saved', '!': 'saved', '*': 'changed' }
 
-type Command = { command: string } & Record<string, string | number>
 // the option list open: a feature's control, by its visible index, on the pattern it was opened on
 type Picking = { pattern: string; feature: number; control: number }
 
@@ -100,7 +102,6 @@ export default function Remote() {
   const opened = openFeature === null ? null : state.features[openFeature]
   const pattern = state.pattern
   const step = (feature: number, control: number, by: number) => {
-    navigator.vibrate(10)
     const key = `${feature}:${control}`
     const c = state.features[feature].controls[control]
     setStepping((s) => ({ ...s, [key]: stepped(s[key] ?? c.pick, by, c.options.length) }))
@@ -149,6 +150,13 @@ export default function Remote() {
               >
                 {feature.name}
               </button>
+              {f < music && (
+                <Pin
+                  name={feature.name}
+                  pinned={state.walk.pins.includes(f)}
+                  onClick={() => send({ command: 'pin', pattern, feature: f })}
+                />
+              )}
               {toggle && (
                 <button
                   className="switch"
@@ -172,25 +180,20 @@ export default function Remote() {
               )}
             </div>
             {isOpen &&
-              cardControls(feature).map(({ control, index }) => {
-                const pick = stepping[`${f}:${index}`] ?? control.pick
-                return (
-                  <div className="stepper" key={control.name}>
-                    <button aria-label={`${control.name} down`} onClick={() => step(f, index, -1)}>
-                      −
-                    </button>
-                    <button className="value" onClick={() => setPicking({ pattern, feature: f, control: index })}>
-                      <span className="control">{control.name}:</span> {control.options[pick]}
-                    </button>
-                    <button aria-label={`${control.name} up`} onClick={() => step(f, index, 1)}>
-                      +
-                    </button>
-                  </div>
-                )
-              })}
+              cardControls(feature).map(({ control, index }) => (
+                <Stepper
+                  key={control.name}
+                  name={control.name}
+                  value={control.options[stepping[`${f}:${index}`] ?? control.pick]}
+                  onStep={(by) => step(f, index, by)}
+                  onPick={() => setPicking({ pattern, feature: f, control: index })}
+                />
+              ))}
           </section>
         )
       })}
+
+      <Walk walk={state.walk} paused={state.paused} send={send} />
 
       <Ring turn={state.ring} send={(angle) => send({ command: 'spin', angle })} />
 

@@ -77,6 +77,34 @@ def randomize_feature(fidx):
 def pauseplay(a):
     a.pause_change = not a.pause_change
 
+# the walk's: Pace and Reach stepped, Stay and a feature's pin flipped, Back and Nudge
+
+def walk_pace(step):
+    def func(a):
+        a.walk.pace.change(step)
+    return func
+
+def walk_reach(step):
+    def func(a):
+        a.walk.reach.change(step)
+    return func
+
+def toggle_stay(a):
+    a.walk.stay.change()
+
+def toggle_pin(fidx):
+    def func(a):
+        # Music is no pattern's, so the walk never moves it
+        if fidx < len(a.pattern.features):
+            a.walk.toggle_pin(fidx)
+    return func
+
+def walk_back(a):
+    a.walk.back(a)
+
+def nudge(a):
+    a.walk.step(a)
+
 def spin_ring(angle):
     def func(a):
         a.ring_angle = angle
@@ -159,6 +187,16 @@ def remote_command(message: dict):
         return save_music
     if command == "spin":
         return spin_ring(message["angle"])
+    if command == "pace":
+        return walk_pace(message["step"])
+    if command == "reach":
+        return walk_reach(message["step"])
+    if command == "stay":
+        return toggle_stay
+    if command == "back":
+        return walk_back
+    if command == "nudge":
+        return nudge
     if command == "randomize" and "feature" not in message:
         return randomize_pattern
     pattern = message["pattern"]
@@ -166,6 +204,8 @@ def remote_command(message: dict):
     control = None  # change's and set's: the control's place and name
     if command == "randomize":
         func = randomize_feature(fidx)
+    elif command == "pin":
+        func = toggle_pin(fidx)
     elif command == "change":
         control = (message["control"], message["name"])
         func = change_option(fidx, message["control"], message["step"])

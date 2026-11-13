@@ -18,6 +18,30 @@ It finds the two strands on the LAN and logs to `twinky.log`. Saved patterns (`s
 
 `.venv/bin/python device.py` saves the tree's real layout to `layouts/tree.json`.
 
+## The walk
+
+The autopilot is a walk (`walk.py`): every so often one control of one of the pattern's features
+steps to an option near its own and the tree glides there, so the look changes a little at a time;
+about one step in ten rerolls a whole feature, and about one in thirty changes the pattern, with the
+usual change, the new one freshly randomized. Space pauses it, as it paused the changes; twinky
+starts paused. Its live controls:
+
+- Pace (`<` and `>`, or `,` and `.`): slow, easy, brisk or fast, a step every 8, 4, 2 or 1 seconds;
+  with Music on and its beat sure, on every 4th bar line, every 2nd, or (brisk and fast) every one
+  instead.
+- Reach (`[` and `]`): near (the next option either way), far (up to 3 away), any (any option) or
+  jump, the old autopilot: a freshly randomized pattern every 60 seconds, from a bar line in drive.
+- Stay (`t`): the walk stays on this pattern, moving only its knobs (at jump, rerolling them all).
+- Pin (`p`, the selected feature): the walk holds a pinned feature still and moves the rest. Pins
+  are the walk's alone, not saved, left as they are by Random and Shuffle, and cleared when the
+  pattern changes. Music is not walked, and has none.
+- Back (`b`): undoes the walk's last step, gliding back, and again the one before, 10 kept; a change
+  of pattern it undoes changes back to that pattern with its controls as they were. It works paused.
+- Nudge (`n`): one step now, as the walk would take it.
+
+A saved pattern's controls are held, as before: the walk only moves on from it, unless Stay is on.
+The TUI's footer shows the keys, Pace, Reach and Stay, and a pinned feature says so.
+
 ## The simulator page
 
 Whenever twinky runs it serves http://localhost:8016/ (the page `pnpm build` leaves in `web/dist/`):
@@ -37,8 +61,9 @@ seconds, the page runs twinky's own engine itself, under Pyodide in a Web Worker
 and says "Simulated tree: no twinky.py answered. Run twinky.py to play your tree live." It is twinky
 --sim in the page: the same rotation from Basic Bitch with the changes paused and the saves in
 `saves/`, stepped on the clock and at the frame rate `--sim` plays on, each frame sent to the page as
-the server sends it and drawn by the same code. A panel on the right picks the pattern and sets the
-one on show's knobs, each change one of the remote's commands (`switch`, `set`). Music is off: the
+the server sends it and drawn by the same code. A panel on the right picks the pattern, has the
+remote's Walk card (its On switch starts the paused walk) and sets the one on show's knobs, a pin on
+each feature, each change one of the remote's commands (`switch`, `set`, the walk's). Music is off: the
 Listen panel says it needs twinky.py. While simulating, the page looks for twinky every 5 seconds
 (not on an HTTPS page, which twinky never serves) and goes live once it answers. Served from a
 folder (`base: './'`), `dist/` works from any path, such as the site's `/twinky/`.
@@ -49,7 +74,7 @@ threads, and the TUI), with `layouts/`, `looks/` and `saves/`, and from `.venv` 
 xled_plus's `ledcolor.py`, which are pure Python (`vite.config.ts`); so the build needs the venv.
 In the page run `browser.py`, `commands.py`, `core.py`, `control.py`, `colors.py`, `effects.py`,
 `hints.py`, `layout.py`, `look.py`, `motion.py`, `music.py`, `palette.py`, `param.py`, `sim.py`,
-`streamer.py`, `topologies.py`, `utils.py` and `wire.py`.
+`streamer.py`, `topologies.py`, `utils.py`, `walk.py` and `wire.py`.
 What both twinky and the page run moved out of those three: the rotation and the commands to
 `commands.py`, the layout, frame and state messages to `wire.py`. Pyodide's own files are copied from
 `node_modules/pyodide` into `dist/pyodide/`, never fetched from a CDN. The first load is about 13 MB
@@ -91,9 +116,11 @@ saves its picks to `saves/music.json`.
 
 A page for the phone, at `/remote` on the same port: the patterns as a row of chips along the top, the
 pattern's features as cards, Music last, the open card's controls as minus and plus steppers (tap a
-value for its whole option list) and its On switch on the header, then the spin ring; along the
-bottom, Random (the TUI's `R`), Shuffle (`r`: the open card's feature, or with every card closed the
-whole pattern), Pause (space) and Save (`s`: the pattern, or Music with its card open). It keeps the
+value for its whole option list) and its pin and On switch on the header, then the Walk card (its On
+switch, the other way round from Pause; Pace and Reach as steppers, Stay, Back and Nudge), then the
+spin ring; along the bottom, Random (the TUI's `R`), Shuffle (`r`: the open card's feature, or with
+every card closed the whole pattern), Pause (space) and Save (`s`: the pattern, or Music with its
+card open). It keeps the
 screen on, ticks on each minus and plus, and drags the tree round live with the spin ring, the tree
 staying where it's let go (its bottom is the side nearest you). Every tap is one of the TUI's own
 commands on the same queue, so the phone and the TUI can drive at once and stay in step.
@@ -105,17 +132,23 @@ from the phone, the TUI or an automatic change, and the TUI's time text 4 times 
                "features": [{"name": "Spin", "switch": 0,
                              "controls": [{"name": "Enabled", "options": ["On", "Off"], "pick": 0}, ...]},
                             ..., {"name": "Music", ...}],
+               "walk": {"pace": {"name": "Pace", "options": ["slow", "easy", "brisk", "fast"], "pick": 1},
+                        "reach": {"name": "Reach", "options": ["near", "far", "any", "jump"], "pick": 0},
+                        "stay": false, "pins": [2], "back": true},
                "paused": false, "ring": 0.0}}
     {"time": "-42.13"}
 
 `mark` is the TUI's `?` (not saved), `!` (saved) or `*` (changed since), `to` the pattern a change is
-running to, a feature's `switch` its On toggle's place in `controls` (null with none), `ring` the
-spin ring's turn. The remote sends
+running to, a feature's `switch` its On toggle's place in `controls` (null with none), `walk` the
+walk's Pace and Reach, Stay, the pinned features by their place in `features` and whether Back has a
+step, `ring` the spin ring's turn. The remote sends
 `{"command": "switch", "to": 3}`, `"random"`, `"pause"`, `"save"`, `"save music"`,
-`{"command": "spin", "angle": 0.25}`, `"randomize"` (the pattern), and for a feature, by its place
-in `features` and a control's in its visible `controls`, `"randomize"`, `"change"` (with `step`) and
-`"set"` (with `option`), each naming the pattern it was meant for, and change and set the control's
-`name`, as a command for a pattern or control no longer on show is dropped.
+`{"command": "spin", "angle": 0.25}`, `"randomize"` (the pattern), the walk's
+`{"command": "pace", "step": 1}`, `{"command": "reach", "step": -1}`, `"stay"`, `"back"` and
+`"nudge"`, and for a feature, by its place in `features` and a control's in its visible `controls`,
+`"randomize"`, `"pin"`, `"change"` (with `step`) and `"set"` (with `option`), each naming the
+pattern it was meant for, and change and set the control's `name`, as a command for a pattern or
+control no longer on show is dropped.
 
 ### On the Android phone
 
@@ -199,6 +232,7 @@ lights recentred on the trunk, strays pulled in.
     .venv/bin/pytest tests/test_server.py
     .venv/bin/pytest tests/test_music.py
     .venv/bin/pytest tests/test_remote.py
+    .venv/bin/pytest tests/test_walk.py
     .venv/bin/pytest tests/test_palette.py tests/test_motion.py tests/test_hints.py tests/test_look.py
     .venv/bin/pytest tests/test_effects.py -k Aurora
     .venv/bin/pytest tests/test_browser.py

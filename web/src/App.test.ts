@@ -109,4 +109,36 @@ describe('the page with no twinky', () => {
     )
     expect(await page.$$eval('.simulated legend', (ls) => ls.map((l) => l.textContent))).toContain('Fireworks')
   })
+
+  // on Fireworks, which has no save, so the walk moves its knobs
+  it('walks the simulated tree from the Walk card, and pins a feature', { timeout: 60_000 }, async () => {
+    const back = '.simulated .walk-steps button:first-child'
+    const attribute = (selector: string, name: string, value: string | null) =>
+      page.waitForFunction(
+        (s: string, n: string, v: string | null) => document.querySelector(s)?.getAttribute(n) === v,
+        {},
+        selector,
+        name,
+        value,
+      )
+    // the rotation starts paused, as twinky --sim does
+    await attribute('.simulated [aria-label="Walk On"]', 'aria-checked', 'false')
+    await attribute(back, 'disabled', '')
+    await page.click('.simulated .walk-steps button:last-child') // Nudge
+    await attribute(back, 'disabled', null)
+    await page.click(back)
+    await attribute(back, 'disabled', '')
+    await page.click('.simulated [aria-label="Pace up"]')
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('.simulated .stepper .value')].some((v) => v.textContent === 'Pace: brisk'),
+    )
+    for (const [label, name] of [
+      ['Walk Stay', 'aria-checked'],
+      ['Pin Fireworks', 'aria-pressed'],
+      ['Walk On', 'aria-checked'],
+    ]) {
+      await page.click(`.simulated [aria-label="${label}"]`)
+      await attribute(`.simulated [aria-label="${label}"]`, name, 'true')
+    }
+  })
 })
